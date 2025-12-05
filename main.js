@@ -114,13 +114,13 @@ function getWeaponAttackBonus() {
 
     rarities.forEach(rarity => {
         tiers.forEach(tier => {
-            const levelInput = document.getElementById(`level-${rarity}-${tier}`);
+            const inventoryInput = document.getElementById(`inventory-${rarity}-${tier}`);
             const equippedCheckbox = document.getElementById(`equipped-${rarity}-${tier}`);
             const equippedInput = document.getElementById(`equipped-attack-${rarity}-${tier}`);
 
-            if (levelInput) {
-                const level = parseFloat(levelInput.value) || 0;
-                totalInventory += calculateInventoryBonus(rarity, tier, level);
+            if (inventoryInput) {
+                const inventoryBonus = parseFloat(inventoryInput.value) || 0;
+                totalInventory += inventoryBonus;
 
                 if (equippedCheckbox && equippedCheckbox.checked && equippedInput) {
                     equippedBonus = parseFloat(equippedInput.value) || 0;

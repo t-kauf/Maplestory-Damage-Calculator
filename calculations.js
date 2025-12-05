@@ -83,7 +83,7 @@ function applyItemToStats(baseStats, equippedItem, comparisonItem) {
     newStats.attack -= equippedItem.attack * weaponMultiplier;
     newStats.critRate -= equippedItem.critRate;
     newStats.critDamage -= equippedItem.critDamage;
-    newStats.skillCoeff -= equippedItem.skillLevel * 0.32; // 1 level = 0.32% skill coefficient
+    newStats.skillCoeff -= equippedItem.skillLevel * 0.3; // 1 level = 0.3% skill coefficient
     newStats.normalDamage -= equippedItem.normalDamage;
     newStats.bossDamage -= equippedItem.bossDamage;
     newStats.damage -= equippedItem.damage;
@@ -92,7 +92,7 @@ function applyItemToStats(baseStats, equippedItem, comparisonItem) {
     newStats.attack += comparisonItem.attack * weaponMultiplier;
     newStats.critRate += comparisonItem.critRate;
     newStats.critDamage += comparisonItem.critDamage;
-    newStats.skillCoeff += comparisonItem.skillLevel * 0.32; // 1 level = 0.32% skill coefficient
+    newStats.skillCoeff += comparisonItem.skillLevel * 0.3; // 1 level = 0.3% skill coefficient
     newStats.normalDamage += comparisonItem.normalDamage;
     newStats.bossDamage += comparisonItem.bossDamage;
     newStats.damage += comparisonItem.damage;

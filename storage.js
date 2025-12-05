@@ -13,7 +13,7 @@ function saveToLocalStorage() {
         'attack', 'crit-rate', 'crit-damage', 'stat-damage', 'damage',
         'damage-amp', 'attack-speed', 'def-pen', 'boss-damage',
         'normal-damage', 'skill-coeff', 'skill-mastery', 'skill-mastery-boss',
-        'min-damage', 'max-damage'
+        'min-damage', 'max-damage', 'primary-main-stat', 'secondary-main-stat'
     ];
 
     fields.forEach(field => {
@@ -70,14 +70,14 @@ function saveToLocalStorage() {
     // Save Weapons
     rarities.forEach(rarity => {
         tiers.forEach(tier => {
-            const levelInput = document.getElementById(`level-${rarity}-${tier}`);
+            const inventoryInput = document.getElementById(`inventory-${rarity}-${tier}`);
             const equippedCheckbox = document.getElementById(`equipped-${rarity}-${tier}`);
             const equippedInput = document.getElementById(`equipped-attack-${rarity}-${tier}`);
 
-            if (levelInput) {
+            if (inventoryInput) {
                 const key = `${rarity}-${tier}`;
                 data.weapons[key] = {
-                    level: levelInput.value,
+                    inventoryAttack: inventoryInput.value,
                     equipped: equippedCheckbox ? equippedCheckbox.checked : false,
                     equippedAttack: equippedInput ? equippedInput.value : '0'
                 };
@@ -91,7 +91,9 @@ function saveToLocalStorage() {
 // Load data from localStorage
 function loadFromLocalStorage() {
     const savedData = localStorage.getItem('damageCalculatorData');
-    if (!savedData) return false;
+    if (!savedData) {
+        return false;
+    }
 
     try {
         const data = JSON.parse(savedData);
@@ -101,7 +103,7 @@ function loadFromLocalStorage() {
             'attack', 'crit-rate', 'crit-damage', 'stat-damage', 'damage',
             'damage-amp', 'attack-speed', 'def-pen', 'boss-damage',
             'normal-damage', 'skill-coeff', 'skill-mastery', 'skill-mastery-boss',
-            'min-damage', 'max-damage'
+            'min-damage', 'max-damage', 'primary-main-stat', 'secondary-main-stat'
         ];
 
         if (data.baseSetup) {
@@ -161,11 +163,11 @@ function loadFromLocalStorage() {
                     const weaponData = data.weapons[key];
 
                     if (weaponData) {
-                        const levelInput = document.getElementById(`level-${rarity}-${tier}`);
+                        const inventoryInput = document.getElementById(`inventory-${rarity}-${tier}`);
                         const equippedCheckbox = document.getElementById(`equipped-${rarity}-${tier}`);
                         const equippedInput = document.getElementById(`equipped-attack-${rarity}-${tier}`);
 
-                        if (levelInput) levelInput.value = weaponData.level;
+                        if (inventoryInput) inventoryInput.value = weaponData.inventoryAttack || '0';
                         if (equippedCheckbox) {
                             equippedCheckbox.checked = weaponData.equipped;
                             if (weaponData.equipped) {
@@ -192,7 +194,7 @@ function attachSaveListeners() {
         'attack', 'crit-rate', 'crit-damage', 'stat-damage', 'damage',
         'damage-amp', 'attack-speed', 'def-pen', 'boss-damage',
         'normal-damage', 'skill-coeff', 'skill-mastery', 'skill-mastery-boss',
-        'min-damage', 'max-damage'
+        'min-damage', 'max-damage', 'primary-main-stat', 'secondary-main-stat'
     ];
 
     fields.forEach(field => {

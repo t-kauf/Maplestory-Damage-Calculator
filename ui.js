@@ -54,6 +54,151 @@ function loadTheme() {
     themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
 }
 
+// Equip/Unequip functionality
+function unequipItem() {
+    // Get equipped item data
+    const equippedItem = getItemStats('equipped');
+
+    if (!equippedItem.name && equippedItem.attack === 0 &&
+        equippedItem.critRate === 0 && equippedItem.critDamage === 0 &&
+        equippedItem.skillLevel === 0 && equippedItem.normalDamage === 0 &&
+        equippedItem.bossDamage === 0 && equippedItem.damage === 0) {
+        alert('No item currently equipped');
+        return;
+    }
+
+    // Subtract equipped item stats from base stats
+    const weaponMultiplier = 1 + (getWeaponAttackBonus() / 100);
+
+    const attackBase = document.getElementById('attack-base');
+    attackBase.value = parseFloat(attackBase.value) - (equippedItem.attack * weaponMultiplier);
+
+    const critRateBase = document.getElementById('crit-rate-base');
+    critRateBase.value = parseFloat(critRateBase.value) - equippedItem.critRate;
+
+    const critDamageBase = document.getElementById('crit-damage-base');
+    critDamageBase.value = parseFloat(critDamageBase.value) - equippedItem.critDamage;
+
+    const skillCoeffBase = document.getElementById('skill-coeff-base');
+    skillCoeffBase.value = parseFloat(skillCoeffBase.value) - (equippedItem.skillLevel * 0.3);
+
+    const normalDamageBase = document.getElementById('normal-damage-base');
+    normalDamageBase.value = parseFloat(normalDamageBase.value) - equippedItem.normalDamage;
+
+    const bossDamageBase = document.getElementById('boss-damage-base');
+    bossDamageBase.value = parseFloat(bossDamageBase.value) - equippedItem.bossDamage;
+
+    const damageBase = document.getElementById('damage-base');
+    damageBase.value = parseFloat(damageBase.value) - equippedItem.damage;
+
+    // Move to comparison items
+    addComparisonItem();
+    document.getElementById(`item-${comparisonItemCount}-name`).value = equippedItem.name || 'Unequipped Item';
+    document.getElementById(`item-${comparisonItemCount}-attack`).value = equippedItem.attack;
+
+    // Add stats to comparison item
+    const statMapping = [
+        { type: 'crit-rate', value: equippedItem.critRate },
+        { type: 'crit-damage', value: equippedItem.critDamage },
+        { type: 'skill-level', value: equippedItem.skillLevel },
+        { type: 'normal-damage', value: equippedItem.normalDamage },
+        { type: 'boss-damage', value: equippedItem.bossDamage },
+        { type: 'damage', value: equippedItem.damage }
+    ];
+
+    statMapping.forEach(stat => {
+        if (stat.value !== 0) {
+            addComparisonItemStat(comparisonItemCount);
+            const container = document.getElementById(`item-${comparisonItemCount}-stats-container`);
+            const statCount = container.children.length;
+            document.getElementById(`item-${comparisonItemCount}-stat-${statCount}-type`).value = stat.type;
+            document.getElementById(`item-${comparisonItemCount}-stat-${statCount}-value`).value = stat.value;
+        }
+    });
+
+    // Clear equipped item
+    document.getElementById('equipped-name').value = 'Current Item';
+    document.getElementById('equipped-attack').value = '0';
+
+    // Remove all equipped stats
+    for (let i = 1; i <= 10; i++) {
+        const statElem = document.getElementById(`equipped-stat-${i}`);
+        if (statElem) statElem.remove();
+    }
+    equippedStatCount = 0;
+
+    saveToLocalStorage();
+    calculate();
+}
+
+function equipItem(itemId) {
+    // Check if there's already an equipped item
+    const currentEquipped = getItemStats('equipped');
+    if (currentEquipped.attack !== 0 || currentEquipped.critRate !== 0 ||
+        currentEquipped.critDamage !== 0 || currentEquipped.skillLevel !== 0) {
+        if (!confirm('This will replace your currently equipped item. Continue?')) {
+            return;
+        }
+        // Unequip current item first
+        unequipItem();
+    }
+
+    // Get comparison item data
+    const comparisonItem = getItemStats(`item-${itemId}`);
+
+    // Add comparison item stats to base stats
+    const weaponMultiplier = 1 + (getWeaponAttackBonus() / 100);
+
+    const attackBase = document.getElementById('attack-base');
+    attackBase.value = parseFloat(attackBase.value) + (comparisonItem.attack * weaponMultiplier);
+
+    const critRateBase = document.getElementById('crit-rate-base');
+    critRateBase.value = parseFloat(critRateBase.value) + comparisonItem.critRate;
+
+    const critDamageBase = document.getElementById('crit-damage-base');
+    critDamageBase.value = parseFloat(critDamageBase.value) + comparisonItem.critDamage;
+
+    const skillCoeffBase = document.getElementById('skill-coeff-base');
+    skillCoeffBase.value = parseFloat(skillCoeffBase.value) + (comparisonItem.skillLevel * 0.3);
+
+    const normalDamageBase = document.getElementById('normal-damage-base');
+    normalDamageBase.value = parseFloat(normalDamageBase.value) + comparisonItem.normalDamage;
+
+    const bossDamageBase = document.getElementById('boss-damage-base');
+    bossDamageBase.value = parseFloat(bossDamageBase.value) + comparisonItem.bossDamage;
+
+    const damageBase = document.getElementById('damage-base');
+    damageBase.value = parseFloat(damageBase.value) + comparisonItem.damage;
+
+    // Move to equipped item
+    document.getElementById('equipped-name').value = comparisonItem.name || 'Equipped Item';
+    document.getElementById('equipped-attack').value = comparisonItem.attack;
+
+    // Add stats to equipped item
+    const statMapping = [
+        { type: 'crit-rate', value: comparisonItem.critRate },
+        { type: 'crit-damage', value: comparisonItem.critDamage },
+        { type: 'skill-level', value: comparisonItem.skillLevel },
+        { type: 'normal-damage', value: comparisonItem.normalDamage },
+        { type: 'boss-damage', value: comparisonItem.bossDamage },
+        { type: 'damage', value: comparisonItem.damage }
+    ];
+
+    statMapping.forEach(stat => {
+        if (stat.value !== 0) {
+            addEquippedStat();
+            document.getElementById(`equipped-stat-${equippedStatCount}-type`).value = stat.type;
+            document.getElementById(`equipped-stat-${equippedStatCount}-value`).value = stat.value;
+        }
+    });
+
+    // Remove comparison item
+    removeComparisonItem(itemId);
+
+    saveToLocalStorage();
+    calculate();
+}
+
 // Equipped item stat management
 function addEquippedStat() {
     if (equippedStatCount >= 3) {
@@ -124,7 +269,10 @@ function addComparisonItem() {
                 </div>
             </div>
             <div id="item-${comparisonItemCount}-stats-container"></div>
-            <button onclick="addComparisonItemStat(${comparisonItemCount})" style="background: var(--accent-primary); border: none; padding: 10px 15px; border-radius: 10px; color: white; cursor: pointer; font-weight: 600; margin-top: 8px; font-size: 0.9em; width: 100%; box-shadow: 0 2px 8px var(--shadow); transition: all 0.3s ease;">+ Add Stat</button>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+                <button onclick="addComparisonItemStat(${comparisonItemCount})" style="background: var(--accent-primary); border: none; padding: 10px 15px; border-radius: 10px; color: white; cursor: pointer; font-weight: 600; font-size: 0.9em; box-shadow: 0 2px 8px var(--shadow); transition: all 0.3s ease;">+ Add Stat</button>
+                <button onclick="equipItem(${comparisonItemCount})" style="background: var(--accent-success); border: none; padding: 10px 15px; border-radius: 10px; color: white; cursor: pointer; font-weight: 600; font-size: 0.9em; box-shadow: 0 2px 8px var(--shadow); transition: all 0.3s ease;">Equip</button>
+            </div>
         </div>
     `;
 
@@ -192,8 +340,6 @@ function initializeWeapons() {
     let html = '';
 
     rarities.forEach(rarity => {
-        html += `<div style="grid-column: span 4;"><h3 style="color: var(--accent-success); margin: 10px 0 8px 0; font-size: 0.95em; text-transform: capitalize; font-weight: 600;">${rarity} Weapons</h3></div>`;
-
         tiers.forEach(tier => {
             const rate = weaponRatesPerLevel[rarity][tier];
             if (rate === null) {
@@ -204,8 +350,8 @@ function initializeWeapons() {
             } else {
                 html += `<div class="weapon-card" id="weapon-${rarity}-${tier}">
                     <div class="weapon-header">${tier.toUpperCase()} ${rarity.charAt(0).toUpperCase() + rarity.slice(1)}</div>
-                    <input type="number" class="weapon-input" id="level-${rarity}-${tier}"
-                           placeholder="Level" value="0" min="0" max="200" onchange="updateWeaponBonuses()">
+                    <input type="number" step="0.1" class="weapon-input" id="inventory-${rarity}-${tier}"
+                           placeholder="Inventory %" value="0" onchange="updateWeaponBonuses()">
                     <div class="weapon-checkbox">
                         <input type="checkbox" id="equipped-${rarity}-${tier}"
                                onchange="handleEquippedChange('${rarity}', '${tier}')">
@@ -214,10 +360,7 @@ function initializeWeapons() {
                     <div id="equipped-input-${rarity}-${tier}" style="display: none;">
                         <input type="number" step="0.1" class="weapon-input"
                                id="equipped-attack-${rarity}-${tier}"
-                               placeholder="Equipped Attack %" value="0" onchange="updateWeaponBonuses()">
-                    </div>
-                    <div class="weapon-bonus">
-                        Inventory: <span id="inventory-${rarity}-${tier}">0.0%</span>
+                               placeholder="Equipped %" value="0" onchange="updateWeaponBonuses()">
                     </div>
                 </div>`;
             }
@@ -230,11 +373,11 @@ function initializeWeapons() {
     setTimeout(() => {
         rarities.forEach(rarity => {
             tiers.forEach(tier => {
-                const levelInput = document.getElementById(`level-${rarity}-${tier}`);
+                const inventoryInput = document.getElementById(`inventory-${rarity}-${tier}`);
                 const equippedInput = document.getElementById(`equipped-attack-${rarity}-${tier}`);
 
-                if (levelInput) {
-                    levelInput.addEventListener('input', saveToLocalStorage);
+                if (inventoryInput) {
+                    inventoryInput.addEventListener('input', saveToLocalStorage);
                 }
                 if (equippedInput) {
                     equippedInput.addEventListener('input', saveToLocalStorage);
@@ -284,15 +427,12 @@ function updateWeaponBonuses() {
 
     rarities.forEach(rarity => {
         tiers.forEach(tier => {
-            const levelInput = document.getElementById(`level-${rarity}-${tier}`);
-            const inventorySpan = document.getElementById(`inventory-${rarity}-${tier}`);
+            const inventoryInput = document.getElementById(`inventory-${rarity}-${tier}`);
             const equippedCheckbox = document.getElementById(`equipped-${rarity}-${tier}`);
             const equippedInput = document.getElementById(`equipped-attack-${rarity}-${tier}`);
 
-            if (levelInput && inventorySpan) {
-                const level = parseFloat(levelInput.value) || 0;
-                const inventoryBonus = calculateInventoryBonus(rarity, tier, level);
-                inventorySpan.textContent = inventoryBonus.toFixed(1) + '%';
+            if (inventoryInput) {
+                const inventoryBonus = parseFloat(inventoryInput.value) || 0;
                 totalInventory += inventoryBonus;
 
                 if (equippedCheckbox && equippedCheckbox.checked && equippedInput) {
@@ -303,7 +443,7 @@ function updateWeaponBonuses() {
     });
 
     document.getElementById('total-inventory-attack').textContent = totalInventory.toFixed(1) + '%';
-    document.getElementById('equipped-attack').textContent = equippedBonus.toFixed(1) + '%';
+    document.getElementById('equipped-weapon-attack-pct').textContent = equippedBonus.toFixed(1) + '%';
     document.getElementById('total-weapon-attack').textContent = (totalInventory + equippedBonus).toFixed(1) + '%';
 
     // Save to localStorage
@@ -328,7 +468,7 @@ function displayResults(itemName, stats, uniqueId, isEquipped = false, equippedD
         const changePercentage = ((currentValue - referenceValue) / referenceValue) * 100;
         const changeColor = changePercentage >= 0 ? 'var(--accent-success)' : 'var(--accent-warning)';
         const changeSign = changePercentage >= 0 ? '+' : '';
-        return `<div style="color: ${changeColor}; font-weight: 600; margin-top: 4px; font-size: 0.95em;">${changeSign}${changePercentage.toFixed(2)}%</div>`;
+        return `<span style="color: ${changeColor}; font-weight: 600; margin-left: 8px; font-size: 0.85em;">(${changeSign}${changePercentage.toFixed(2)}%)</span>`;
     };
 
     const expectedBossDamagePercentChange = equippedDamageValues ? getPercentChangeDisplay(bossResults.expectedDamage, equippedDamageValues.expectedDamageBoss) : '';
@@ -341,26 +481,22 @@ function displayResults(itemName, stats, uniqueId, isEquipped = false, equippedD
             <h3 style="color: ${borderColor}; margin-bottom: 15px; text-align: center; font-size: 1.2em; font-weight: 600;">${itemName}</h3>
         <div class="expected-damage">
             <div class="label">Expected Damage (Boss)</div>
-            <div class="value">${formatNumber(bossResults.expectedDamage)}</div>
-            ${expectedBossDamagePercentChange}
+            <div class="value">${formatNumber(bossResults.expectedDamage)}${expectedBossDamagePercentChange}</div>
         </div>
 
         <div class="expected-damage" style="margin-top: 10px; background: rgba(67, 233, 123, 0.3);">
             <div class="label">DPS (Boss)</div>
-            <div class="value">${formatNumber(bossResults.dps)}</div>
-            ${bossDpsPercentChange}
+            <div class="value">${formatNumber(bossResults.dps)}${bossDpsPercentChange}</div>
         </div>
 
         <div class="expected-damage" style="margin-top: 10px;">
             <div class="label">Expected Damage (Normal)</div>
-            <div class="value">${formatNumber(normalResults.expectedDamage)}</div>
-            ${expectedNormalDamagePercentChange}
+            <div class="value">${formatNumber(normalResults.expectedDamage)}${expectedNormalDamagePercentChange}</div>
         </div>
 
         <div class="expected-damage" style="margin-top: 10px; background: rgba(67, 233, 123, 0.3);">
             <div class="label">DPS (Normal)</div>
-            <div class="value">${formatNumber(normalResults.dps)}</div>
-            ${normalDpsPercentChjange}
+            <div class="value">${formatNumber(normalResults.dps)}${normalDpsPercentChjange}</div>
         </div>
 
         <div class="toggle-details" onclick="toggleDetails('${uniqueId}')">
