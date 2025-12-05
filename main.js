@@ -169,9 +169,15 @@ function calculate() {
 window.onload = function () {
     // Load theme first
     loadTheme();
+    // Initialize hero power presets
+    initializeHeroPowerPresets();
     initializeWeapons();
     // Load saved data from localStorage
     const loaded = loadFromLocalStorage();
+    // Load hero power presets from localStorage
+    loadHeroPowerPresets();
+    // Initialize Inner Ability Analysis
+    initializeInnerAbilityAnalysis();
     // Attach save listeners to all inputs
     attachSaveListeners();
     // Update weapon bonuses if data was loaded
