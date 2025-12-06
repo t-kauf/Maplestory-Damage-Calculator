@@ -17,8 +17,9 @@ function calculateDamage(stats, monsterType) {
     const baseDamage = stats.attack * (stats.skillCoeff / 100) * (1 + totalSkillMastery / 100);
 
     // Step 2: Calculate Base Hit Damage
-    // NEW FORMULA: damage_amp_multiplier = 1.07 + (damage_amplification / 163)
-    const damageAmpMultiplier = 1.07 + (stats.damageAmp / 163);
+    // Damage amplification uses square root scaling with diminishing returns
+    // Formula: 1.0542 + sqrt(damageAmp) / 50
+    const damageAmpMultiplier = 1.05 + Math.sqrt(stats.damageAmp) / 50;
 
     // NEW: Defense Penetration multiplier
     const defPenMultiplier = 1 + (stats.defPen / 363);
@@ -26,7 +27,7 @@ function calculateDamage(stats, monsterType) {
     const monsterDamage = monsterType === 'boss' ? stats.bossDamage : stats.normalDamage;
 
     const baseHitDamage = baseDamage *
-        (1 + stats.statDamage / 100) *
+        (1 + stats.statDamage / 100) * 1.004 *
         (1 + stats.damage / 100) *
         (1 + monsterDamage / 100) *
         damageAmpMultiplier *
