@@ -200,6 +200,63 @@ function updateAnalysisTabs() {
     calculate();
 }
 
+// Export all local storage data to clipboard
+function exportData() {
+    const allData = {
+        damageCalculatorData: localStorage.getItem('damageCalculatorData'),
+        heroPowerPresets: localStorage.getItem('heroPowerPresets'),
+        theme: localStorage.getItem('theme')
+    };
+
+    const jsonString = JSON.stringify(allData, null, 2);
+
+    navigator.clipboard.writeText(jsonString).then(() => {
+        alert('✅ Data copied to clipboard! You can now paste it on another device.');
+    }).catch(err => {
+        console.error('Failed to copy data:', err);
+        alert('❌ Failed to copy data. Please check console for details.');
+    });
+}
+
+// Import data from clipboard to local storage
+function importData() {
+    navigator.clipboard.readText().then(text => {
+        try {
+            const data = JSON.parse(text);
+
+            // Validate the data structure
+            if (!data.damageCalculatorData && !data.heroPowerPresets) {
+                throw new Error('Invalid data format');
+            }
+
+            // Confirm before overwriting
+            if (!confirm('⚠️ This will overwrite your current data. Are you sure you want to continue?')) {
+                return;
+            }
+
+            // Import each piece of data
+            if (data.damageCalculatorData) {
+                localStorage.setItem('damageCalculatorData', data.damageCalculatorData);
+            }
+            if (data.heroPowerPresets) {
+                localStorage.setItem('heroPowerPresets', data.heroPowerPresets);
+            }
+            if (data.theme) {
+                localStorage.setItem('theme', data.theme);
+            }
+
+            alert('✅ Data imported successfully! Refreshing page...');
+            location.reload();
+        } catch (err) {
+            console.error('Failed to import data:', err);
+            alert('❌ Failed to import data. Please make sure you copied valid data.');
+        }
+    }).catch(err => {
+        console.error('Failed to read clipboard:', err);
+        alert('❌ Failed to read clipboard. Please make sure you have data copied.');
+    });
+}
+
 // Attach save listeners to base setup inputs
 function attachSaveListeners() {
     // Attach to base setup inputs

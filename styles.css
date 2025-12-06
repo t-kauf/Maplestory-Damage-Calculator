@@ -798,6 +798,11 @@ select option {
     color: #fff;
 }
 
+.rarity-ancient {
+    background: #ff9500;
+    color: #fff;
+}
+
 .dps-positive {
     color: var(--accent-success);
     font-weight: 600;

@@ -5,11 +5,12 @@ const weaponRatesPerLevel = {
     'epic': { 't1': 0.5144, 't2': 0.6015, 't3': 0.4308, 't4': 0.3033 },
     'unique': { 't1': 1.5573, 't2': 2.7395, 't3': 0.8850, 't4': 0.6686 },
     'legendary': { 't1': 3.9490, 't2': 2.7297, 't3': 3.1824, 't4': 2.5734 },
-    'mystic': { 't1': null, 't2': null, 't3': null, 't4': 4.9322 }
+    'mystic': { 't1': 5.5, 't2': 4.2, 't3': 4.8, 't4': 4.9322 },
+    'ancient': { 't1': 6.5, 't2': 5.0, 't3': 5.5, 't4': 6.2 }
 };
 
 const tiers = ['t4', 't3', 't2', 't1'];
-const rarities = ['normal', 'rare', 'epic', 'unique', 'legendary', 'mystic'];
+const rarities = ['normal', 'rare', 'epic', 'unique', 'legendary', 'mystic', 'ancient'];
 
 const availableStats = [
     { value: 'attack', label: 'Attack' },
@@ -211,7 +212,8 @@ const rarityColors = {
     'Epic': '#9966ff',
     'Rare': '#6699ff',
     'Normal': '#ffffff',
-    'Mystic': '#ff3f42'
+    'Mystic': '#ff3f42',
+    'Ancient': '#ff9500'
 };
 
 // Global state variables

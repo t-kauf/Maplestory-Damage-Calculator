@@ -21,6 +21,10 @@
     <button class="theme-toggle" onclick="toggleTheme()" id="theme-toggle">🌙</button>
     <div class="container">
         <h1>Damage Calculator</h1>
+        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 15px;">
+            <button onclick="exportData()" style="background: var(--accent-primary); border: none; padding: 8px 16px; border-radius: 8px; color: white; cursor: pointer; font-size: 0.85em; font-weight: 600; box-shadow: 0 2px 8px var(--shadow);">📋 Copy Data</button>
+            <button onclick="importData()" style="background: var(--accent-secondary); border: none; padding: 8px 16px; border-radius: 8px; color: white; cursor: pointer; font-size: 0.85em; font-weight: 600; box-shadow: 0 2px 8px var(--shadow);">📥 Paste Data</button>
+        </div>
 
         <!-- First Tabbed Area: Character Setup -->
         <div class="stat-weights-container tab-container">
