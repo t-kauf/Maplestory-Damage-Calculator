@@ -26,6 +26,11 @@ function switchTab(group, tabName) {
 
     // Add active class to clicked button
     event.currentTarget.classList.add('active');
+
+    // Render content for specific tabs
+    if (group === 'analysis' && tabName === 'artifact-potential') {
+        renderArtifactPotential();
+    }
 }
 
 // Theme toggle functions

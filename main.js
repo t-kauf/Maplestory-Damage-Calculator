@@ -188,6 +188,8 @@ window.onload = function () {
     loadHeroPowerPresets();
     // Initialize Inner Ability Analysis
     initializeInnerAbilityAnalysis();
+    // Initialize Artifact Potential
+    initializeArtifactPotential();
     // Attach save listeners to all inputs
     attachSaveListeners();
     // Update weapon bonuses if data was loaded

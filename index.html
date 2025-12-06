@@ -155,14 +155,14 @@
             </div>
         </div>
 
-        <!-- Second Tabbed Area: Item Analysis -->
+        <!-- Second Tabbed Area: Character Optimization -->
         <div class="stat-weights-container tab-container">
-            <div class="stat-weights-header">Item Analysis</div>
+            <div class="stat-weights-header">Character Optimization</div>
             <div class="tab-buttons">
                 <button class="tab-button active" onclick="switchTab('analysis', 'item-comparison')">Item
                     Comparison</button>
-                <button class="tab-button" onclick="switchTab('analysis', 'inner-ability')">Inner Ability
-                    Analysis</button>
+                <button class="tab-button" onclick="switchTab('analysis', 'inner-ability')">Inner Ability</button>
+                <button class="tab-button" onclick="switchTab('analysis', 'artifact-potential')">Artifact Potential</button>
             </div>
 
             <!-- Item Comparison Tab -->
@@ -251,6 +251,13 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Artifact Potential Tab -->
+            <div id="analysis-artifact-potential" class="tab-content">
+                <div id="artifact-potential-container">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
         </div>
 
         <!-- Stat Damage Predictions -->
@@ -265,6 +272,7 @@
     <script src="storage.js"></script>
     <script src="ui.js"></script>
     <script src="inner-ability.js"></script>
+    <script src="artifact-potential.js"></script>
     <script src="main.js"></script>
 </body>
 
