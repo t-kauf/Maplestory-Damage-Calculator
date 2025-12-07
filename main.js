@@ -173,7 +173,6 @@ function calculate() {
     document.getElementById('results-container').innerHTML = resultsHTML || '<p style="text-align: center; color: #b3d9ff;">Add comparison items to see results</p>';
 
     // Calculate stat weights for base setup
-    console.log({baseStats})
     calculateStatWeights('base', baseStats);
 }
 
