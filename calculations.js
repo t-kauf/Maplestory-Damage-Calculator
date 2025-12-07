@@ -29,6 +29,7 @@ function calculateDamage(stats, monsterType) {
     const baseHitDamage = baseDamage *
         (1 + stats.statDamage / 100) * 1.004 *
         (1 + stats.damage / 100) *
+        (stats.finalDamage / 100) *
         (1 + monsterDamage / 100) *
         damageAmpMultiplier *
         defPenMultiplier;
@@ -118,6 +119,7 @@ function calculateStatWeights(setup, stats) {
         { key: 'skillCoeff', label: 'Skill Coefficient' },
         { key: 'skillMastery', label: 'Skill Mastery' },
         { key: 'damage', label: 'Damage' },
+        { key: 'finalDamage', label: 'Final Damage' },
         { key: 'bossDamage', label: 'Boss Damage' },
         { key: 'normalDamage', label: 'Monster Damage' },
         { key: 'damageAmp', label: 'Damage Amplification' },
@@ -205,16 +207,22 @@ function calculateStatWeights(setup, stats) {
     html += '</tr>';
 
     const multiplicativeStats = {
-        'attackSpeed': { denominator: 150, },
-        'defPen': { denominator: 100, }
+        'finalDamage': true 
+    };
+
+    const diminishingReturnStats = {
+        'attackSpeed': { denominator: 150 },
+        'defPen': { denominator: 100 }
     };
 
     // Percentage stats
     percentageStats.forEach(stat => {
         let labelContent = stat.label;
         if (multiplicativeStats[stat.key]) {
-            const info = multiplicativeStats[stat.key];
-            labelContent += ` <span class="info-icon" role="img" aria-label="Info" title="Increases to this stat are multiplicative rather than additive, but also have diminishing returns. A line item with 10% in this stat will translate to less than 10% increase on the stats page. Final increase = y% × (1 - x/${info.denominator}), where x is the current value and y is the increase amount.">ℹ️</span>`;
+            labelContent += ` <span class="info-icasdasdon" role="img" aria-label="Info" title="Increases to this stat are multiplicative rather than additive. This is our best guess at how ${stat.key} is calculated.">ℹ️</span>`;
+        } else if (diminishingReturnStats[stat.key]) {
+            const info = diminishingReturnStats[stat.key];
+            labelContent += ` <span class="info-icon" role="img" aria-label="Info" title="Increases to this stat are additive but have diminishing returns. Final increase = y% × (1 - x/${info.denominator}), where x is the current value and y is the increase amount.">ℹ️</span>`;
         }
 
         html += `<tr><td class="stat-name">${labelContent}</td>`;
@@ -222,13 +230,16 @@ function calculateStatWeights(setup, stats) {
         percentIncreases.forEach(increase => {
             const modifiedStats = { ...stats };
             const oldValue = stats[stat.key];
-
-            // Special handling for multiplicative stats with diminishing returns
             if (multiplicativeStats[stat.key]) {
-                const denominator = multiplicativeStats[stat.key].denominator;
+                // multiplicative
+                modifiedStats[stat.key] *= (1 + increase / 100);
+            } else if (diminishingReturnStats[stat.key]) {
+                // additive with diminishing returns
+                const denominator = diminishingReturnStats[stat.key].denominator;
                 const effectiveIncrease = increase * (1 - oldValue / denominator);
                 modifiedStats[stat.key] = oldValue + effectiveIncrease;
             } else {
+                // regular additive
                 modifiedStats[stat.key] = oldValue + increase;
             }
             const newValue = modifiedStats[stat.key];
@@ -237,8 +248,17 @@ function calculateStatWeights(setup, stats) {
             const baseDPS = stat.key === "bossDamage" ? baseBossDPS : baseNormalDPS;
             const gain = ((newDPS - baseDPS) / baseDPS * 100).toFixed(2);
 
+            let displayedOldValue = oldValue;
+            let displayedNewValue = newValue;
 
-            const tooltip = `+${increase}%\nOld: ${formatNumber(oldValue)}, New: ${formatNumber(newValue)}\nOld DPS: ${formatNumber(baseDPS)}, New DPS: ${formatNumber(newDPS)}\nGain: ${gain}%`;
+            // multiplicative stats are measured in terms of %x increase vs x% of the base
+            // e.g convert from 1.07 back to 7% for display
+            if (multiplicativeStats[stat.key]) {
+                displayedNewValue = (newValue * 100 - 100)
+                displayedOldValue = (oldValue * 100 - 100)
+            }
+
+            const tooltip = `+${increase}%\n Old: ${formatNumber(displayedOldValue)}, New: ${formatNumber(displayedNewValue)}\nOld DPS: ${formatNumber(baseDPS)}, New DPS: ${formatNumber(newDPS)}\nGain: ${gain}%`;
 
             html += `<td class="gain-cell" title="${tooltip}"><span class="gain-positive">+${gain}%</span></td>`;
         });
