@@ -21,8 +21,8 @@ function calculateDamage(stats, monsterType) {
     // Formula: 1.0542 + sqrt(damageAmp) / 50
     const damageAmpMultiplier = 1.05 + Math.sqrt(stats.damageAmp) / 50;
 
-    // NEW: Defense Penetration multiplier
-    const defPenMultiplier = 1 + (stats.defPen / 363);
+    // NEW: Defense Penetration multiplier (disabled - always 1)
+    const defPenMultiplier = 1;
 
     const monsterDamage = monsterType === 'boss' ? stats.bossDamage : stats.normalDamage;
 
@@ -126,7 +126,6 @@ function calculateStatWeights(setup, stats) {
         { key: 'bossDamage', label: 'Boss Damage' },
         { key: 'normalDamage', label: 'Monster Damage' },
         { key: 'damageAmp', label: 'Damage Amplification' },
-        { key: 'defPen', label: 'Defense Penetration' },
         { key: 'minDamage', label: 'Min Damage Multiplier' },
         { key: 'maxDamage', label: 'Max Damage Multiplier' },
         { key: 'critRate', label: 'Critical Rate' },
@@ -214,8 +213,7 @@ function calculateStatWeights(setup, stats) {
     };
 
     const diminishingReturnStats = {
-        'attackSpeed': { denominator: 150 },
-        'defPen': { denominator: 100 }
+        'attackSpeed': { denominator: 150 }
     };
 
     // Percentage stats

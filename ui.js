@@ -586,7 +586,7 @@ function displayResults(itemName, stats, uniqueId, isEquipped = false, equippedD
                         <span class="damage-label">Damage Amplification:</span>
                         <span class="damage-value">${stats.damageAmp.toFixed(2)}</span>
                     </div>
-                    <div class="damage-row">
+                    <div class="damage-row" style="display: none;">
                         <span class="damage-label">Defense Penetration:</span>
                         <span class="damage-value">${stats.defPen.toFixed(2)}%</span>
                     </div>
@@ -623,10 +623,6 @@ function displayResults(itemName, stats, uniqueId, isEquipped = false, equippedD
                     <div class="damage-row">
                         <span class="damage-label">Damage Amp Multiplier:</span>
                         <span class="damage-value">${bossResults.damageAmpMultiplier.toFixed(4)}x</span>
-                    </div>
-                    <div class="damage-row">
-                        <span class="damage-label">Defense Pen Multiplier:</span>
-                        <span class="damage-value">${bossResults.defPenMultiplier.toFixed(4)}x</span>
                     </div>
                     <div class="damage-row">
                         <span class="damage-label">Attack Speed Multiplier:</span>
