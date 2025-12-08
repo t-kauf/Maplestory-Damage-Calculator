@@ -213,7 +213,7 @@ const rarityColors = {
     'Rare': '#6699ff',
     'Normal': '#ffffff',
     'Mystic': '#ff3f42',
-    'Ancient': '#ff9500'
+    'Ancient': '#3882ff'
 };
 
 // Global state variables

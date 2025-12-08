@@ -48,6 +48,39 @@ function toggleTheme() {
         themeToggle.textContent = '🌙';
         localStorage.setItem('theme', 'light');
     }
+
+    // Re-initialize weapons to update Normal rarity color based on theme
+    const savedData = localStorage.getItem('damageCalculatorData');
+    initializeWeapons();
+
+    // Restore weapon values after re-initialization
+    if (savedData) {
+        const data = JSON.parse(savedData);
+        if (data.weapons) {
+            rarities.forEach(rarity => {
+                tiers.forEach(tier => {
+                    const key = `${rarity}-${tier}`;
+                    const weaponData = data.weapons[key];
+
+                    if (weaponData) {
+                        const inventoryInput = document.getElementById(`inventory-${rarity}-${tier}`);
+                        const equippedCheckbox = document.getElementById(`equipped-${rarity}-${tier}`);
+                        const equippedInput = document.getElementById(`equipped-attack-${rarity}-${tier}`);
+
+                        if (inventoryInput) inventoryInput.value = weaponData.inventoryAttack || '0';
+                        if (equippedCheckbox) {
+                            equippedCheckbox.checked = weaponData.equipped;
+                            if (weaponData.equipped) {
+                                handleEquippedChange(rarity, tier);
+                            }
+                        }
+                        if (equippedInput) equippedInput.value = weaponData.equippedAttack || '0';
+                    }
+                });
+            });
+            updateWeaponBonuses();
+        }
+    }
 }
 
 function loadTheme() {
@@ -348,7 +381,13 @@ function initializeWeapons() {
         tiers.forEach(tier => {
             const rate = weaponRatesPerLevel[rarity][tier];
             const rarityCapitalized = rarity.charAt(0).toUpperCase() + rarity.slice(1);
-            const rarityColor = rarityColors[rarityCapitalized] || '#ffffff';
+            let rarityColor = rarityColors[rarityCapitalized] || '#ffffff';
+
+            // For Normal rarity, use black in light theme and white in dark theme
+            if (rarityCapitalized === 'Normal') {
+                const currentTheme = document.body.getAttribute('data-theme');
+                rarityColor = currentTheme === 'light' ? '#000000' : '#ffffff';
+            }
 
             if (rate === null) {
                 html += `<div class="weapon-card" style="opacity: 0.4;">
