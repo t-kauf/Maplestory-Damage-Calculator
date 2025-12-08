@@ -347,14 +347,17 @@ function initializeWeapons() {
     rarities.forEach(rarity => {
         tiers.forEach(tier => {
             const rate = weaponRatesPerLevel[rarity][tier];
+            const rarityCapitalized = rarity.charAt(0).toUpperCase() + rarity.slice(1);
+            const rarityColor = rarityColors[rarityCapitalized] || '#ffffff';
+
             if (rate === null) {
                 html += `<div class="weapon-card" style="opacity: 0.4;">
-                    <div class="weapon-header">${tier.toUpperCase()} ${rarity.charAt(0).toUpperCase() + rarity.slice(1)}</div>
+                    <div class="weapon-header" style="color: ${rarityColor};">${tier.toUpperCase()} ${rarityCapitalized}</div>
                     <div style="text-align: center; color: var(--text-secondary); font-size: 0.8em; padding: 15px 0;">No data</div>
                 </div>`;
             } else {
                 html += `<div class="weapon-card" id="weapon-${rarity}-${tier}">
-                    <div class="weapon-header">${tier.toUpperCase()} ${rarity.charAt(0).toUpperCase() + rarity.slice(1)}</div>
+                    <div class="weapon-header" style="color: ${rarityColor};">${tier.toUpperCase()} ${rarityCapitalized}</div>
                     <input type="number" step="0.1" class="weapon-input" id="inventory-${rarity}-${tier}"
                            placeholder="Inventory %" value="0" onchange="updateWeaponBonuses()">
                     <div class="weapon-checkbox">
