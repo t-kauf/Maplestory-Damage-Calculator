@@ -5,41 +5,72 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Damage Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            light: '#007aff',
+                            dark: '#0a84ff'
+                        },
+                        secondary: {
+                            light: '#5856d6',
+                            dark: '#5e5ce6'
+                        },
+                        success: {
+                            light: '#34c759',
+                            dark: '#30d158'
+                        },
+                        warning: {
+                            light: '#ff9500',
+                            dark: '#ff9f0a'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
     <link rel="stylesheet" href="styles.css">
-	
+
 	<script async src="https://www.googletagmanager.com/gtag/js?id=G-GKDLXCWZ9R"></script>
 	<script>
 	window.dataLayer = window.dataLayer || [];
 	function gtag(){dataLayer.push(arguments);}
 	gtag('js', new Date());
-	
+
 	gtag('config', 'G-GKDLXCWZ9R');
 	</script>
 </head>
 
-<body data-theme="light">
-    <button class="theme-toggle" onclick="toggleTheme()" id="theme-toggle">🌙</button>
-    <div class="container">
-        <h1>Damage Calculator</h1>
-        <div style="display: flex; justify-content: flex-end; gap: 10px; margin-bottom: 15px;">
-            <button onclick="exportData()" style="background: var(--accent-primary); border: none; padding: 8px 16px; border-radius: 8px; color: white; cursor: pointer; font-size: 0.85em; font-weight: 600; box-shadow: 0 2px 8px var(--shadow);">📋 Copy Data</button>
-            <button onclick="importData()" style="background: var(--accent-secondary); border: none; padding: 8px 16px; border-radius: 8px; color: white; cursor: pointer; font-size: 0.85em; font-weight: 600; box-shadow: 0 2px 8px var(--shadow);">📥 Paste Data</button>
+<body class="bg-gray-50 dark:bg-black text-gray-900 dark:text-gray-100 min-h-screen p-5 transition-colors duration-300">
+    <div class="fixed top-5 right-5 z-50 flex gap-2 items-center">
+        <a href="https://paypal.me/freakehms" target="_blank" rel="noopener noreferrer" class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-full px-5 py-2.5 text-sm font-medium text-gray-600 dark:text-gray-400 opacity-70 hover:opacity-90 hover:-translate-y-0.5 transition-all duration-300 shadow-lg hover:shadow-xl">DONATE</a>
+        <button onclick="toggleTheme()" id="theme-toggle" class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-full px-5 py-2.5 text-xl hover:-translate-y-0.5 transition-all duration-300 shadow-lg hover:shadow-xl">🌙</button>
+    </div>
+    <div class="max-w-7xl mx-auto">
+        <h1 class="text-center mb-8 text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400 bg-clip-text text-transparent">Damage Calculator</h1>
+        <div class="flex flex-col sm:flex-row justify-end gap-2.5 mb-4">
+            <button onclick="exportData()" class="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow-md hover:shadow-lg transition-all">📋 Copy Data</button>
+            <button onclick="importData()" class="bg-purple-600 hover:bg-purple-700 dark:bg-purple-500 dark:hover:bg-purple-600 text-white px-4 py-2 rounded-lg font-semibold text-sm shadow-md hover:shadow-lg transition-all">📥 Paste Data</button>
         </div>
 
         <!-- First Tabbed Area: Character Setup -->
-        <div class="stat-weights-container tab-container">
-            <div class="stat-weights-header">Character Setup</div>
-            <div class="tab-buttons">
-                <button class="tab-button active" onclick="switchTab('setup', 'base-stats')">Base Stats</button>
-                <button class="tab-button" onclick="switchTab('setup', 'weapon-levels')">Weapon Levels</button>
-                <button class="tab-button" onclick="switchTab('setup', 'hero-power')">Hero Power Ability</button>
-                <button class="tab-button" onclick="switchTab('setup', 'equipment-slots')">Slot Scrolling</button>
+        <div class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-lg mb-5">
+            <div class="text-2xl mb-5 text-center text-blue-600 dark:text-blue-400 font-semibold">Character Setup</div>
+            <div class="flex flex-wrap gap-2.5 mb-5 border-b-2 border-gray-200/50 dark:border-gray-700/50 pb-0">
+                <button class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'base-stats')">Base Stats</button>
+                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'weapon-levels')">Weapon Levels</button>
+                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'hero-power')">Hero Power Ability</button>
+                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'equipment-slots')">Slot Scrolling</button>
             </div>
 
             <!-- Base Stats Tab -->
             <div id="setup-base-stats" class="tab-content active">
-                <div class="setup-panel" style="background: transparent; padding: 15px;">
-                    <div class="input-grid" style="grid-template-columns: repeat(4, 1fr); gap: 10px;">
+                <div class="bg-transparent p-4">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                         <div class="input-group">
                             <label>Attack</label>
                             <input type="number" id="attack-base" value="500">
@@ -130,7 +161,7 @@
                         <strong style="color: var(--accent-primary);">Instructions:</strong> For each weapon, enter the <strong>Inventory Attack %</strong> shown in the weapon UI. For your currently equipped weapon, check the <strong>Equipped</strong> box and also enter the <strong>Equipped Attack %</strong> (both values are visible when viewing that weapon).
                     </div>
                 </div>
-                <div id="weapons-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+                <div id="weapons-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2">
                     <!-- Weapons will be generated by JavaScript -->
                 </div>
                 <div
@@ -139,7 +170,7 @@
                         style="color: var(--text-secondary); font-size: 0.9em; text-align: center; margin-bottom: 15px; font-weight: 500;">
                         Applied to Attack row in Stat Damage Predictions below
                     </div>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; text-align: center;">
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
                         <div>
                             <div
                                 style="color: var(--accent-success); font-size: 0.95em; font-weight: 600; margin-bottom: 5px;">
@@ -179,7 +210,7 @@
                         <strong style="color: var(--accent-primary);">Equipment Slot Analysis:</strong> Track individual equipment slot values in isolation. Each slot's DPS gain is calculated by comparing damage WITH that slot's stats vs damage WITH zero stats from that slot.
                     </div>
                 </div>
-                <div id="equipment-slots-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px;">
+                <div id="equipment-slots-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Slot cards generated by JavaScript -->
                 </div>
                 <div style="margin-top: 20px; text-align: center;">
@@ -189,19 +220,18 @@
         </div>
 
         <!-- Second Tabbed Area: Character Optimization -->
-        <div class="stat-weights-container tab-container">
-            <div class="stat-weights-header">Character Optimization</div>
-            <div class="tab-buttons">
-                <button class="tab-button active" onclick="switchTab('analysis', 'item-comparison')">Item
-                    Comparison</button>
-                <button class="tab-button" onclick="switchTab('analysis', 'inner-ability')">Inner Ability</button>
-                <button class="tab-button" onclick="switchTab('analysis', 'artifact-potential')">Artifact Potential</button>
-                <button class="tab-button" onclick="switchTab('analysis', 'scroll-optimizer')">Scrolling</button>
+        <div class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-lg mb-5">
+            <div class="text-2xl mb-5 text-center text-blue-600 dark:text-blue-400 font-semibold">Character Optimization</div>
+            <div class="flex flex-wrap gap-2.5 mb-5 border-b-2 border-gray-200/50 dark:border-gray-700/50 pb-0">
+                <button class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('analysis', 'item-comparison')">Item Comparison</button>
+                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('analysis', 'inner-ability')">Inner Ability</button>
+                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('analysis', 'artifact-potential')">Artifact Potential</button>
+                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('analysis', 'scroll-optimizer')">Scrolling</button>
             </div>
 
             <!-- Item Comparison Tab -->
             <div id="analysis-item-comparison" class="tab-content active">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-5">
                     <!-- Equipped Item -->
                     <div>
                         <h3 style="color: var(--accent-success); margin-bottom: 8px; font-size: 1em; font-weight: 600;">
@@ -216,7 +246,7 @@
                                 <span style="color: var(--text-secondary); font-size: 0.8em;">(stats in base
                                     setup)</span>
                             </div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-2.5">
                                 <div class="input-group">
                                     <label>Name</label>
                                     <input type="text" id="equipped-name" value="Current Item" onchange="saveToLocalStorage()">
@@ -227,12 +257,12 @@
                                 </div>
                             </div>
                             <div id="equipped-stats-container"></div>
-                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
                                 <button onclick="addEquippedStat()"
-                                    style="background: var(--accent-success); border: none; padding: 10px 15px; border-radius: 10px; color: white; cursor: pointer; font-weight: 600; font-size: 0.9em; box-shadow: 0 2px 8px var(--shadow); transition: all 0.3s ease;">+
+                                    class="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white px-4 py-2.5 rounded-lg cursor-pointer font-semibold text-sm shadow-md hover:shadow-lg transition-all">+
                                     Add Stat</button>
                                 <button onclick="unequipItem()"
-                                    style="background: var(--accent-warning); border: none; padding: 10px 15px; border-radius: 10px; color: white; cursor: pointer; font-weight: 600; font-size: 0.9em; box-shadow: 0 2px 8px var(--shadow); transition: all 0.3s ease;">
+                                    class="bg-orange-500 hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 text-white px-4 py-2.5 rounded-lg cursor-pointer font-semibold text-sm shadow-md hover:shadow-lg transition-all">
                                     Unequip</button>
                             </div>
                         </div>
@@ -244,8 +274,7 @@
                             Comparison Items</h3>
                         <div id="comparison-items-container"
                             style="max-height: 400px; overflow-y: auto; margin-bottom: 10px;"></div>
-                        <button class="calculate-btn" onclick="addComparisonItem()"
-                            style="background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary)); padding: 10px 15px; font-size: 0.95em;">+
+                        <button class="calculate-btn" onclick="addComparisonItem()">+
                             Add Item</button>
                     </div>
                 </div>
@@ -257,17 +286,17 @@
                         style="color: var(--accent-primary); margin-bottom: 15px; font-size: 1.3em; font-weight: 600; text-align: center;">
                         Comparison Results</h3>
                     <div id="results-container"
-                        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 15px;">
+                        class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     </div>
                 </div>
             </div>
 
             <!-- Inner Ability Analysis Tab -->
             <div id="analysis-inner-ability" class="tab-content">
-                <div class="tab-buttons" style="border-bottom: 1px solid var(--border-color); margin-bottom: 20px;">
-                    <button class="tab-button active" onclick="switchInnerAbilityTab('preset-comparison')">Preset
+                <div class="flex flex-wrap gap-2.5 mb-5 border-b-2 border-gray-200/50 dark:border-gray-700/50 pb-0">
+                    <button class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchInnerAbilityTab('preset-comparison')">Preset
                         Comparison</button>
-                    <button class="tab-button" onclick="switchInnerAbilityTab('theoretical-best')">Theoretical
+                    <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchInnerAbilityTab('theoretical-best')">Theoretical
                         Best</button>
                 </div>
 
@@ -301,7 +330,7 @@
                     </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                     <div class="input-group">
                         <label>Spell Trace Budget</label>
                         <input type="number" id="scroll-spell-trace-budget" value="7000" min="500" max="50000" step="100">
@@ -329,6 +358,16 @@
                     </div>
                 </div>
 
+                <div style="background: rgba(0, 122, 255, 0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                    <label style="display: flex; align-items: center; cursor: pointer; font-size: 0.95em;">
+                        <input type="checkbox" id="scroll-enable-resets" checked style="margin-right: 8px; cursor: pointer;">
+                        <span style="color: var(--text-primary); font-weight: 600;">Enable Resets</span>
+                    </label>
+                    <div style="margin-top: 8px; padding: 8px; background: var(--background); border-radius: 6px; font-size: 0.85em; color: var(--text-secondary); line-height: 1.6;">
+                        When enabled, strategies will reset the item (costing 50 spell trace) if the result doesn't meet their criteria. When disabled, strategies will accept the first result regardless of outcome.
+                    </div>
+                </div>
+
                 <button class="calculate-btn" onclick="runScrollSimulation()" id="scroll-run-btn">Run Simulation</button>
 
                 <div id="scroll-progress-container" style="display: none; margin-top: 15px;">
@@ -345,8 +384,8 @@
         </div>
 
         <!-- Stat Damage Predictions -->
-        <div class="stat-weights-container">
-            <div class="stat-weights-header">Stat Damage Predictions (DPS Gain) - Base Setup</div>
+        <div class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-2xl p-6 shadow-lg mb-5">
+            <div class="text-2xl mb-5 text-center text-blue-600 dark:text-blue-400 font-semibold">Stat Damage Predictions (DPS Gain) - Base Setup</div>
             <div id="stat-weights-base"></div>
         </div>
     </div>

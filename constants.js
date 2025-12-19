@@ -48,6 +48,27 @@ const innerAbilityStats = [
 
 // Inner abilities data with min/max values per rarity
 const innerAbilitiesData = {
+	"Mystic": {
+		"Meso Drop": { "min": 9, "max": 15 },
+        "EXP Gain": { "min": 9, "max": 15 },
+        "Defense Penetration": { "min": 14, "max": 20 },
+        "Boss Monster Damage": { "min": 28, "max": 40 },
+        "Normal Monster Damage": { "min": 28, "max": 40 },
+        "Attack Speed": { "min": 15, "max": 20 },
+        "Damage Taken Decrease": { "min": 7, "max": 10 },
+        "Min Damage Multiplier": { "min": 28, "max": 40 },
+        "Max Damage Multiplier": { "min": 28, "max": 40 },
+        "Critical Rate": { "min": 15, "max": 20 },
+        "Critical Resistance": { "min": 22.5, "max": 30 },
+        "Damage": { "min": 28, "max": 40 },
+        "Debuff Tolerance": { "min": 18, "max": 25 },
+        "Main Stat": { "min": 1500, "max": 2500 },
+        "Max HP": { "min": 70000, "max": 115000 },
+        "Max MP": { "min": 900, "max": 1500 },
+        "Accuracy": { "min": 20, "max": 25 },
+        "Evasion": { "min": 20, "max": 25 },
+        "MP Recovery Per Sec": { "min": 80, "max": 150 }
+	},
     "Legendary": {
         "Meso Drop": { "min": 5, "max": 8 },
         "EXP Gain": { "min": 5, "max": 8 },

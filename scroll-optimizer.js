@@ -111,7 +111,7 @@ function attemptScrollRun(strategy, budget, traceUsed, scrolls) {
 }
 
 // Simulate with reset strategy
-function simulateScrollWithResets(strategy, budget, scrolls) {
+function simulateScrollWithResets(strategy, budget, scrolls, enableResets = true) {
     let traceUsed = 0;
     let resetCount = 0;
     let finalResult = null;
@@ -141,6 +141,11 @@ function simulateScrollWithResets(strategy, budget, scrolls) {
 
         traceUsed += result.attemptCost;
         finalResult = { ...result, traceUsed };
+
+        // If resets are disabled, always accept the first result
+        if (!enableResets) {
+            break;
+        }
 
         // Strategy decides whether to reset
         const shouldReset = strategy.shouldReset(result, traceUsed, budget);
@@ -639,6 +644,7 @@ async function runScrollSimulation() {
     const budget = parseInt(document.getElementById('scroll-spell-trace-budget').value);
     const numSimulations = parseInt(document.getElementById('scroll-simulations').value);
     const scrollLevel = document.querySelector('input[name="scroll-level"]:checked')?.value || '65';
+    const enableResets = document.getElementById('scroll-enable-resets')?.checked ?? true;
     const scrolls = scrollLevel === '65' ? SCROLLS_L65 : SCROLLS_L85;
 
     const button = document.getElementById('scroll-run-btn');
@@ -681,7 +687,7 @@ async function runScrollSimulation() {
         }
 
         for (const strategy of strategies) {
-            const result = simulateScrollWithResets(strategy, budget, scrolls);
+            const result = simulateScrollWithResets(strategy, budget, scrolls, enableResets);
 
             const data = results[strategy.id];
             data.attacks.push(result.totalAttack);
@@ -808,16 +814,15 @@ function displayScrollResults(results, budget, numSimulations) {
     top5.forEach(([strategyId, data], index) => {
         const isBest = strategyId === bestStrategy;
         const isActive = index === 0;
-        const activeStyle = isActive ?
-            'background: var(--accent-primary); color: white;' :
-            'background: transparent; color: var(--text-primary);';
+        const activeClass = isActive ?
+            'bg-blue-600 dark:bg-blue-500 text-white' :
+            'bg-transparent text-gray-900 dark:text-gray-100 hover:bg-blue-50 dark:hover:bg-blue-900/20';
 
         tableHTML += `
             <button
-                class="scroll-strategy-tab-btn ${isActive ? 'active-scroll-tab' : ''}"
+                class="scroll-strategy-tab-btn ${isActive ? 'active-scroll-tab' : ''} ${activeClass} px-5 py-3 border-none cursor-pointer font-semibold text-sm whitespace-nowrap transition-all"
                 data-strategy-id="${strategyId}"
-                onclick="switchScrollStrategyTab('${strategyId}')"
-                style="padding: 12px 20px; border: none; cursor: pointer; font-weight: 600; font-size: 0.9em; white-space: nowrap; transition: all 0.3s; ${activeStyle}">
+                onclick="switchScrollStrategyTab('${strategyId}')">
                 ${data.strategy.name}${isBest ? ' ⭐' : ''}
             </button>
         `;
@@ -921,8 +926,8 @@ function switchScrollStrategyTab(strategyId) {
     const allButtons = document.querySelectorAll('.scroll-strategy-tab-btn');
     allButtons.forEach(btn => {
         btn.classList.remove('active-scroll-tab');
-        btn.style.background = 'transparent';
-        btn.style.color = 'var(--text-primary)';
+        btn.classList.remove('bg-blue-600', 'dark:bg-blue-500', 'text-white');
+        btn.classList.add('bg-transparent', 'text-gray-900', 'dark:text-gray-100', 'hover:bg-blue-50', 'dark:hover:bg-blue-900/20');
     });
 
     // Show selected tab content
@@ -935,7 +940,7 @@ function switchScrollStrategyTab(strategyId) {
     const selectedButton = document.querySelector(`[data-strategy-id="${strategyId}"]`);
     if (selectedButton) {
         selectedButton.classList.add('active-scroll-tab');
-        selectedButton.style.background = 'var(--accent-primary)';
-        selectedButton.style.color = 'white';
+        selectedButton.classList.remove('bg-transparent', 'text-gray-900', 'dark:text-gray-100', 'hover:bg-blue-50', 'dark:hover:bg-blue-900/20');
+        selectedButton.classList.add('bg-blue-600', 'dark:bg-blue-500', 'text-white');
     }
 }

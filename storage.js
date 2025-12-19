@@ -178,13 +178,19 @@ function loadFromLocalStorage() {
                         const equippedInput = document.getElementById(`equipped-attack-${rarity}-${tier}`);
 
                         if (inventoryInput) inventoryInput.value = weaponData.inventoryAttack || '0';
+
+                        // Set the equipped attack value BEFORE calling handleEquippedChange
+                        // This ensures the value is set before the save is triggered
+                        if (equippedInput && weaponData.equippedAttack !== undefined) {
+                            equippedInput.value = weaponData.equippedAttack || '0';
+                        }
+
                         if (equippedCheckbox) {
                             equippedCheckbox.checked = weaponData.equipped;
                             if (weaponData.equipped) {
                                 handleEquippedChange(rarity, tier);
                             }
                         }
-                        if (equippedInput) equippedInput.value = weaponData.equippedAttack;
                     }
                 });
             });

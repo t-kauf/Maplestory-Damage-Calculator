@@ -230,7 +230,7 @@ function calculateBestCombinations() {
                 stat: statName,
                 rarity,
                 value: ranges.max,
-                rarityOrder: { 'Legendary': 3, 'Unique': 2, 'Epic': 1, 'Rare': 0, 'Normal': 0 }[rarity] || 0
+                rarityOrder: { 'Mystic': 5, 'Ancient': 4, 'Legendary': 3, 'Unique': 2, 'Epic': 1, 'Rare': 0, 'Normal': 0 }[rarity] || 0
             });
         });
     });
@@ -280,12 +280,16 @@ function calculateBestCombinations() {
     // Scenario 2: Best with Unique + Legendary (up to 5 lines)
     const uniqueLegendary = findBestLines(5, ['Unique', 'Legendary']);
 
-    // Scenario 3: Best with all rarities (6 lines)
-    const allRarities = findBestLines(6, ['Legendary', 'Unique', 'Epic', 'Rare', 'Normal']);
+    // Scenario 3: Best with Unique + Legendary + Mystic (up to 6 lines)
+    const mysticLegendaryUnique = findBestLines(6, ['Mystic', 'Legendary', 'Unique']);
+
+    // Scenario 4: Best with all rarities (6 lines)
+    const allRarities = findBestLines(6, ['Mystic', 'Legendary', 'Unique', 'Epic', 'Rare', 'Normal']);
 
     return {
         uniqueOnly,
         uniqueLegendary,
+        mysticLegendaryUnique,
         allRarities
     };
 }
@@ -482,6 +486,22 @@ function renderTheoreticalBest() {
         const percent = (combinations.uniqueLegendary.totalDPS / baselineBossDps) * 100;
         const cls = percent >= 0 ? 'dps-positive' : 'dps-negative';
         html += `<div class="combo-total">Total DPS Gain: +${formatNumber(combinations.uniqueLegendary.totalDPS)} <span class="${cls}" style="font-weight:600; opacity:0.85; font-size:0.95em;"> (${percent >= 0 ? '+' : ''}${percent.toFixed(2)}%)</span></div>`;
+    }
+    html += '</div>';
+
+    // Mystic + Legendary + Unique
+    html += '<div class="combo-card">';
+    html += '<h4><span class="rarity-badge rarity-mystic">M</span><span class="rarity-badge rarity-legendary">L</span><span class="rarity-badge rarity-unique">U</span>Best with Mystic + Legendary + Unique (Up to 6 Lines)</h4>';
+    html += '<div class="combo-lines">';
+    combinations.mysticLegendaryUnique.lines.forEach(line => {
+        const rarityClass = `rarity-${line.rarity.toLowerCase()}`;
+        html += `<div class="combo-line"><span class="rarity-badge ${rarityClass}">${line.rarity.charAt(0)}</span>${line.stat}: ${line.value}</div>`;
+    });
+    html += '</div>';
+    {
+        const percent = (combinations.mysticLegendaryUnique.totalDPS / baselineBossDps) * 100;
+        const cls = percent >= 0 ? 'dps-positive' : 'dps-negative';
+        html += `<div class="combo-total">Total DPS Gain: +${formatNumber(combinations.mysticLegendaryUnique.totalDPS)} <span class="${cls}" style="font-weight:600; opacity:0.85; font-size:0.95em;"> (${percent >= 0 ? '+' : ''}${percent.toFixed(2)}%)</span></div>`;
     }
     html += '</div>';
 

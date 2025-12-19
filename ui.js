@@ -35,18 +35,18 @@ function switchTab(group, tabName) {
 
 // Theme toggle functions
 function toggleTheme() {
-    const body = document.body;
+    const html = document.documentElement;
     const themeToggle = document.getElementById('theme-toggle');
-    const currentTheme = body.getAttribute('data-theme');
+    const isDark = html.classList.contains('dark');
 
-    if (currentTheme === 'light') {
-        body.setAttribute('data-theme', 'dark');
-        themeToggle.textContent = '☀️';
-        localStorage.setItem('theme', 'dark');
-    } else {
-        body.setAttribute('data-theme', 'light');
+    if (isDark) {
+        html.classList.remove('dark');
         themeToggle.textContent = '🌙';
         localStorage.setItem('theme', 'light');
+    } else {
+        html.classList.add('dark');
+        themeToggle.textContent = '☀️';
+        localStorage.setItem('theme', 'dark');
     }
 
     // Re-initialize weapons to update Normal rarity color based on theme
@@ -68,13 +68,19 @@ function toggleTheme() {
                         const equippedInput = document.getElementById(`equipped-attack-${rarity}-${tier}`);
 
                         if (inventoryInput) inventoryInput.value = weaponData.inventoryAttack || '0';
+
+                        // Set the equipped attack value BEFORE calling handleEquippedChange
+                        // This ensures the value is set before the save is triggered
+                        if (equippedInput && weaponData.equippedAttack !== undefined) {
+                            equippedInput.value = weaponData.equippedAttack || '0';
+                        }
+
                         if (equippedCheckbox) {
                             equippedCheckbox.checked = weaponData.equipped;
                             if (weaponData.equipped) {
                                 handleEquippedChange(rarity, tier);
                             }
                         }
-                        if (equippedInput) equippedInput.value = weaponData.equippedAttack || '0';
                     }
                 });
             });
@@ -85,11 +91,16 @@ function toggleTheme() {
 
 function loadTheme() {
     const savedTheme = localStorage.getItem('theme') || 'light';
-    const body = document.body;
+    const html = document.documentElement;
     const themeToggle = document.getElementById('theme-toggle');
 
-    body.setAttribute('data-theme', savedTheme);
-    themeToggle.textContent = savedTheme === 'dark' ? '☀️' : '🌙';
+    if (savedTheme === 'dark') {
+        html.classList.add('dark');
+        if (themeToggle) themeToggle.textContent = '☀️';
+    } else {
+        html.classList.remove('dark');
+        if (themeToggle) themeToggle.textContent = '🌙';
+    }
 }
 
 // Equip/Unequip functionality
@@ -267,7 +278,7 @@ function addEquippedStat() {
             <label style="font-size: 0.8em;">Value</label>
             <input type="number" step="0.1" id="equipped-stat-${equippedStatCount}-value" value="0" onchange="saveToLocalStorage()">
         </div>
-        <button onclick="removeEquippedStat(${equippedStatCount})" style="background: var(--accent-warning); border: none; padding: 8px 12px; border-radius: 8px; color: white; cursor: pointer; font-size: 0.85em; height: 38px; transition: all 0.3s ease; font-weight: 600;">✕</button>
+        <button onclick="removeEquippedStat(${equippedStatCount})" class="bg-orange-500 hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 text-white px-3 py-2 rounded-lg cursor-pointer text-sm font-semibold transition-all" style="height: 38px;">✕</button>
     `;
 
     container.appendChild(statDiv);
@@ -291,12 +302,12 @@ function addComparisonItem() {
     itemDiv.id = `comparison-item-${comparisonItemCount}`;
     itemDiv.style.marginBottom = '12px';
     itemDiv.innerHTML = `
-        <div style="background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.05)); border: 1px solid var(--accent-primary); border-radius: 12px; padding: 15px; box-shadow: 0 4px 16px var(--shadow);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <span style="color: var(--accent-primary); font-weight: 600; font-size: 0.95em;">Item #${comparisonItemCount}</span>
-                <button onclick="removeComparisonItem(${comparisonItemCount})" style="background: var(--accent-warning); border: none; padding: 6px 12px; border-radius: 8px; color: white; cursor: pointer; font-size: 0.85em; transition: all 0.3s ease; font-weight: 600;">✕</button>
+        <div class="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-500 dark:border-blue-400 rounded-xl p-4 shadow-lg">
+            <div class="flex justify-between items-center mb-2.5">
+                <span class="text-blue-600 dark:text-blue-400 font-semibold text-base">Item #${comparisonItemCount}</span>
+                <button onclick="removeComparisonItem(${comparisonItemCount})" class="bg-orange-500 hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 text-white px-3 py-1.5 rounded-lg cursor-pointer text-sm font-semibold transition-all">✕</button>
             </div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-2.5">
                 <div class="input-group">
                     <label>Name</label>
                     <input type="text" id="item-${comparisonItemCount}-name" value="Item ${comparisonItemCount}" onchange="saveToLocalStorage()">
@@ -307,9 +318,9 @@ function addComparisonItem() {
                 </div>
             </div>
             <div id="item-${comparisonItemCount}-stats-container"></div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
-                <button onclick="addComparisonItemStat(${comparisonItemCount})" style="background: var(--accent-primary); border: none; padding: 10px 15px; border-radius: 10px; color: white; cursor: pointer; font-weight: 600; font-size: 0.9em; box-shadow: 0 2px 8px var(--shadow); transition: all 0.3s ease;">+ Add Stat</button>
-                <button onclick="equipItem(${comparisonItemCount})" style="background: var(--accent-success); border: none; padding: 10px 15px; border-radius: 10px; color: white; cursor: pointer; font-weight: 600; font-size: 0.9em; box-shadow: 0 2px 8px var(--shadow); transition: all 0.3s ease;">Equip</button>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2">
+                <button onclick="addComparisonItemStat(${comparisonItemCount})" class="bg-blue-600 hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600 text-white px-4 py-2.5 rounded-lg cursor-pointer font-semibold text-sm shadow-md hover:shadow-lg transition-all">+ Add Stat</button>
+                <button onclick="equipItem(${comparisonItemCount})" class="bg-green-600 hover:bg-green-700 dark:bg-green-500 dark:hover:bg-green-600 text-white px-4 py-2.5 rounded-lg cursor-pointer font-semibold text-sm shadow-md hover:shadow-lg transition-all">Equip</button>
             </div>
         </div>
     `;
@@ -357,7 +368,7 @@ function addComparisonItemStat(itemId) {
             <label style="font-size: 0.8em;">Value</label>
             <input type="number" step="0.1" id="item-${itemId}-stat-${statId}-value" value="0" onchange="saveToLocalStorage()">
         </div>
-        <button onclick="removeComparisonItemStat(${itemId}, ${statId})" style="background: var(--accent-warning); border: none; padding: 8px 12px; border-radius: 8px; color: white; cursor: pointer; font-size: 0.85em; height: 38px; transition: all 0.3s ease; font-weight: 600;">✕</button>
+        <button onclick="removeComparisonItemStat(${itemId}, ${statId})" class="bg-orange-500 hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 text-white px-3 py-2 rounded-lg cursor-pointer text-sm font-semibold transition-all" style="height: 38px;">✕</button>
     `;
 
     container.appendChild(statDiv);
@@ -397,17 +408,23 @@ function initializeWeapons() {
             } else {
                 html += `<div class="weapon-card" id="weapon-${rarity}-${tier}">
                     <div class="weapon-header" style="color: ${rarityColor};">${tier.toUpperCase()} ${rarityCapitalized}</div>
-                    <input type="number" step="0.1" class="weapon-input" id="inventory-${rarity}-${tier}"
-                           placeholder="Inventory %" value="0" onchange="updateWeaponBonuses()">
+                    <div class="input-group" style="margin-bottom: 8px;">
+                        <label style="margin-bottom: 4px;">Inventory:</label>
+                        <input type="number" step="0.1" class="weapon-input" id="inventory-${rarity}-${tier}"
+                               placeholder="0.0%" value="0" onchange="updateWeaponBonuses()">
+                    </div>
                     <div class="weapon-checkbox">
                         <input type="checkbox" id="equipped-${rarity}-${tier}"
                                onchange="handleEquippedChange('${rarity}', '${tier}')">
                         <label>Equipped</label>
                     </div>
                     <div id="equipped-input-${rarity}-${tier}" style="display: none;">
-                        <input type="number" step="0.1" class="weapon-input"
-                               id="equipped-attack-${rarity}-${tier}"
-                               placeholder="Equipped %" value="0" onchange="updateWeaponBonuses()">
+                        <div class="input-group" style="margin-top: 8px;">
+                            <label style="margin-bottom: 4px;">Equipped (✓):</label>
+                            <input type="number" step="0.1" class="weapon-input"
+                                   id="equipped-attack-${rarity}-${tier}"
+                                   placeholder="0.0%" value="0" onchange="updateWeaponBonuses()">
+                        </div>
                     </div>
                 </div>`;
             }
@@ -505,15 +522,16 @@ function displayResults(itemName, stats, uniqueId, isEquipped = false, equippedD
     const bossResults = calculateDamage(stats, 'boss');
     const normalResults = calculateDamage(stats, 'normal');
 
-    const borderColor = isEquipped ? 'var(--accent-success)' : 'var(--accent-primary)';
+    const borderColor = isEquipped ? '#10b981' : '#2563eb';
+    const darkBorderColor = isEquipped ? '#34d399' : '#60a5fa';
     const bgGradient = isEquipped
-        ? 'linear-gradient(135deg, rgba(52, 199, 89, 0.1), rgba(0, 122, 255, 0.05))'
-        : 'linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.05))';
+        ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(37, 99, 235, 0.05))'
+        : 'linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(88, 86, 214, 0.05))';
 
     const getPercentChangeDisplay = (currentValue, referenceValue) => {
         if (!referenceValue || referenceValue === 0) return '';
         const changePercentage = ((currentValue - referenceValue) / referenceValue) * 100;
-        const changeColor = changePercentage >= 0 ? 'var(--accent-success)' : 'var(--accent-warning)';
+        const changeColor = changePercentage >= 0 ? '#10b981' : '#f59e0b';
         const changeSign = changePercentage >= 0 ? '+' : '';
         return `<span style="color: ${changeColor}; font-weight: 600; margin-left: 8px; font-size: 0.85em;">(${changeSign}${changePercentage.toFixed(2)}%)</span>`;
     };
@@ -524,14 +542,15 @@ function displayResults(itemName, stats, uniqueId, isEquipped = false, equippedD
     const normalDpsPercentChjange = equippedDamageValues ? getPercentChangeDisplay(normalResults.dps, equippedDamageValues.dpsNormal) : '';
 
     const html = `
-        <div style="background: ${bgGradient}; border: 2px solid ${borderColor}; border-radius: 16px; padding: 20px; box-shadow: 0 6px 24px var(--shadow); transition: all 0.3s ease;">
+        <div class="result-panel" style="background: ${bgGradient}; border: 2px solid ${borderColor}; border-radius: 16px; padding: 20px; box-shadow: 0 6px 24px rgba(0, 0, 0, 0.1); transition: all 0.3s ease;">
             <h3 style="color: ${borderColor}; margin-bottom: 15px; text-align: center; font-size: 1.2em; font-weight: 600;">${itemName}</h3>
+
         <div class="expected-damage">
             <div class="label">Expected Damage (Boss)</div>
             <div class="value">${formatNumber(bossResults.expectedDamage)}${expectedBossDamagePercentChange}</div>
         </div>
 
-        <div class="expected-damage" style="margin-top: 10px; background: rgba(67, 233, 123, 0.3);">
+        <div class="expected-damage" style="margin-top: 10px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(37, 99, 235, 0.2));">
             <div class="label">DPS (Boss)</div>
             <div class="value">${formatNumber(bossResults.dps)}${bossDpsPercentChange}</div>
         </div>
@@ -541,7 +560,7 @@ function displayResults(itemName, stats, uniqueId, isEquipped = false, equippedD
             <div class="value">${formatNumber(normalResults.expectedDamage)}${expectedNormalDamagePercentChange}</div>
         </div>
 
-        <div class="expected-damage" style="margin-top: 10px; background: rgba(67, 233, 123, 0.3);">
+        <div class="expected-damage" style="margin-top: 10px; background: linear-gradient(135deg, rgba(16, 185, 129, 0.25), rgba(37, 99, 235, 0.2));">
             <div class="label">DPS (Normal)</div>
             <div class="value">${formatNumber(normalResults.dps)}${normalDpsPercentChjange}</div>
         </div>
