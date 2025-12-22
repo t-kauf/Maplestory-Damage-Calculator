@@ -63,6 +63,7 @@ function attemptScrollRun(strategy, budget, traceUsed, scrolls) {
     let failedSlots = 0;
     let attemptCost = 0;
     const slotResults = [];
+    let earlyReset = false;
 
     for (let slot = 1; slot <= NUM_SLOTS; slot++) {
         const scrollType = strategy.selectScroll(slot, successfulSlots, failedSlots, traceUsed + attemptCost, budget);
@@ -98,6 +99,19 @@ function attemptScrollRun(strategy, budget, traceUsed, scrolls) {
         } else {
             failedSlots++;
         }
+
+        // Check for early reset after this slot (if strategy supports it)
+        if (strategy.shouldResetEarly) {
+            const shouldResetEarly = strategy.shouldResetEarly(slotResults, slot, successfulSlots, failedSlots);
+            if (shouldResetEarly) {
+                earlyReset = true;
+                // Mark remaining slots as unfunded
+                for (let s = slot + 1; s <= NUM_SLOTS; s++) {
+                    slotResults.push({ slot: s, success: false, unfunded: true });
+                }
+                break;
+            }
+        }
     }
 
     return {
@@ -106,12 +120,13 @@ function attemptScrollRun(strategy, budget, traceUsed, scrolls) {
         successfulSlots,
         failedSlots,
         attemptCost,
-        slotResults
+        slotResults,
+        earlyReset
     };
 }
 
 // Simulate with reset strategy
-function simulateScrollWithResets(strategy, budget, scrolls, enableResets = true) {
+function simulateScrollWithResets(strategy, budget, scrolls) {
     let traceUsed = 0;
     let resetCount = 0;
     let finalResult = null;
@@ -142,13 +157,14 @@ function simulateScrollWithResets(strategy, budget, scrolls, enableResets = true
         traceUsed += result.attemptCost;
         finalResult = { ...result, traceUsed };
 
-        // If resets are disabled, always accept the first result
-        if (!enableResets) {
-            break;
+        // Check if early reset was triggered (takes priority)
+        let shouldReset = false;
+        if (result.earlyReset) {
+            shouldReset = true;
+        } else {
+            // Otherwise, strategy decides whether to reset based on final result
+            shouldReset = strategy.shouldReset(result, traceUsed, budget);
         }
-
-        // Strategy decides whether to reset
-        const shouldReset = strategy.shouldReset(result, traceUsed, budget);
 
         if (!shouldReset) {
             break;
@@ -166,291 +182,283 @@ function simulateScrollWithResets(strategy, budget, scrolls, enableResets = true
     return { ...finalResult, resetCount, attemptCount };
 }
 
-// Create strategy variations for L65 scrolls only
-//
-// POTENTIAL REDUNDANCIES TO WATCH FOR:
-// - "Slot 10 Priority" vs "70% L65 - Reset <7": Slot 10 Priority adds an extra condition,
-//   but might perform very similarly in practice
-// - "First 2 30% then Bonus 10" vs "First 2 30% then Bonus 5&10": Similar strategies,
-//   one just adds slot 5
-// - Multiple damage amp thresholds (0.3%, 0.5%, 0.7%, 1.0%): Will behave similarly
-//   but optimal threshold depends on budget
-//
+// Create strategy variations for L65 scrolls - Lock-in optimized strategies
 function createL65Strategies() {
     const strategies = [];
 
-    // 70% L65 strategies with various reset thresholds (all reset if first 2 fail)
-    const thresholds70 = [10, 9, 8, 7, 6];
-    for (const threshold of thresholds70) {
-        strategies.push({
-            id: `L65_70_reset_${threshold}`,
-            name: `70% L65 - Reset <${threshold}`,
-            description: `70% L65 scrolls. Reset if fewer than ${threshold} slots succeed OR if first 2 slots fail.`,
-            selectScroll: () => 'L65_70',
-            shouldReset: (result) => {
-                // Reset if first 2 slots both failed
-                if (result.slotResults.length >= 2) {
-                    const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                    if (first2Failed) return true;
-                }
-                return result.successfulSlots < threshold;
-            }
-        });
-    }
-
-    // 30% L65 strategies with various reset thresholds
-    const thresholds30 = [10, 9, 8, 7, 6, 5, 4];
-    for (const threshold of thresholds30) {
-        strategies.push({
-            id: `L65_30_reset_${threshold}`,
-            name: `30% L65 - Reset <${threshold}`,
-            description: `30% L65 scrolls. Reset if fewer than ${threshold} slots succeed.`,
-            selectScroll: () => 'L65_30',
-            shouldReset: (result) => result.successfulSlots < threshold
-        });
-    }
-
-    // First 2 slots 30% strategies - reset if first 2 don't both succeed
+    // Secure Slot 1 with 30% (Base strategy)
     strategies.push({
-        id: 'first2_30_bonus_both',
-        name: 'First 2 30% then Bonus 5&10',
-        description: '30% L65 on slots 1-2. Reset if both first 2 fail. Then 30% on slots 5&10, 70% on others. Reset if <8 total success.',
+        id: 'L65_slot1_30_lock',
+        name: 'Secure Slot 1 (30%)',
+        description: 'Reset until 30% succeeds on slot 1. Then 30% on slots 5&10, 70% on others. Low budget efficient.',
         selectScroll: (slot) => {
-            if (slot <= 2) return 'L65_30';
+            if (slot === 1) return 'L65_30';
             if (slot === 5 || slot === 10) return 'L65_30';
             return 'L65_70';
         },
-        shouldReset: (result) => {
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
             }
-            return result.successfulSlots < 8;
-        }
+            return false;
+        },
+        shouldReset: (result) => false
     });
 
+    // 70% Base with 30% on Bonus Slots Only
     strategies.push({
-        id: 'first2_30_then_70',
-        name: 'First 2 30% then 70%',
-        description: '30% L65 on slots 1-2. Reset if both first 2 fail. Then 70% L65 on remaining slots. Reset if <8 total success.',
-        selectScroll: (slot) => (slot <= 2) ? 'L65_30' : 'L65_70',
-        shouldReset: (result) => {
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
-            }
-            return result.successfulSlots < 8;
-        }
-    });
-
-    strategies.push({
-        id: 'first2_30_then_70_strict',
-        name: 'First 2 30% then 70% (Strict)',
-        description: '30% L65 on slots 1-2. Reset if ANY of first 2 fail. Then 70% L65 on remaining. Reset if <9 total success.',
-        selectScroll: (slot) => (slot <= 2) ? 'L65_30' : 'L65_70',
-        shouldReset: (result) => {
-            if (result.slotResults.length >= 1 && !result.slotResults[0].success) return true;
-            if (result.slotResults.length >= 2 && !result.slotResults[1].success) return true;
-            return result.successfulSlots < 9;
-        }
-    });
-
-    strategies.push({
-        id: 'first2_30_bonus10_only',
-        name: 'First 2 30% then Bonus 10',
-        description: '30% L65 on slots 1-2. Reset if both fail. Then 30% on slot 10, 70% on others. Reset if <8 success.',
+        id: 'L65_70_bonus_30',
+        name: '70% Base + Bonus 30%',
+        description: '70% L65 on all slots except 5&10, which use 30% (42% and 52% success rates). No early resets.',
         selectScroll: (slot) => {
-            if (slot <= 2) return 'L65_30';
+            if (slot === 5 || slot === 10) return 'L65_30';
+            return 'L65_70';
+        },
+        shouldReset: (result) => false
+    });
+
+    // Secure Slot 10 with 30% (Best bonus slot)
+    strategies.push({
+        id: 'L65_slot10_30_lock',
+        name: 'Secure Slot 10 (30%)',
+        description: 'Reset until 30% succeeds on slot 10 (52% with +20% bonus). Then 30% on slots 1&5, 70% on others.',
+        selectScroll: (slot) => {
+            if (slot === 10) return 'L65_30';
+            if (slot === 1 || slot === 5) return 'L65_30';
+            return 'L65_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            if (currentSlot === 10 && slotResults.length >= 10) {
+                const slot10 = slotResults[9];
+                if (!slot10.success && !slot10.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: (result) => false
+    });
+
+    // Secure Slot 5 with 30%
+    strategies.push({
+        id: 'L65_slot5_30_lock',
+        name: 'Secure Slot 5 (30%)',
+        description: 'Reset until 30% succeeds on slot 5 (42% with +10% bonus). Then 30% on slots 1&10, 70% on others.',
+        selectScroll: (slot) => {
+            if (slot === 5) return 'L65_30';
+            if (slot === 1 || slot === 10) return 'L65_30';
+            return 'L65_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            if (currentSlot === 5 && slotResults.length >= 5) {
+                const slot5 = slotResults[4];
+                if (!slot5.success && !slot5.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: (result) => false
+    });
+
+    // Secure Two Slots: 1 + 10
+    strategies.push({
+        id: 'L65_slot1_10_double_lock',
+        name: 'Secure Slots 1+10 (30%)',
+        description: 'Reset until slot 1 succeeds, then reset until slot 10 succeeds (both 30%). Then 30% on slot 5, 70% on others. High damage floor.',
+        selectScroll: (slot) => {
+            if (slot === 1 || slot === 10) return 'L65_30';
+            if (slot === 5) return 'L65_30';
+            return 'L65_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            // Reset if slot 1 fails
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
+            }
+            // Reset if slot 10 fails (after slot 1 succeeded)
+            if (currentSlot === 10 && slotResults.length >= 10) {
+                const slot1 = slotResults[0];
+                const slot10 = slotResults[9];
+                if (slot1.success && !slot10.success && !slot10.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: (result) => false
+    });
+
+    // Secure Two Slots: 1 + 5
+    strategies.push({
+        id: 'L65_slot1_5_double_lock',
+        name: 'Secure Slots 1+5 (30%)',
+        description: 'Reset until slot 1 succeeds, then reset until slot 5 succeeds (both 30%). Then 30% on slot 10, 70% on others. Medium budget.',
+        selectScroll: (slot) => {
+            if (slot === 1 || slot === 5) return 'L65_30';
             if (slot === 10) return 'L65_30';
             return 'L65_70';
         },
-        shouldReset: (result) => {
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            // Reset if slot 1 fails
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
             }
-            return result.successfulSlots < 8;
+            // Reset if slot 5 fails (after slot 1 succeeded)
+            if (currentSlot === 5 && slotResults.length >= 5) {
+                const slot1 = slotResults[0];
+                const slot5 = slotResults[4];
+                if (slot1.success && !slot5.success && !slot5.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: (result) => false
+    });
+
+    // Secure All Three Key Slots
+    strategies.push({
+        id: 'L65_triple_lock_1_5_10',
+        name: 'Secure All Three 30% (1+5+10)',
+        description: 'Reset until slots 1, 5, and 10 all succeed sequentially (all 30%). 70% on others. High budget, guarantees 3x 30% success.',
+        selectScroll: (slot) => {
+            if (slot === 1 || slot === 5 || slot === 10) return 'L65_30';
+            return 'L65_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            // Reset if slot 1 fails
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
+            }
+            // Reset if slot 5 fails (after slot 1 succeeded)
+            if (currentSlot === 5 && slotResults.length >= 5) {
+                const slot1 = slotResults[0];
+                const slot5 = slotResults[4];
+                if (slot1.success && !slot5.success && !slot5.unfunded) {
+                    return true;
+                }
+            }
+            // Reset if slot 10 fails (after slots 1 and 5 succeeded)
+            if (currentSlot === 10 && slotResults.length >= 10) {
+                const slot1 = slotResults[0];
+                const slot5 = slotResults[4];
+                const slot10 = slotResults[9];
+                if (slot1.success && slot5.success && !slot10.success && !slot10.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: (result) => false
+    });
+
+    // Secure Slot 1, then All 30%
+    strategies.push({
+        id: 'L65_slot1_lock_all_30',
+        name: 'Secure Slot 1 (30%) + All 30%',
+        description: 'Reset until slot 1 succeeds with 30%, then use 30% L65 for ALL remaining slots. High damage amp potential, high budget required.',
+        selectScroll: (slot) => 'L65_30',
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: (result) => false
+    });
+
+    // Secure Slot 1 + Require Damage Amp
+    strategies.push({
+        id: 'L65_slot1_lock_amp_0_5',
+        name: 'Secure Slot 1 (30%) + 0.5% Amp',
+        description: 'Reset until slot 1 succeeds with 30%, then 30% on slots 5&10, 70% elsewhere. Also reset if total damage amp < 0.5%. High budget.',
+        selectScroll: (slot) => {
+            if (slot === 1) return 'L65_30';
+            if (slot === 5 || slot === 10) return 'L65_30';
+            return 'L65_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: (result) => {
+            return result.totalDamageAmp < 0.5;
         }
     });
 
-    // Mixed strategies using bonus slots (original)
+    // Secure Slot 1 + Require Bonus Success
     strategies.push({
-        id: 'bonus_both',
-        name: 'Bonus Slots 5&10',
-        description: '30% L65 on slots 5 and 10 (bonus slots), 70% L65 on others. Reset if <8 success OR first 2 slots fail.',
-        selectScroll: (slot) => (slot === 5 || slot === 10) ? 'L65_30' : 'L65_70',
-        shouldReset: (result) => {
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
+        id: 'L65_slot1_lock_bonus_retry',
+        name: 'Secure Slot 1 (30%) + Bonus Retry',
+        description: 'Reset until slot 1 succeeds with 30%, then 30% on slots 5&10, 70% elsewhere. Also reset if both bonus slots (5&10) fail. Medium budget.',
+        selectScroll: (slot) => {
+            if (slot === 1) return 'L65_30';
+            if (slot === 5 || slot === 10) return 'L65_30';
+            return 'L65_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
             }
-            return result.successfulSlots < 8;
-        }
-    });
-
-    strategies.push({
-        id: 'bonus_10',
-        name: 'Bonus Slot 10 Only',
-        description: '30% L65 on slot 10 only, 70% L65 on others. Reset if <8 success OR first 2 slots fail.',
-        selectScroll: (slot) => (slot === 10) ? 'L65_30' : 'L65_70',
+            return false;
+        },
         shouldReset: (result) => {
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
-            }
-            return result.successfulSlots < 8;
-        }
-    });
-
-    // Damage amp focused strategy
-    strategies.push({
-        id: 'damage_amp_hunter',
-        name: 'Damage Amp Hunter',
-        description: '30% L65 scrolls. Reset if damage amp < 0.5%.',
-        selectScroll: () => 'L65_30',
-        shouldReset: (result) => result.totalDamageAmp < 0.5
-    });
-
-    // Slot 10 priority strategy (NOTE: May be redundant with 70% L65 - Reset <7)
-    strategies.push({
-        id: 'slot10_priority',
-        name: 'Slot 10 Priority',
-        description: '70% L65 scrolls. Reset if <7 success OR slot 10 fails OR first 2 slots fail.',
-        selectScroll: () => 'L65_70',
-        shouldReset: (result) => {
-            // Reset if first 2 slots both failed
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
-            }
-            if (result.successfulSlots < 7) return true;
+            // Reset if both slot 5 and slot 10 failed
+            const slot5 = result.slotResults.find(s => s.slot === 5);
             const slot10 = result.slotResults.find(s => s.slot === 10);
-            if (slot10 && !slot10.success && !slot10.unfunded) return true;
+            if (slot5 && slot10 && !slot5.unfunded && !slot10.unfunded) {
+                if (!slot5.success && !slot10.success) {
+                    return true;
+                }
+            }
             return false;
         }
     });
 
-    // NEW: Progressive fallback - start aggressive, fall back on failure
+    // Secure Slot 1 + Require High Success Rate
     strategies.push({
-        id: 'progressive_fallback',
-        name: 'Progressive Fallback',
-        description: '30% L65 until first failure, then switch to 70% L65 for remaining slots. Reset if <7 success or first 2 fail.',
-        selectScroll: (slot, successfulSlots, failedSlots) => {
-            return failedSlots === 0 ? 'L65_30' : 'L65_70';
+        id: 'L65_slot1_lock_8plus',
+        name: 'Secure Slot 1 (30%) + 8+ Successes',
+        description: 'Reset until slot 1 succeeds with 30%, then 30% on slots 5&10, 70% elsewhere. Also reset if <8 total successes. Very high budget.',
+        selectScroll: (slot) => {
+            if (slot === 1) return 'L65_30';
+            if (slot === 5 || slot === 10) return 'L65_30';
+            return 'L65_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
+            }
+            return false;
         },
         shouldReset: (result) => {
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
-            }
-            return result.successfulSlots < 7;
-        }
-    });
-
-    // NEW: First 3 slots 30% - more early aggression
-    strategies.push({
-        id: 'first3_30_then_70',
-        name: 'First 3 30% then 70%',
-        description: '30% L65 on slots 1-3. Reset if first 2 fail. Then 70% L65. Reset if <8 success.',
-        selectScroll: (slot) => (slot <= 3) ? 'L65_30' : 'L65_70',
-        shouldReset: (result) => {
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
-            }
-            return result.successfulSlots < 8;
-        }
-    });
-
-    // NEW: First 4 slots 30% - even more early aggression
-    strategies.push({
-        id: 'first4_30_then_70',
-        name: 'First 4 30% then 70%',
-        description: '30% L65 on slots 1-4. Reset if first 2 fail. Then 70% L65. Reset if <8 success.',
-        selectScroll: (slot) => (slot <= 4) ? 'L65_30' : 'L65_70',
-        shouldReset: (result) => {
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
-            }
-            return result.successfulSlots < 8;
-        }
-    });
-
-    // NEW: Slot 5 priority - leverage the +10% bonus
-    strategies.push({
-        id: 'slot5_priority_30',
-        name: 'Slot 5 Priority 30%',
-        description: '30% L65 on slot 5 (+10% bonus = 42% success), 70% elsewhere. Reset if slot 5 fails OR <8 success or first 2 fail.',
-        selectScroll: (slot) => (slot === 5) ? 'L65_30' : 'L65_70',
-        shouldReset: (result) => {
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
-            }
-            const slot5 = result.slotResults.find(s => s.slot === 5);
-            if (slot5 && !slot5.success && !slot5.unfunded) return true;
-            return result.successfulSlots < 8;
-        }
-    });
-
-    // NEW: Only use 30% on the two bonus slots (5 and 10)
-    strategies.push({
-        id: 'only_bonus_slots_30',
-        name: 'Only Bonus Slots 30%',
-        description: '30% L65 ONLY on slots 5&10 (best success rates: 42% and 52%), 70% everywhere else. Reset if either bonus slot fails OR <8 success or first 2 fail.',
-        selectScroll: (slot) => (slot === 5 || slot === 10) ? 'L65_30' : 'L65_70',
-        shouldReset: (result) => {
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
-            }
-            // Reset if slot 5 or 10 failed
-            const slot5 = result.slotResults.find(s => s.slot === 5);
-            const slot10 = result.slotResults.find(s => s.slot === 10);
-            if (slot5 && !slot5.success && !slot5.unfunded) return true;
-            if (slot10 && !slot10.success && !slot10.unfunded) return true;
-            return result.successfulSlots < 8;
-        }
-    });
-
-    // NEW: Different damage amp thresholds for high-budget optimization
-    strategies.push({
-        id: 'damage_amp_0_3',
-        name: 'Damage Amp 0.3%+',
-        description: '30% L65 scrolls. Reset if damage amp < 0.3%. Good for medium budgets.',
-        selectScroll: () => 'L65_30',
-        shouldReset: (result) => result.totalDamageAmp < 0.3
-    });
-
-    strategies.push({
-        id: 'damage_amp_0_7',
-        name: 'Damage Amp 0.7%+',
-        description: '30% L65 scrolls. Reset if damage amp < 0.7%. Good for high budgets.',
-        selectScroll: () => 'L65_30',
-        shouldReset: (result) => result.totalDamageAmp < 0.7
-    });
-
-    strategies.push({
-        id: 'damage_amp_1_0',
-        name: 'Damage Amp 1.0%+',
-        description: '30% L65 scrolls. Reset if damage amp < 1.0%. Very aggressive, needs high budget.',
-        selectScroll: () => 'L65_30',
-        shouldReset: (result) => result.totalDamageAmp < 1.0
-    });
-
-    // NEW: First slot 30% only - minimal risk, small upside
-    strategies.push({
-        id: 'first1_30_only',
-        name: 'First Slot 30% Only',
-        description: '30% L65 on slot 1 only, 70% on rest. Reset if slot 1 fails OR <8 success or first 2 fail.',
-        selectScroll: (slot) => (slot === 1) ? 'L65_30' : 'L65_70',
-        shouldReset: (result) => {
-            if (result.slotResults.length >= 1 && !result.slotResults[0].success) return true;
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
-            }
             return result.successfulSlots < 8;
         }
     });
@@ -462,154 +470,266 @@ function createL65Strategies() {
 function createL85Strategies() {
     const strategies = [];
 
-    // 70% L85 strategies
-    const thresholds70 = [10, 9, 8, 7, 6];
-    for (const threshold of thresholds70) {
-        strategies.push({
-            id: `L85_70_reset_${threshold}`,
-            name: `70% L85 - Reset <${threshold}`,
-            description: `70% L85 scrolls. Reset if fewer than ${threshold} slots succeed OR if first 2 slots fail.`,
-            selectScroll: () => 'L85_70',
-            shouldReset: (result) => {
-                if (result.slotResults.length >= 2) {
-                    const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                    if (first2Failed) return true;
+    // Base strategy: Slot 1 15% Lock-In
+    strategies.push({
+        id: 'L85_slot1_15_lock',
+        name: 'Slot 1 15% Lock-In',
+        description: '15% L85 on slot 1, reset until success. Then 15% on slots 5&10, 70% on others. No resets after slot 1 succeeds.',
+        selectScroll: (slot) => {
+            if (slot === 1) return 'L85_15';
+            if (slot === 5 || slot === 10) return 'L85_15';
+            return 'L85_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
                 }
-                return result.successfulSlots < threshold;
             }
-        });
-    }
-
-    // 30% L85 strategies
-    const thresholds30 = [10, 9, 8, 7, 6, 5, 4];
-    for (const threshold of thresholds30) {
-        strategies.push({
-            id: `L85_30_reset_${threshold}`,
-            name: `30% L85 - Reset <${threshold}`,
-            description: `30% L85 scrolls. Reset if fewer than ${threshold} slots succeed.`,
-            selectScroll: () => 'L85_30',
-            shouldReset: (result) => result.successfulSlots < threshold
-        });
-    }
-
-    // 15% L85 strategies
-    const thresholds15 = [10, 9, 8, 7, 6, 5];
-    for (const threshold of thresholds15) {
-        strategies.push({
-            id: `L85_15_reset_${threshold}`,
-            name: `15% L85 - Reset <${threshold}`,
-            description: `15% L85 scrolls (very risky). Reset if fewer than ${threshold} slots succeed. High budget required.`,
-            selectScroll: () => 'L85_15',
-            shouldReset: (result) => result.successfulSlots < threshold
-        });
-    }
-
-    // Mixed strategies
-    strategies.push({
-        id: 'L85_bonus_15_on_slots',
-        name: 'Bonus Slots 15%',
-        description: '15% L85 on slots 5&10 (bonus = 27% & 37% success), 70% L85 elsewhere. Reset if either bonus fails OR <7 success or first 2 fail.',
-        selectScroll: (slot) => (slot === 5 || slot === 10) ? 'L85_15' : 'L85_70',
-        shouldReset: (result) => {
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
-            }
-            const slot5 = result.slotResults.find(s => s.slot === 5);
-            const slot10 = result.slotResults.find(s => s.slot === 10);
-            if (slot5 && !slot5.success && !slot5.unfunded) return true;
-            if (slot10 && !slot10.success && !slot10.unfunded) return true;
-            return result.successfulSlots < 7;
-        }
+            return false;
+        },
+        shouldReset: (result) => false
     });
 
+    // Slot 10 Lock-In (highest bonus slot)
     strategies.push({
-        id: 'L85_first2_30_then_70',
-        name: 'First 2 30% then 70%',
-        description: '30% L85 on slots 1-2. Reset if both first 2 fail. Then 70% L85. Reset if <8 success.',
-        selectScroll: (slot) => (slot <= 2) ? 'L85_30' : 'L85_70',
-        shouldReset: (result) => {
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
+        id: 'L85_slot10_15_lock',
+        name: 'Slot 10 15% Lock-In',
+        description: '15% L85 on slot 10 first (37% with bonus), reset until success. Then 15% on slots 1&5, 70% on others.',
+        selectScroll: (slot) => {
+            if (slot === 10) return 'L85_15';
+            if (slot === 1 || slot === 5) return 'L85_15';
+            return 'L85_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            if (currentSlot === 10 && slotResults.length >= 10) {
+                const slot10 = slotResults[9];
+                if (!slot10.success && !slot10.unfunded) {
+                    return true;
+                }
             }
-            return result.successfulSlots < 8;
-        }
+            return false;
+        },
+        shouldReset: (result) => false
     });
 
+    // Slot 5 Lock-In (medium bonus slot)
     strategies.push({
-        id: 'L85_progressive_30_to_70',
-        name: 'Progressive 30% to 70%',
-        description: '30% L85 until first failure, then switch to 70% L85. Reset if <7 success or first 2 fail.',
-        selectScroll: (slot, successfulSlots, failedSlots) => {
-            return failedSlots === 0 ? 'L85_30' : 'L85_70';
+        id: 'L85_slot5_15_lock',
+        name: 'Slot 5 15% Lock-In',
+        description: '15% L85 on slot 5 first (27% with bonus), reset until success. Then 15% on slots 1&10, 70% on others.',
+        selectScroll: (slot) => {
+            if (slot === 5) return 'L85_15';
+            if (slot === 1 || slot === 10) return 'L85_15';
+            return 'L85_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            if (currentSlot === 5 && slotResults.length >= 5) {
+                const slot5 = slotResults[4];
+                if (!slot5.success && !slot5.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: (result) => false
+    });
+
+    // Double Lock: Slot 1 + Slot 10
+    strategies.push({
+        id: 'L85_slot1_10_double_lock',
+        name: 'Slot 1+10 Double Lock',
+        description: 'Lock slot 1, then lock slot 10 (both 15%). Then 15% on slot 5, 70% on others. Very high damage floor.',
+        selectScroll: (slot) => {
+            if (slot === 1 || slot === 10) return 'L85_15';
+            if (slot === 5) return 'L85_15';
+            return 'L85_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            // Reset if slot 1 fails
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
+            }
+            // Reset if slot 10 fails (after slot 1 succeeded)
+            if (currentSlot === 10 && slotResults.length >= 10) {
+                const slot1 = slotResults[0];
+                const slot10 = slotResults[9];
+                if (slot1.success && !slot10.success && !slot10.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: (result) => false
+    });
+
+    // Slot 1 Lock + All 30%
+    strategies.push({
+        id: 'L85_slot1_lock_then_30',
+        name: 'Slot 1 Lock + All 30%',
+        description: 'Lock slot 1 with 15%, then use 30% L85 for all remaining slots. Higher risk/reward for high budgets.',
+        selectScroll: (slot) => {
+            if (slot === 1) return 'L85_15';
+            return 'L85_30';
+        },
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: (result) => false
+    });
+
+    // Slot 1 Lock + Bonus Retry
+    strategies.push({
+        id: 'L85_slot1_lock_bonus_retry',
+        name: 'Slot 1 Lock + Bonus Retry',
+        description: 'Lock slot 1, then 15% on slots 5&10, 70% elsewhere. Also reset if both bonus slots (5&10) fail. High budget.',
+        selectScroll: (slot) => {
+            if (slot === 1) return 'L85_15';
+            if (slot === 5 || slot === 10) return 'L85_15';
+            return 'L85_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
+            }
+            return false;
         },
         shouldReset: (result) => {
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
-            }
-            return result.successfulSlots < 7;
-        }
-    });
-
-    strategies.push({
-        id: 'L85_slot10_15_priority',
-        name: 'Slot 10 15% Priority',
-        description: '15% L85 on slot 10 (+20% bonus = 37% success), 70% L85 elsewhere. Reset if slot 10 fails OR <7 success or first 2 fail.',
-        selectScroll: (slot) => (slot === 10) ? 'L85_15' : 'L85_70',
-        shouldReset: (result) => {
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
-            }
-            const slot10 = result.slotResults.find(s => s.slot === 10);
-            if (slot10 && !slot10.success && !slot10.unfunded) return true;
-            return result.successfulSlots < 7;
-        }
-    });
-
-    // Damage amp strategies
-    strategies.push({
-        id: 'L85_damage_amp_1_5',
-        name: 'Damage Amp 1.5%+',
-        description: '30% L85 scrolls. Reset if damage amp < 1.5%. Good for medium budgets.',
-        selectScroll: () => 'L85_30',
-        shouldReset: (result) => result.totalDamageAmp < 1.5
-    });
-
-    strategies.push({
-        id: 'L85_damage_amp_2_0',
-        name: 'Damage Amp 2.0%+',
-        description: '30% L85 scrolls. Reset if damage amp < 2.0%. Good for high budgets.',
-        selectScroll: () => 'L85_30',
-        shouldReset: (result) => result.totalDamageAmp < 2.0
-    });
-
-    strategies.push({
-        id: 'L85_damage_amp_3_0',
-        name: 'Damage Amp 3.0%+',
-        description: '15% L85 scrolls. Reset if damage amp < 3.0%. Very aggressive, needs very high budget.',
-        selectScroll: () => 'L85_15',
-        shouldReset: (result) => result.totalDamageAmp < 3.0
-    });
-
-    strategies.push({
-        id: 'L85_bonus_30_only',
-        name: 'Only Bonus Slots 30%',
-        description: '30% L85 ONLY on slots 5&10, 70% everywhere else. Reset if either bonus slot fails OR <8 success or first 2 fail.',
-        selectScroll: (slot) => (slot === 5 || slot === 10) ? 'L85_30' : 'L85_70',
-        shouldReset: (result) => {
-            if (result.slotResults.length >= 2) {
-                const first2Failed = !result.slotResults[0].success && !result.slotResults[1].success;
-                if (first2Failed) return true;
-            }
+            // Reset if both slot 5 and slot 10 failed
             const slot5 = result.slotResults.find(s => s.slot === 5);
             const slot10 = result.slotResults.find(s => s.slot === 10);
-            if (slot5 && !slot5.success && !slot5.unfunded) return true;
-            if (slot10 && !slot10.success && !slot10.unfunded) return true;
-            return result.successfulSlots < 8;
+            if (slot5 && slot10 && !slot5.unfunded && !slot10.unfunded) {
+                if (!slot5.success && !slot10.success) {
+                    return true;
+                }
+            }
+            return false;
         }
+    });
+
+    // Slot 1 Lock + High Success Requirement
+    strategies.push({
+        id: 'L85_slot1_lock_7plus',
+        name: 'Slot 1 Lock + 7+ Successes',
+        description: 'Lock slot 1, then 15% on slots 5&10, 70% elsewhere. Reset if <7 total successes. Very high budget.',
+        selectScroll: (slot) => {
+            if (slot === 1) return 'L85_15';
+            if (slot === 5 || slot === 10) return 'L85_15';
+            return 'L85_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: (result) => {
+            return result.successfulSlots < 7;
+        }
+    });
+
+    // Double Lock: Slot 1 + Slot 5
+    strategies.push({
+        id: 'L85_slot1_5_double_lock',
+        name: 'Slot 1+5 Double Lock',
+        description: 'Lock slot 1, then lock slot 5 (both 15%). Then 15% on slot 10, 70% on others. High damage floor.',
+        selectScroll: (slot) => {
+            if (slot === 1 || slot === 5) return 'L85_15';
+            if (slot === 10) return 'L85_15';
+            return 'L85_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            // Reset if slot 1 fails
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
+            }
+            // Reset if slot 5 fails (after slot 1 succeeded)
+            if (currentSlot === 5 && slotResults.length >= 5) {
+                const slot1 = slotResults[0];
+                const slot5 = slotResults[4];
+                if (slot1.success && !slot5.success && !slot5.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: (result) => false
+    });
+
+    // Triple Lock: All bonus slots
+    strategies.push({
+        id: 'L85_triple_lock_1_5_10',
+        name: 'Triple Lock 1+5+10',
+        description: 'Lock slots 1, 5, and 10 sequentially (all 15%). 70% on others. Extremely high budget, guaranteed 3x 15% success.',
+        selectScroll: (slot) => {
+            if (slot === 1 || slot === 5 || slot === 10) return 'L85_15';
+            return 'L85_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            // Reset if slot 1 fails
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
+            }
+            // Reset if slot 5 fails (after slot 1 succeeded)
+            if (currentSlot === 5 && slotResults.length >= 5) {
+                const slot1 = slotResults[0];
+                const slot5 = slotResults[4];
+                if (slot1.success && !slot5.success && !slot5.unfunded) {
+                    return true;
+                }
+            }
+            // Reset if slot 10 fails (after slots 1 and 5 succeeded)
+            if (currentSlot === 10 && slotResults.length >= 10) {
+                const slot1 = slotResults[0];
+                const slot5 = slotResults[4];
+                const slot10 = slotResults[9];
+                if (slot1.success && slot5.success && !slot10.success && !slot10.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: (result) => false
+    });
+
+    // Slot 1 Lock + All 15% (Ultra Aggressive)
+    strategies.push({
+        id: 'L85_slot1_lock_all_15',
+        name: 'Slot 1 Lock + All 15%',
+        description: 'Lock slot 1, then use 15% L85 for ALL remaining slots. Ultra-aggressive, extreme budget required.',
+        selectScroll: (slot) => 'L85_15',
+        shouldResetEarly: (slotResults, currentSlot, successfulSlots, failedSlots) => {
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: (result) => false
     });
 
     return strategies;
@@ -644,7 +764,6 @@ async function runScrollSimulation() {
     const budget = parseInt(document.getElementById('scroll-spell-trace-budget').value);
     const numSimulations = parseInt(document.getElementById('scroll-simulations').value);
     const scrollLevel = document.querySelector('input[name="scroll-level"]:checked')?.value || '65';
-    const enableResets = document.getElementById('scroll-enable-resets')?.checked ?? true;
     const scrolls = scrollLevel === '65' ? SCROLLS_L65 : SCROLLS_L85;
 
     const button = document.getElementById('scroll-run-btn');
@@ -687,7 +806,7 @@ async function runScrollSimulation() {
         }
 
         for (const strategy of strategies) {
-            const result = simulateScrollWithResets(strategy, budget, scrolls, enableResets);
+            const result = simulateScrollWithResets(strategy, budget, scrolls);
 
             const data = results[strategy.id];
             data.attacks.push(result.totalAttack);
@@ -887,9 +1006,54 @@ function displayScrollResults(results, budget, numSimulations) {
                     <div style="font-weight: 600; color: var(--text-primary); margin-bottom: 8px;">
                         Attack Distribution (across ${numSimulations.toLocaleString()} simulations):
                     </div>
-                    <div style="font-family: monospace; font-size: 0.9em; color: var(--text-secondary);">
+                    <div style="font-family: monospace; font-size: 0.9em; color: var(--text-secondary); margin-bottom: 12px;">
                         10th percentile: ${p10} | Median: ${p50} | 90th percentile: ${p90}
                     </div>
+                    ${(() => {
+                        // Create histogram bins (groups of 50 attack)
+                        const binSize = 50;
+                        const maxAttack = Math.max(...data.attacks);
+                        const numBins = Math.ceil(maxAttack / binSize) + 1;
+                        const bins = new Array(numBins).fill(0);
+
+                        // Count simulations in each bin
+                        data.attacks.forEach(attack => {
+                            const binIndex = Math.floor(attack / binSize);
+                            bins[binIndex]++;
+                        });
+
+                        // Find max count for scaling
+                        const maxCount = Math.max(...bins);
+
+                        // Generate histogram HTML
+                        let histogramHTML = '<div style="font-size: 0.85em; color: var(--text-secondary); margin-top: 8px;">';
+
+                        // Only show bins that have at least 1 simulation
+                        bins.forEach((count, index) => {
+                            if (count > 0) {
+                                const rangeStart = index * binSize;
+                                const rangeEnd = (index + 1) * binSize;
+                                const percentage = (count / numSimulations * 100).toFixed(1);
+                                const barWidth = (count / maxCount * 100).toFixed(1);
+
+                                histogramHTML +=
+                                    '<div style="display: flex; align-items: center; margin-bottom: 4px;">' +
+                                        '<div style="width: 100px; text-align: right; padding-right: 8px; font-family: monospace;">' +
+                                            rangeStart + '-' + rangeEnd + ':' +
+                                        '</div>' +
+                                        '<div style="flex: 1; background: #e0e0e0; border-radius: 3px; height: 20px; position: relative;">' +
+                                            '<div style="background: linear-gradient(90deg, #007AFF, #34C759); width: ' + barWidth + '%; height: 100%; border-radius: 3px; transition: width 0.3s;"></div>' +
+                                        '</div>' +
+                                        '<div style="width: 80px; padding-left: 8px; font-family: monospace; font-size: 0.9em;">' +
+                                            count + ' (' + percentage + '%)' +
+                                        '</div>' +
+                                    '</div>';
+                            }
+                        });
+
+                        histogramHTML += '</div>';
+                        return histogramHTML;
+                    })()}
                 </div>
 
                 <div style="background: rgba(0, 122, 255, 0.05); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color);">
