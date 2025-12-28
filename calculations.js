@@ -19,9 +19,14 @@ function calculateDamage(stats, monsterType) {
     // Step 2: Calculate Base Hit Damage
     const damageAmpMultiplier = 1 + stats.damageAmp / 100;
  
-    // NEW: Defense Penetration multiplier (disabled - always 1)
-    const defPenMultiplier = 1; // TODO: (1 - stage's defense * (1 - stats.defPen))
-    const damageReduction = 1; // TODO: 1 - stage's damage reduction
+    // Get selected stage's defense values
+    const stageDefense = getSelectedStageDefense();
+
+    // Defense Penetration multiplier: 1 - (defense% * (1 - defPen%))
+    const defPenMultiplier = 1 - (stageDefense.defense / 100) * (1 - stats.defPen / 100);
+
+    // Damage Reduction: 1 - damageReduction%
+    const damageReduction = 1 - (stageDefense.damageReduction / 100);
  
     const monsterDamage = monsterType === 'boss' ? stats.bossDamage : stats.normalDamage;
  
@@ -54,7 +59,10 @@ function calculateDamage(stats, monsterType) {
     const expectedDamage = nonCritAvg * (1 - critRate) + critAvg * critRate;
  
     // Step 6: Calculate DPS
-    const attackSpeedMultiplier = 1 + (stats.attackSpeed / 100);
+    // Attack speed uses formula: AS = 150(1 - ∏(1 - s/150)) with hard cap at 150%
+    // Any attack speed over 150% is capped and ignored
+    const cappedAttackSpeed = Math.min(stats.attackSpeed, 150);
+    const attackSpeedMultiplier = 1 + (cappedAttackSpeed / 100);
     const dps = expectedDamage * attackSpeedMultiplier;
  
     return {
@@ -176,7 +184,8 @@ function calculateStatWeights(setup, stats) {
         { key: 'maxDamage', label: 'Max Damage Multiplier' },
         { key: 'critRate', label: 'Critical Rate' },
         { key: 'critDamage', label: 'Critical Damage' },
-        { key: 'attackSpeed', label: 'Attack Speed' }
+        { key: 'attackSpeed', label: 'Attack Speed' },
+        { key: 'defPen', label: 'Defense Penetration' }
     ];
 
     const percentIncreases = [1, 5, 10, 25, 50, 75];
@@ -210,7 +219,7 @@ function calculateStatWeights(setup, stats) {
     html += '</tr>';
  
     // Attack row
-    html += `<tr><td class="stat-name">Attack</td>`;
+    html += `<tr><td class="stat-name"><button onclick="toggleStatChart('${setup}', 'attack', 'Attack', true)" style="background: none; border: none; cursor: pointer; font-size: 1.2em; margin-right: 8px; color: var(--accent-primary);" title="Toggle graph">📊</button>Attack</td>`;
     attackIncreases.forEach(increase => {
         const modifiedStats = { ...stats };
         const oldValue = stats.attack;
@@ -226,7 +235,8 @@ function calculateStatWeights(setup, stats) {
         html += `<td class="gain-cell" title="${tooltip}"><span class="gain-positive">+${gain}%</span></td>`;
     });
     html += '</tr>';
- 
+    html += `<tr id="chart-row-${setup}-attack" style="display: none;"><td colspan="7" style="padding: 20px; background: var(--background);"><canvas id="chart-${setup}-attack"></canvas></td></tr>`;
+
     // Main Stat increments row
     html += '<tr style="background: rgba(79, 195, 247, 0.15);"><td style="color: #4fc3f7; font-weight: bold;"></td>';
     mainStatIncreases.forEach(inc => {
@@ -235,7 +245,7 @@ function calculateStatWeights(setup, stats) {
     html += '</tr>';
  
     // Main Stat row
-    html += `<tr><td class="stat-name">Main Stat (100 = 1% Stat Dmg)</td>`;
+    html += `<tr><td class="stat-name"><button onclick="toggleStatChart('${setup}', 'mainStat', 'Main Stat', true)" style="background: none; border: none; cursor: pointer; font-size: 1.2em; margin-right: 8px; color: var(--accent-primary);" title="Toggle graph">📊</button>Main Stat (100 = 1% Stat Dmg)</td>`;
     mainStatIncreases.forEach(increase => {
         const modifiedStats = { ...stats };
         const oldValue = stats.statDamage;
@@ -251,7 +261,8 @@ function calculateStatWeights(setup, stats) {
         html += `<td class="gain-cell" title="${tooltip}"><span class="gain-positive">+${gain}%</span></td>`;
     });
     html += '</tr>';
- 
+    html += `<tr id="chart-row-${setup}-mainStat" style="display: none;"><td colspan="7" style="padding: 20px; background: var(--background);"><canvas id="chart-${setup}-mainStat"></canvas></td></tr>`;
+
     html += '</tbody></table>';
     html += '</div>';
  
@@ -282,7 +293,7 @@ function calculateStatWeights(setup, stats) {
             labelContent += ` <span class="info-icon" role="img" aria-label="Info" title="Increases to this stat are multiplicative, but have diminishing returns.">ℹ️</span>`;
         }
  
-        html += `<tr><td class="stat-name">${labelContent}</td>`;
+        html += `<tr><td class="stat-name"><button onclick="toggleStatChart('${setup}', '${stat.key}', '${stat.label}', false)" style="background: none; border: none; cursor: pointer; font-size: 1.2em; margin-right: 8px; color: var(--accent-primary);" title="Toggle graph">📊</button>${labelContent}</td>`;
  
         percentIncreases.forEach(increase => {
             const modifiedStats = { ...stats };
@@ -291,6 +302,7 @@ function calculateStatWeights(setup, stats) {
                 modifiedStats[stat.key] = (((1 + oldValue / 100) * (1 + increase / 100)) - 1) * 100;
             } else if (diminishingReturnStats[stat.key]) {
                 const factor = diminishingReturnStats[stat.key].denominator;
+                // Use the formula to combine the current value with the new source
                 modifiedStats[stat.key] = (1 - (1 - oldValue / factor) * (1 - increase / factor)) * factor;
             } else {
                 modifiedStats[stat.key] = oldValue + increase;
@@ -305,68 +317,184 @@ function calculateStatWeights(setup, stats) {
  
             html += `<td class="gain-cell" title="${tooltip}"><span class="gain-positive">+${gain}%</span></td>`;
         });
- 
+
         html += '</tr>';
+        html += `<tr id="chart-row-${setup}-${stat.key}" style="display: none;"><td colspan="7" style="padding: 20px; background: var(--background);"><canvas id="chart-${setup}-${stat.key}"></canvas></td></tr>`;
     });
  
     html += '</tbody></table>';
     html += '</div>';
  
-    // ========== TABLE 3: STAT EQUIVALENCE ==========
-    html += '<div style="margin-bottom: 20px;">';
-    html += '<h3 style="color: var(--accent-success); margin-bottom: 10px; font-size: 1.1em; font-weight: 600;">Stat Equivalence to Attack</h3>';
-    html += '<p style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 15px;">How much of each percentage stat equals the same DPS gain as gaining attack?</p>';
-    html += '<table class="stat-weight-table">';
-    html += '<thead><tr><th>Percentage Stat</th>';
- 
-    // Reference attack amounts for equivalence
-    const referenceAttacks = [500, 1000, 2500];
-    const attackGains = [];
- 
-    referenceAttacks.forEach(attackInc => {
-        const modifiedStats = { ...stats };
-        const effectiveIncrease = attackInc * (1 + weaponAttackBonus / 100);
-        modifiedStats.attack = stats.attack + effectiveIncrease;
-        const newDPS = calculateDamage(modifiedStats, 'boss').dps;
-        const gain = ((newDPS - baseBossDPS) / baseBossDPS * 100);
-        attackGains.push(gain);
-        html += `<th>≈ +${formatNumber(attackInc)} Attack</th>`;
-    });
- 
-    html += '</tr></thead><tbody>';
- 
-    // For each percentage stat, find equivalent
-    percentageStats.forEach(stat => {
-        html += `<tr><td class="stat-name">${stat.label}</td>`;
- 
-        referenceAttacks.forEach((attackInc, index) => {
-            const targetGain = attackGains[index];
-            const monsterType = stat.key === "bossDamage" ? 'boss' : (stat.key === "normalDamage" ? 'normal' : 'boss');
-            const equivalentPct = findEquivalentPercentage(
-                stats,
-                stat.key,
-                targetGain,
-                monsterType === 'boss' ? baseBossDPS : baseNormalDPS,
-                monsterType,
-                multiplicativeStats,
-                diminishingReturnStats
-            );
- 
-            if (equivalentPct === null) {
-                html += `<td class="gain-cell" style="color: var(--text-secondary);">N/A</td>`;
-            } else {
-                const tooltip = `${equivalentPct.toFixed(2)}% ${stat.label}\n≈ ${targetGain.toFixed(2)}% DPS gain\n≈ +${formatNumber(attackInc)} Attack`;
-                html += `<td class="gain-cell" title="${tooltip}"><span class="gain-positive">+${equivalentPct.toFixed(2)}%</span></td>`;
-            }
-        });
- 
-        html += '</tr>';
-    });
- 
-    html += '</tbody></table>';
-    html += '</div>';
  
     document.getElementById(`stat-weights-${setup}`).innerHTML = html;
+}
+
+// Store chart instances
+const statWeightCharts = {};
+
+// Toggle stat weight chart visibility
+function toggleStatChart(setup, statKey, statLabel, isFlat = false) {
+    const chartId = `chart-${setup}-${statKey}`;
+    const rowId = `chart-row-${setup}-${statKey}`;
+    const chartRow = document.getElementById(rowId);
+
+    if (!chartRow) return;
+
+    // Toggle visibility
+    if (chartRow.style.display === 'none') {
+        chartRow.style.display = 'table-row';
+
+        // Create chart if it doesn't exist
+        if (!statWeightCharts[chartId]) {
+            renderStatChart(setup, statKey, statLabel, isFlat);
+        }
+    } else {
+        chartRow.style.display = 'none';
+    }
+}
+
+// Generate chart data for a stat
+function generateStatChartData(setup, statKey, statLabel, isFlat) {
+    const stats = getStats(setup);
+    const baseBossDPS = calculateDamage(stats, 'boss').dps;
+    const weaponAttackBonus = getWeaponAttackBonus();
+
+    const multiplicativeStats = {
+        'critDamage': true,
+        'finalDamage': true
+    };
+
+    const diminishingReturnStats = {
+        'attackSpeed': { denominator: 150 },
+        'defPenMultiplier': { denominator: 100 }
+    };
+
+    // Generate data points
+    const dataPoints = [];
+    const numPoints = 50;
+    const maxIncrease = isFlat ? (statKey === 'attack' ? 10000 : 5000) : 100;
+
+    for (let i = 0; i <= numPoints; i++) {
+        const increase = (i / numPoints) * maxIncrease;
+        const modifiedStats = { ...stats };
+
+        if (isFlat) {
+            if (statKey === 'attack') {
+                const effectiveIncrease = increase * (1 + weaponAttackBonus / 100);
+                modifiedStats.attack = stats.attack + effectiveIncrease;
+            } else if (statKey === 'mainStat') {
+                const statDamageIncrease = increase / 100;
+                modifiedStats.statDamage = stats.statDamage + statDamageIncrease;
+            }
+        } else {
+            const oldValue = stats[statKey];
+            if (multiplicativeStats[statKey]) {
+                modifiedStats[statKey] = (((1 + oldValue / 100) * (1 + increase / 100)) - 1) * 100;
+            } else if (diminishingReturnStats[statKey]) {
+                const factor = diminishingReturnStats[statKey].denominator;
+                modifiedStats[statKey] = (1 - (1 - oldValue / factor) * (1 - increase / factor)) * factor;
+            } else {
+                modifiedStats[statKey] = oldValue + increase;
+            }
+        }
+
+        const monsterType = statKey === 'bossDamage' ? 'boss' : (statKey === 'normalDamage' ? 'normal' : 'boss');
+        const newDPS = calculateDamage(modifiedStats, monsterType).dps;
+        const baseDPS = monsterType === 'boss' ? baseBossDPS : calculateDamage(stats, 'normal').dps;
+        const gain = ((newDPS - baseDPS) / baseDPS * 100);
+
+        dataPoints.push({
+            x: increase,
+            y: gain
+        });
+    }
+
+    return dataPoints;
+}
+
+// Render stat weight chart
+function renderStatChart(setup, statKey, statLabel, isFlat) {
+    const chartId = `chart-${setup}-${statKey}`;
+    const canvas = document.getElementById(chartId);
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    const data = generateStatChartData(setup, statKey, statLabel, isFlat);
+
+    // Destroy existing chart if it exists
+    if (statWeightCharts[chartId]) {
+        statWeightCharts[chartId].destroy();
+    }
+
+    // Get theme colors
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#e5e7eb' : '#1f2937';
+    const gridColor = isDark ? '#374151' : '#d1d5db';
+
+    // Create new chart
+    statWeightCharts[chartId] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [{
+                label: `${statLabel} → DPS Gain`,
+                data: data,
+                borderColor: '#007aff',
+                backgroundColor: 'rgba(0, 122, 255, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.1,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 3,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const increase = context.parsed.x.toFixed(2);
+                            const gain = context.parsed.y.toFixed(2);
+                            return `+${increase}${isFlat ? '' : '%'} ${statLabel} → +${gain}% DPS`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    title: {
+                        display: true,
+                        text: `Increase in ${statLabel}${isFlat ? '' : ' (%)'}`,
+                        color: textColor
+                    },
+                    ticks: {
+                        color: textColor
+                    },
+                    grid: {
+                        color: gridColor
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'DPS Gain (%)',
+                        color: textColor
+                    },
+                    ticks: {
+                        color: textColor
+                    },
+                    grid: {
+                        color: gridColor
+                    }
+                }
+            }
+        }
+    });
 }
 
 // Calculate stat equivalency - shows what other stats equal a given stat increase
@@ -413,6 +541,15 @@ function calculateStatEquivalency(sourceStat) {
                 return { ...stats, statDamage: stats.statDamage + statDamageIncrease };
             },
             formatValue: (val) => formatNumber(val)
+        },
+        'skill-level': {
+            label: '3rd Job Skill +',
+            getValue: () => parseFloat(document.getElementById('equiv-skill-level').value) || 0,
+            applyToStats: (stats, value) => {
+                const skillCoeffIncrease = value * 0.3; // 1 skill level = 0.3% skill coefficient
+                return { ...stats, skillCoeff: stats.skillCoeff + skillCoeffIncrease };
+            },
+            formatValue: (val) => `+${Math.round(val)}`
         },
         'crit-rate': {
             label: 'Critical Rate',

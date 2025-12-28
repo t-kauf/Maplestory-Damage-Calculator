@@ -10,7 +10,15 @@ function mapArtifactStat(statName, value, baseStats) {
     switch (cleanStatName) {
         case 'Main Stat %':
             // Calculate the additional main stat from the percentage
-            const primaryMainStat = parseFloat(document.getElementById('primary-main-stat-base')?.value) || 0;
+            let primaryMainStat = parseFloat(document.getElementById('primary-main-stat-base')?.value) || 0;
+
+            // Dark Knight: 12.7% of defense is converted to main stat but doesn't scale with Main Stat %
+            if (selectedClass === 'dark-knight') {
+                const defense = parseFloat(document.getElementById('defense-base')?.value) || 0;
+                const defenseToMainStat = defense * 0.127;
+                primaryMainStat = primaryMainStat - defenseToMainStat;
+            }
+
             const additionalMainStat = primaryMainStat * (value / 100);
             // Convert additional main stat to Stat Damage % at 100:1 ratio
             const statDamageBonus = additionalMainStat / 100;

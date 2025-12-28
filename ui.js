@@ -120,7 +120,7 @@ function unequipItem() {
     const weaponMultiplier = 1 + (getWeaponAttackBonus() / 100);
 
     const attackBase = document.getElementById('attack-base');
-    attackBase.value = parseFloat(attackBase.value) - (equippedItem.attack * weaponMultiplier);
+    attackBase.value = Math.floor(parseFloat(attackBase.value) - (equippedItem.attack * weaponMultiplier));
 
     const critRateBase = document.getElementById('crit-rate-base');
     critRateBase.value = parseFloat(critRateBase.value) - equippedItem.critRate;
@@ -199,7 +199,7 @@ function equipItem(itemId) {
     const weaponMultiplier = 1 + (getWeaponAttackBonus() / 100);
 
     const attackBase = document.getElementById('attack-base');
-    attackBase.value = parseFloat(attackBase.value) + (comparisonItem.attack * weaponMultiplier);
+    attackBase.value = Math.floor(parseFloat(attackBase.value) + (comparisonItem.attack * weaponMultiplier));
 
     const critRateBase = document.getElementById('crit-rate-base');
     critRateBase.value = parseFloat(critRateBase.value) + comparisonItem.critRate;
@@ -250,13 +250,20 @@ function equipItem(itemId) {
 
 // Equipped item stat management
 function addEquippedStat() {
-    if (equippedStatCount >= 3) {
+    const container = document.getElementById('equipped-stats-container');
+    const currentStats = container.children.length;
+
+    if (currentStats >= 3) {
         alert('Maximum 3 optional stats allowed');
         return;
     }
 
-    equippedStatCount++;
-    const container = document.getElementById('equipped-stats-container');
+    // Find the next available stat ID (handles gaps from removed stats)
+    let statId = 1;
+    while (document.getElementById(`equipped-stat-${statId}`)) {
+        statId++;
+    }
+    equippedStatCount = statId;
 
     const statDiv = document.createElement('div');
     statDiv.id = `equipped-stat-${equippedStatCount}`;
@@ -347,7 +354,11 @@ function addComparisonItemStat(itemId) {
         return;
     }
 
-    const statId = currentStats + 1;
+    // Find the next available stat ID (handles gaps from removed stats)
+    let statId = 1;
+    while (document.getElementById(`item-${itemId}-stat-${statId}`)) {
+        statId++;
+    }
     const statDiv = document.createElement('div');
     statDiv.id = `item-${itemId}-stat-${statId}`;
     statDiv.style.cssText = 'display: grid; grid-template-columns: 1fr 80px auto; gap: 6px; margin-bottom: 6px; align-items: end;';

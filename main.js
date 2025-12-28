@@ -133,6 +133,96 @@ function getWeaponAttackBonus() {
     return totalInventory + equippedBonus;
 }
 
+// Stage defense functions
+function populateStageDropdown() {
+    const select = document.getElementById('target-stage-base');
+    if (!select) return;
+
+    // Clear existing options
+    select.innerHTML = '';
+
+    // Default option
+    const noneOpt = document.createElement('option');
+    noneOpt.value = 'none';
+    noneOpt.textContent = 'None / Training Dummy (Def: 0%, DR: 0%)';
+    select.appendChild(noneOpt);
+
+    // Stage Hunts group
+    const stageHuntsGroup = document.createElement('optgroup');
+    stageHuntsGroup.label = 'Stage Hunts';
+    stageDefenses.stageHunts.forEach(entry => {
+        const opt = document.createElement('option');
+        opt.value = `stageHunt-${entry.stage}`;
+        opt.textContent = `${entry.stage} (Def: ${entry.defense}%, DR: ${entry.damageReduction}%)`;
+        stageHuntsGroup.appendChild(opt);
+    });
+    select.appendChild(stageHuntsGroup);
+
+    // Chapter Bosses group
+    const chapterGroup = document.createElement('optgroup');
+    chapterGroup.label = 'Chapter Bosses';
+    stageDefenses.chapterBosses.forEach(entry => {
+        const opt = document.createElement('option');
+        opt.value = `chapterBoss-${entry.chapter}`;
+        opt.textContent = `Chapter ${entry.chapter} (Def: ${entry.defense}%, DR: ${entry.damageReduction}%)`;
+        chapterGroup.appendChild(opt);
+    });
+    select.appendChild(chapterGroup);
+
+    // World Bosses group
+    const worldBossGroup = document.createElement('optgroup');
+    worldBossGroup.label = 'World Bosses';
+    stageDefenses.worldBosses.forEach(entry => {
+        const opt = document.createElement('option');
+        opt.value = `worldBoss-${entry.stage}`;
+        opt.textContent = `Stage ${entry.stage} (Def: ${entry.defense}%, DR: ${entry.damageReduction}%)`;
+        worldBossGroup.appendChild(opt);
+    });
+    select.appendChild(worldBossGroup);
+
+    // Boss Raids group
+    const bossRaidGroup = document.createElement('optgroup');
+    bossRaidGroup.label = 'Boss Raids';
+    stageDefenses.bossRaids.forEach(entry => {
+        const opt = document.createElement('option');
+        opt.value = `bossRaid-${entry.boss}`;
+        opt.textContent = `${entry.boss} (Def: ${entry.defense}%, DR: ${entry.damageReduction}%)`;
+        bossRaidGroup.appendChild(opt);
+    });
+    select.appendChild(bossRaidGroup);
+}
+
+function getSelectedStageDefense() {
+    const select = document.getElementById('target-stage-base');
+    if (!select) return { defense: 0, damageReduction: 0 };
+
+    const value = select.value;
+
+    if (value === 'none') {
+        return { defense: 0, damageReduction: 0 };
+    }
+
+    const [category, identifier] = value.split('-');
+
+    if (category === 'stageHunt') {
+        // identifier will be like "1" and we need to reconstruct "1-1"
+        const stage = value.replace('stageHunt-', '');
+        const entry = stageDefenses.stageHunts.find(e => e.stage === stage);
+        return entry ? { defense: entry.defense, damageReduction: entry.damageReduction } : { defense: 0, damageReduction: 0 };
+    } else if (category === 'chapterBoss') {
+        const entry = stageDefenses.chapterBosses.find(e => e.chapter === identifier);
+        return entry ? { defense: entry.defense, damageReduction: entry.damageReduction } : { defense: 0, damageReduction: 0 };
+    } else if (category === 'worldBoss') {
+        const entry = stageDefenses.worldBosses.find(e => e.stage === identifier);
+        return entry ? { defense: entry.defense, damageReduction: entry.damageReduction } : { defense: 0, damageReduction: 0 };
+    } else if (category === 'bossRaid') {
+        const entry = stageDefenses.bossRaids.find(e => e.boss === identifier);
+        return entry ? { defense: entry.defense, damageReduction: entry.damageReduction } : { defense: 0, damageReduction: 0 };
+    }
+
+    return { defense: 0, damageReduction: 0 };
+}
+
 // Main calculation orchestration
 function calculate() {
     const baseStats = getStats('base');
@@ -183,6 +273,8 @@ window.onload = function () {
     // Initialize hero power presets
     initializeHeroPowerPresets();
     initializeWeapons();
+    // Populate stage dropdown
+    populateStageDropdown();
     // Enable auto-select for all numeric inputs across the app
     enableGlobalNumberInputAutoSelect();
     // Load saved data from localStorage
@@ -197,6 +289,8 @@ window.onload = function () {
     initializeEquipmentSlots();
     // Load equipment slots after initialization
     loadEquipmentSlots();
+    // Initialize Artifacts
+    initializeArtifacts();
     // Attach save listeners to all inputs
     attachSaveListeners();
     // Update weapon bonuses if data was loaded
@@ -215,3 +309,53 @@ function enableGlobalNumberInputAutoSelect() {
         }
     });
 }
+
+// Class Selection
+let selectedClass = null;
+
+function selectClass(className) {
+    // Remove selected state from all class selectors
+    document.querySelectorAll('.class-selector').forEach(el => {
+        el.classList.remove('selected');
+    });
+
+    // Add selected state to clicked class
+    const classElement = document.getElementById(`class-${className}`);
+    if (classElement) {
+        classElement.classList.add('selected');
+        selectedClass = className;
+
+        // Show/hide defense input for Dark Knight
+        const defenseInputGroup = document.getElementById('defense-input-group');
+        if (defenseInputGroup) {
+            if (className === 'dark-knight') {
+                defenseInputGroup.style.display = 'flex';
+            } else {
+                defenseInputGroup.style.display = 'none';
+            }
+        }
+
+        // Save to localStorage
+        try {
+            localStorage.setItem('selectedClass', className);
+        } catch (error) {
+            console.error('Error saving selected class:', error);
+        }
+    }
+}
+
+function loadSelectedClass() {
+    try {
+        const savedClass = localStorage.getItem('selectedClass');
+        if (savedClass) {
+            selectClass(savedClass);
+        }
+    } catch (error) {
+        console.error('Error loading selected class:', error);
+    }
+}
+
+// Load selected class on initialization
+document.addEventListener('DOMContentLoaded', () => {
+    loadSelectedClass();
+});

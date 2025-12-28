@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Damage Calculator</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -65,11 +66,50 @@
                 <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'weapon-levels')">Weapon Levels</button>
                 <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'hero-power')">Hero Power Ability</button>
                 <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'equipment-slots')">Slot Scrolling</button>
+                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'artifacts')">Artifacts</button>
             </div>
 
             <!-- Base Stats Tab -->
             <div id="setup-base-stats" class="tab-content active">
                 <div class="bg-transparent p-4">
+                    <!-- Class Selector -->
+                    <div style="margin-bottom: 16px; padding: 12px; background: var(--background); border: 1px solid var(--border-color); border-radius: 8px;">
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(100px, 1fr)); gap: 8px;">
+                            <div onclick="selectClass('hero')" id="class-hero" class="class-selector" title="Hero">
+                                <img src="media/classes/hero.png" alt="Hero" style="width: 48px; height: 48px; object-fit: contain;">
+                                <span>Hero</span>
+                            </div>
+                            <div onclick="selectClass('dark-knight')" id="class-dark-knight" class="class-selector" title="Dark Knight">
+                                <img src="media/classes/dk.png" alt="Dark Knight" style="width: 48px; height: 48px; object-fit: contain;">
+                                <span>Dark Knight</span>
+                            </div>
+                            <div onclick="selectClass('bowmaster')" id="class-bowmaster" class="class-selector" title="Bowmaster">
+                                <img src="media/classes/bowmaster.png" alt="Bowmaster" style="width: 48px; height: 48px; object-fit: contain;">
+                                <span>Bowmaster</span>
+                            </div>
+                            <div onclick="selectClass('marksman')" id="class-marksman" class="class-selector" title="Marksman">
+                                <img src="media/classes/marksman.png" alt="Marksman" style="width: 48px; height: 48px; object-fit: contain;">
+                                <span>Marksman</span>
+                            </div>
+                            <div onclick="selectClass('night-lord')" id="class-night-lord" class="class-selector" title="Night Lord">
+                                <img src="media/classes/nl.png" alt="Night Lord" style="width: 48px; height: 48px; object-fit: contain;">
+                                <span>Night Lord</span>
+                            </div>
+                            <div onclick="selectClass('shadower')" id="class-shadower" class="class-selector" title="Shadower">
+                                <img src="media/classes/shadower.png" alt="Shadower" style="width: 48px; height: 48px; object-fit: contain;">
+                                <span>Shadower</span>
+                            </div>
+                            <div onclick="selectClass('arch-mage-il')" id="class-arch-mage-il" class="class-selector" title="Arch Mage (Ice/Lightning)">
+                                <img src="media/classes/mage-il.png" alt="Arch Mage (I/L)" style="width: 48px; height: 48px; object-fit: contain;">
+                                <span>Arch Mage (I/L)</span>
+                            </div>
+                            <div onclick="selectClass('arch-mage-fp')" id="class-arch-mage-fp" class="class-selector" title="Arch Mage (Fire/Poison)">
+                                <img src="media/classes/mage-fp.png" alt="Arch Mage (F/P)" style="width: 48px; height: 48px; object-fit: contain;">
+                                <span>Arch Mage (F/P)</span>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                         <div class="input-group">
                             <label>Attack</label>
@@ -86,6 +126,10 @@
                         <div class="input-group">
                             <label>Attack Speed (%)</label>
                             <input type="number" step="0.1" id="attack-speed-base" value="0">
+                        </div>
+                        <div class="input-group" id="defense-input-group" style="display: none;">
+                            <label>Defense</label>
+                            <input type="number" id="defense-base" value="0">
                         </div>
                         <div class="input-group">
                             <label>Primary Main Stat</label>
@@ -134,9 +178,9 @@
                                     title="This value can be found in the description of your Basic Attack.">?</span></label>
                             <input type="number" step="0.1" id="skill-coeff-base" value="89.9">
                         </div>
-                        <div class="input-group" style="display: none;">
+                        <div class="input-group">
                             <label>Defense Penetration (%) <span class="info-icon" role="img" aria-label="Info"
-                                    title="This value must be manually summed from your Artifact/item potential and Hero Ability.">?</span></label>
+                                    title="Reduces the target's defense. Valuable against high-defense enemies like World Bosses.">?</span></label>
                             <input type="number" step="0.1" id="def-pen-base" value="0">
                         </div>
                         <div class="input-group">
@@ -149,6 +193,15 @@
                                     aria-label="Info"
                                     title="This value must be manually summed from Mastery skills that enhance your Basic Attack damage">?</span></label>
                             <input type="number" step="0.1" id="skill-mastery-boss-base" value="0">
+                        </div>
+                        <div style="grid-column: 1 / -1; border-top: 2px solid var(--border-color); margin: 10px 0;">
+                        </div>
+                        <div class="input-group" style="grid-column: 1 / -1;">
+                            <label>Target Stage/Boss <span class="info-icon" role="img" aria-label="Info"
+                                    title="Select the stage or boss you're fighting to apply their defense and damage reduction values.">?</span></label>
+                            <select id="target-stage-base" onchange="saveToLocalStorage(); updateAnalysisTabs();">
+                                <!-- Populated by JavaScript -->
+                            </select>
                         </div>
                     </div>
                 </div>
@@ -215,6 +268,26 @@
                 </div>
                 <div style="margin-top: 20px; text-align: center;">
                     <button class="calculate-btn" onclick="calculateEquipmentSlotDPS()" style="max-width: 400px; margin: 0 auto;">Calculate Slot DPS</button>
+                </div>
+            </div>
+
+            <!-- Artifacts Tab -->
+            <div id="setup-artifacts" class="tab-content">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; min-height: 600px;">
+                    <!-- Left Panel: Equipped Artifacts -->
+                    <div id="artifacts-equipped-panel" style="background: var(--background); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; overflow-y: auto;">
+                        <!-- Populated by JavaScript -->
+                    </div>
+
+                    <!-- Center Panel: Detail Editor -->
+                    <div id="artifacts-detail-panel" style="background: var(--background); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; overflow-y: auto;">
+                        <!-- Populated by JavaScript -->
+                    </div>
+
+                    <!-- Right Panel: Artifact Grid -->
+                    <div id="artifacts-grid-panel" style="background: var(--background); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; overflow-y: auto;">
+                        <!-- Populated by JavaScript -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -407,6 +480,10 @@
                             <input type="number" id="equiv-main-stat" value="500" min="0" step="50" oninput="calculateStatEquivalency('main-stat')">
                         </div>
                         <div class="input-group">
+                            <label style="font-weight: 600; color: var(--accent-primary);">3rd Job Skill +</label>
+                            <input type="number" id="equiv-skill-level" value="5" min="0" step="1" oninput="calculateStatEquivalency('skill-level')">
+                        </div>
+                        <div class="input-group">
                             <label style="font-weight: 600; color: var(--accent-primary);">Critical Rate (%)</label>
                             <input type="number" id="equiv-crit-rate" value="10" min="0" step="1" oninput="calculateStatEquivalency('crit-rate')">
                         </div>
@@ -451,6 +528,7 @@
     <script src="inner-ability.js"></script>
     <script src="artifact-potential.js"></script>
     <script src="scroll-optimizer.js"></script>
+    <script src="artifacts.js"></script>
     <script src="main.js"></script>
 </body>
 
