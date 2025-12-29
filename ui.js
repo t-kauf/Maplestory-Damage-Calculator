@@ -1561,9 +1561,11 @@ function openHelpSidebar(helpKey) {
     title.textContent = helpData.title;
     content.innerHTML = helpData.content;
 
-    // Show sidebar and backdrop (for mobile)
+    // Show sidebar
     sidebar.style.display = 'flex';
-    if (backdrop) {
+
+    // Only show backdrop on mobile (< 768px)
+    if (backdrop && window.innerWidth < 768) {
         backdrop.classList.add('active');
     }
 }
