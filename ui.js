@@ -101,7 +101,7 @@ function toggleTheme() {
 }
 
 function loadTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'light';
+    const savedTheme = localStorage.getItem('theme') || 'dark';
     const html = document.documentElement;
     const themeToggle = document.getElementById('theme-toggle');
 
@@ -119,8 +119,8 @@ function unequipItem() {
     // Get equipped item data
     const equippedItem = getItemStats('equipped');
 
-    if (!equippedItem.name && equippedItem.attack === 0 &&
-        equippedItem.critRate === 0 && equippedItem.critDamage === 0 &&
+    if (!equippedItem.name && equippedItem.attack === 0 && equippedItem.mainStat === 0 &&
+        equippedItem.defense === 0 && equippedItem.critRate === 0 && equippedItem.critDamage === 0 &&
         equippedItem.skillLevel === 0 && equippedItem.normalDamage === 0 &&
         equippedItem.bossDamage === 0 && equippedItem.damage === 0) {
         alert('No item currently equipped');
@@ -133,23 +133,31 @@ function unequipItem() {
     const attackBase = document.getElementById('attack-base');
     attackBase.value = Math.floor(parseFloat(attackBase.value) - (equippedItem.attack * weaponMultiplier));
 
+    const statDamageBase = document.getElementById('stat-damage-base');
+    let statDamageChange = equippedItem.mainStat / 100;
+    // For Dark Knight: defense converts to main stat
+    if (selectedClass === 'dark-knight') {
+        statDamageChange += (equippedItem.defense * 0.127) / 100;
+    }
+    statDamageBase.value = (parseFloat(statDamageBase.value) - statDamageChange).toFixed(1);
+
     const critRateBase = document.getElementById('crit-rate-base');
-    critRateBase.value = parseFloat(critRateBase.value) - equippedItem.critRate;
+    critRateBase.value = (parseFloat(critRateBase.value) - equippedItem.critRate).toFixed(1);
 
     const critDamageBase = document.getElementById('crit-damage-base');
-    critDamageBase.value = parseFloat(critDamageBase.value) - equippedItem.critDamage;
+    critDamageBase.value = (parseFloat(critDamageBase.value) - equippedItem.critDamage).toFixed(1);
 
     const skillCoeffBase = document.getElementById('skill-coeff-base');
-    skillCoeffBase.value = parseFloat(skillCoeffBase.value) - (equippedItem.skillLevel * 0.3);
+    skillCoeffBase.value = (parseFloat(skillCoeffBase.value) - (equippedItem.skillLevel * 0.3)).toFixed(1);
 
     const normalDamageBase = document.getElementById('normal-damage-base');
-    normalDamageBase.value = parseFloat(normalDamageBase.value) - equippedItem.normalDamage;
+    normalDamageBase.value = (parseFloat(normalDamageBase.value) - equippedItem.normalDamage).toFixed(1);
 
     const bossDamageBase = document.getElementById('boss-damage-base');
-    bossDamageBase.value = parseFloat(bossDamageBase.value) - equippedItem.bossDamage;
+    bossDamageBase.value = (parseFloat(bossDamageBase.value) - equippedItem.bossDamage).toFixed(1);
 
     const damageBase = document.getElementById('damage-base');
-    damageBase.value = parseFloat(damageBase.value) - equippedItem.damage;
+    damageBase.value = (parseFloat(damageBase.value) - equippedItem.damage).toFixed(1);
 
     // Move to comparison items
     addComparisonItem();
@@ -158,6 +166,8 @@ function unequipItem() {
 
     // Add stats to comparison item
     const statMapping = [
+        { type: 'main-stat', value: equippedItem.mainStat },
+        { type: 'defense', value: equippedItem.defense },
         { type: 'crit-rate', value: equippedItem.critRate },
         { type: 'crit-damage', value: equippedItem.critDamage },
         { type: 'skill-level', value: equippedItem.skillLevel },
@@ -194,7 +204,8 @@ function unequipItem() {
 function equipItem(itemId) {
     // Check if there's already an equipped item
     const currentEquipped = getItemStats('equipped');
-    if (currentEquipped.attack !== 0 || currentEquipped.critRate !== 0 ||
+    if (currentEquipped.attack !== 0 || currentEquipped.mainStat !== 0 ||
+        currentEquipped.defense !== 0 || currentEquipped.critRate !== 0 ||
         currentEquipped.critDamage !== 0 || currentEquipped.skillLevel !== 0) {
         if (!confirm('This will replace your currently equipped item. Continue?')) {
             return;
@@ -212,23 +223,31 @@ function equipItem(itemId) {
     const attackBase = document.getElementById('attack-base');
     attackBase.value = Math.floor(parseFloat(attackBase.value) + (comparisonItem.attack * weaponMultiplier));
 
+    const statDamageBase = document.getElementById('stat-damage-base');
+    let statDamageChange = comparisonItem.mainStat / 100;
+    // For Dark Knight: defense converts to main stat
+    if (selectedClass === 'dark-knight') {
+        statDamageChange += (comparisonItem.defense * 0.127) / 100;
+    }
+    statDamageBase.value = (parseFloat(statDamageBase.value) + statDamageChange).toFixed(1);
+
     const critRateBase = document.getElementById('crit-rate-base');
-    critRateBase.value = parseFloat(critRateBase.value) + comparisonItem.critRate;
+    critRateBase.value = (parseFloat(critRateBase.value) + comparisonItem.critRate).toFixed(1);
 
     const critDamageBase = document.getElementById('crit-damage-base');
-    critDamageBase.value = parseFloat(critDamageBase.value) + comparisonItem.critDamage;
+    critDamageBase.value = (parseFloat(critDamageBase.value) + comparisonItem.critDamage).toFixed(1);
 
     const skillCoeffBase = document.getElementById('skill-coeff-base');
-    skillCoeffBase.value = parseFloat(skillCoeffBase.value) + (comparisonItem.skillLevel * 0.3);
+    skillCoeffBase.value = (parseFloat(skillCoeffBase.value) + (comparisonItem.skillLevel * 0.3)).toFixed(1);
 
     const normalDamageBase = document.getElementById('normal-damage-base');
-    normalDamageBase.value = parseFloat(normalDamageBase.value) + comparisonItem.normalDamage;
+    normalDamageBase.value = (parseFloat(normalDamageBase.value) + comparisonItem.normalDamage).toFixed(1);
 
     const bossDamageBase = document.getElementById('boss-damage-base');
-    bossDamageBase.value = parseFloat(bossDamageBase.value) + comparisonItem.bossDamage;
+    bossDamageBase.value = (parseFloat(bossDamageBase.value) + comparisonItem.bossDamage).toFixed(1);
 
     const damageBase = document.getElementById('damage-base');
-    damageBase.value = parseFloat(damageBase.value) + comparisonItem.damage;
+    damageBase.value = (parseFloat(damageBase.value) + comparisonItem.damage).toFixed(1);
 
     // Move to equipped item
     document.getElementById('equipped-name').value = comparisonItem.name || 'Equipped Item';
@@ -236,6 +255,8 @@ function equipItem(itemId) {
 
     // Add stats to equipped item
     const statMapping = [
+        { type: 'main-stat', value: comparisonItem.mainStat },
+        { type: 'defense', value: comparisonItem.defense },
         { type: 'crit-rate', value: comparisonItem.critRate },
         { type: 'crit-damage', value: comparisonItem.critDamage },
         { type: 'skill-level', value: comparisonItem.skillLevel },
@@ -360,8 +381,8 @@ function addComparisonItemStat(itemId) {
     const container = document.getElementById(`item-${itemId}-stats-container`);
     const currentStats = container.children.length;
 
-    if (currentStats >= 3) {
-        alert('Maximum 3 optional stats allowed');
+    if (currentStats >= 6) {
+        alert('Maximum 6 optional stats allowed');
         return;
     }
 

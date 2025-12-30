@@ -24,6 +24,8 @@ function getItemStats(prefix) {
     const stats = {
         name: document.getElementById(`${prefix}-name`)?.value || '',
         attack: parseFloat(document.getElementById(`${prefix}-attack`)?.value) || 0,
+        mainStat: 0,
+        defense: 0,
         critRate: 0,
         critDamage: 0,
         skillLevel: 0,
@@ -46,6 +48,12 @@ function getItemStats(prefix) {
                 switch (statType) {
                     case 'attack':
                         stats.attack += value;
+                        break;
+                    case 'main-stat':
+                        stats.mainStat += value;
+                        break;
+                    case 'defense':
+                        stats.defense += value;
                         break;
                     case 'crit-rate':
                         stats.critRate += value;
@@ -82,6 +90,12 @@ function getItemStats(prefix) {
                 switch (statType) {
                     case 'attack':
                         stats.attack += value;
+                        break;
+                    case 'main-stat':
+                        stats.mainStat += value;
+                        break;
+                    case 'defense':
+                        stats.defense += value;
                         break;
                     case 'crit-rate':
                         stats.critRate += value;
@@ -296,6 +310,8 @@ window.onload = function () {
     loadEquipmentSlots();
     // Initialize Artifacts
     initializeArtifacts();
+    // Initialize Cube Potential
+    initializeCubePotential();
     // Attach save listeners to all inputs
     attachSaveListeners();
     // Update weapon bonuses if data was loaded

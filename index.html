@@ -350,6 +350,7 @@
                 <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('analysis', 'inner-ability')">Inner Ability</button>
                 <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('analysis', 'artifact-potential')">Artifact Potential</button>
                 <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('analysis', 'scroll-optimizer')">Scrolling</button>
+                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('analysis', 'cube-potential')">Cube Potential</button>
             </div>
 
             <!-- Item Comparison Tab -->
@@ -494,6 +495,115 @@
                     <!-- Results will be populated by JavaScript -->
                 </div>
             </div>
+
+            <!-- Cube Potential Tab -->
+            <div id="analysis-cube-potential" class="tab-content">
+                <!-- Class Warning Banner -->
+                <div id="cube-class-warning" style="display: none; background: linear-gradient(135deg, rgba(248, 113, 113, 0.15), rgba(239, 68, 68, 0.1)); border: 2px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 16px rgba(239, 68, 68, 0.1);">
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                        <span style="font-size: 2em;">⚠️</span>
+                        <div>
+                            <div style="font-weight: 700; font-size: 1.1em; color: #ef4444; margin-bottom: 5px;">No Class Selected</div>
+                            <div style="color: var(--text-secondary); font-size: 0.95em;">Please select your class in the Hero Power section above to use the Cube Potential calculator. Class selection is needed to properly calculate stat damage gains.</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Slot Selector -->
+                <div style="background: linear-gradient(135deg, rgba(0, 122, 255, 0.08), rgba(88, 86, 214, 0.05)); border: 2px solid rgba(0, 122, 255, 0.2); border-radius: 16px; padding: 20px; margin-bottom: 25px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);">
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-weight: 600; font-size: 1.05em; color: var(--accent-primary); display: block; margin-bottom: 10px;">Equipment Slot</label>
+                        <div id="cube-slot-selector" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;"></div>
+                    </div>
+                </div>
+
+                <!-- Potential Type Toggle -->
+                <div style="margin-bottom: 20px; background: linear-gradient(135deg, rgba(0, 122, 255, 0.08), rgba(88, 86, 214, 0.05)); border: 2px solid rgba(0, 122, 255, 0.3); border-radius: 12px; padding: 15px;">
+                    <label style="font-weight: 600; font-size: 0.95em; color: var(--text-primary); display: block; margin-bottom: 10px;">Potential Type</label>
+                    <div style="display: flex; gap: 10px;">
+                        <button id="cube-regular-potential-btn" class="cube-potential-type-btn active" onclick="switchPotentialType('regular')" style="flex: 1; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                            Regular Potential
+                        </button>
+                        <button id="cube-bonus-potential-btn" class="cube-potential-type-btn" onclick="switchPotentialType('bonus')" style="flex: 1; padding: 10px 20px; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s;">
+                            Bonus Potential
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Rarity Selector -->
+                <div style="margin-bottom: 20px;">
+                    <label style="font-weight: 600; font-size: 0.95em; color: var(--text-primary); display: block; margin-bottom: 8px;">Slot Potential Rarity</label>
+                    <select id="cube-rarity-selector" class="cube-rarity-select"></select>
+                </div>
+
+                <!-- Tab Navigation -->
+                <div class="flex flex-wrap gap-2.5 mb-5 border-b-2 border-gray-200/50 dark:border-gray-700/50 pb-0">
+                    <button id="cube-tab-comparison" class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg">Comparison</button>
+                    <button id="cube-tab-rankings" class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg">Rankings</button>
+                </div>
+
+                <!-- Comparison Tab Content -->
+                <div id="cube-comparison-content" style="display: block;">
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        <!-- Set A (Current) - Styled like Equipped Item -->
+                        <div style="background: linear-gradient(135deg, rgba(52, 199, 89, 0.1), rgba(0, 122, 255, 0.05)); border: 2px solid var(--accent-success); border-radius: 12px; padding: 20px; box-shadow: 0 4px 16px var(--shadow);">
+                            <h3 style="color: var(--accent-success); margin-bottom: 15px; font-size: 1.1em; font-weight: 600;">Set A (Current)</h3>
+
+                            <div style="margin-bottom: 15px;">
+                                <label style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-primary); font-size: 0.9em;">Line 1</label>
+                                <select id="cube-setA-line1-stat" class="input-field" style="padding: 10px; font-size: 0.9em; width: 100%;"></select>
+                            </div>
+
+                            <div style="margin-bottom: 15px;">
+                                <label style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-primary); font-size: 0.9em;">Line 2</label>
+                                <select id="cube-setA-line2-stat" class="input-field" style="padding: 10px; font-size: 0.9em; width: 100%;"></select>
+                            </div>
+
+                            <div style="margin-bottom: 0;">
+                                <label style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-primary); font-size: 0.9em;">Line 3</label>
+                                <select id="cube-setA-line3-stat" class="input-field" style="padding: 10px; font-size: 0.9em; width: 100%;"></select>
+                            </div>
+                        </div>
+
+                        <!-- Set B (Comparison) - Styled like Comparison Items -->
+                        <div class="bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border-2 border-blue-500 dark:border-blue-400 rounded-xl p-5 shadow-lg">
+                            <h3 class="text-blue-600 dark:text-blue-400 mb-4 text-lg font-semibold">Set B (Comparison)</h3>
+
+                            <div style="margin-bottom: 15px;">
+                                <label style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-primary); font-size: 0.9em;">Line 1</label>
+                                <select id="cube-setB-line1-stat" class="input-field" style="padding: 10px; font-size: 0.9em; width: 100%;"></select>
+                            </div>
+
+                            <div style="margin-bottom: 15px;">
+                                <label style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-primary); font-size: 0.9em;">Line 2</label>
+                                <select id="cube-setB-line2-stat" class="input-field" style="padding: 10px; font-size: 0.9em; width: 100%;"></select>
+                            </div>
+
+                            <div style="margin-bottom: 0;">
+                                <label style="font-weight: 600; margin-bottom: 8px; display: block; color: var(--text-primary); font-size: 0.9em;">Line 3</label>
+                                <select id="cube-setB-line3-stat" class="input-field" style="padding: 10px; font-size: 0.9em; width: 100%;"></select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Comparison Results -->
+                    <div id="cube-comparison-results"></div>
+                </div>
+
+                <!-- Rankings Tab Content -->
+                <div id="cube-rankings-content" style="display: none;">
+                    <!-- Progress Bar -->
+                    <div id="cube-rankings-progress" style="display: none; margin-bottom: 25px;">
+                        <div style="background: var(--border-color); height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 10px;">
+                            <div id="cube-rankings-progress-fill" style="background: linear-gradient(90deg, var(--accent-primary), var(--accent-success)); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                        <p id="cube-rankings-progress-text" style="text-align: center; color: var(--text-secondary); font-weight: 600;"></p>
+                    </div>
+
+                    <!-- Rankings Results -->
+                    <div id="cube-rankings-results"></div>
+                </div>
+            </div>
         </div>
 
         <!-- Stat Damage Predictions -->
@@ -579,6 +689,7 @@
     <script src="artifact-potential.js"></script>
     <script src="scroll-optimizer.js"></script>
     <script src="artifacts.js"></script>
+    <script src="cube-potential.js"></script>
     <script src="main.js"></script>
 </body>
 

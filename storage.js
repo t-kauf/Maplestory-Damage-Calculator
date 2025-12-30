@@ -246,6 +246,11 @@ function updateAnalysisTabs() {
     // Update Artifact Potential
     renderArtifactPotential();
 
+    // Clear Cube Potential rankings cache (stats changed, so rankings need recalculation)
+    if (typeof clearCubeRankingsCache === 'function') {
+        clearCubeRankingsCache();
+    }
+
     // Recalculate all comparisons
     calculate();
 }

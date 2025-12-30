@@ -245,15 +245,25 @@ function applyItemToStats(baseStats, equippedItem, comparisonItem) {
  
     // Subtract equipped item stats (apply weapon bonus to attack)
     newStats.attack -= equippedItem.attack * weaponMultiplier;
+    newStats.statDamage -= equippedItem.mainStat / 100; // 100 main stat = 1% stat damage
+    // For Dark Knight: defense converts to main stat (12.7% of defense → main stat → stat damage)
+    if (selectedClass === 'dark-knight') {
+        newStats.statDamage -= (equippedItem.defense * 0.127) / 100;
+    }
     newStats.critRate -= equippedItem.critRate;
     newStats.critDamage -= equippedItem.critDamage;
     newStats.skillCoeff -= equippedItem.skillLevel * 0.3; // 1 level = 0.3% skill coefficient
     newStats.normalDamage -= equippedItem.normalDamage;
     newStats.bossDamage -= equippedItem.bossDamage;
     newStats.damage -= equippedItem.damage;
- 
+
     // Add comparison item stats (apply weapon bonus to attack)
     newStats.attack += comparisonItem.attack * weaponMultiplier;
+    newStats.statDamage += comparisonItem.mainStat / 100; // 100 main stat = 1% stat damage
+    // For Dark Knight: defense converts to main stat (12.7% of defense → main stat → stat damage)
+    if (selectedClass === 'dark-knight') {
+        newStats.statDamage += (comparisonItem.defense * 0.127) / 100;
+    }
     newStats.critRate += comparisonItem.critRate;
     newStats.critDamage += comparisonItem.critDamage;
     newStats.skillCoeff += comparisonItem.skillLevel * 0.3; // 1 level = 0.3% skill coefficient
