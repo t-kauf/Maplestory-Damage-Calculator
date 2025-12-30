@@ -260,8 +260,21 @@ function exportData() {
     const allData = {
         damageCalculatorData: localStorage.getItem('damageCalculatorData'),
         heroPowerPresets: localStorage.getItem('heroPowerPresets'),
+        cubePotentialData: localStorage.getItem('cubePotentialData'),
+        selectedClass: localStorage.getItem('selectedClass'),
         theme: localStorage.getItem('theme')
     };
+
+    // Parse JSON strings so they're not double-stringified
+    Object.keys(allData).forEach(key => {
+        if (allData[key]) {
+            try {
+                allData[key] = JSON.parse(allData[key]);
+            } catch (e) {
+                // If it's not JSON (like theme which is just a string), keep as is
+            }
+        }
+    });
 
     const jsonString = JSON.stringify(allData, null, 2);
 
@@ -280,7 +293,7 @@ function importData() {
             const data = JSON.parse(text);
 
             // Validate the data structure
-            if (!data.damageCalculatorData && !data.heroPowerPresets) {
+            if (!data.damageCalculatorData && !data.heroPowerPresets && !data.cubePotentialData) {
                 throw new Error('Invalid data format');
             }
 
@@ -289,12 +302,27 @@ function importData() {
                 return;
             }
 
-            // Import each piece of data
+            // Import each piece of data (stringify if it's an object)
             if (data.damageCalculatorData) {
-                localStorage.setItem('damageCalculatorData', data.damageCalculatorData);
+                const dataString = typeof data.damageCalculatorData === 'string'
+                    ? data.damageCalculatorData
+                    : JSON.stringify(data.damageCalculatorData);
+                localStorage.setItem('damageCalculatorData', dataString);
             }
             if (data.heroPowerPresets) {
-                localStorage.setItem('heroPowerPresets', data.heroPowerPresets);
+                const dataString = typeof data.heroPowerPresets === 'string'
+                    ? data.heroPowerPresets
+                    : JSON.stringify(data.heroPowerPresets);
+                localStorage.setItem('heroPowerPresets', dataString);
+            }
+            if (data.cubePotentialData) {
+                const dataString = typeof data.cubePotentialData === 'string'
+                    ? data.cubePotentialData
+                    : JSON.stringify(data.cubePotentialData);
+                localStorage.setItem('cubePotentialData', dataString);
+            }
+            if (data.selectedClass) {
+                localStorage.setItem('selectedClass', data.selectedClass);
             }
             if (data.theme) {
                 localStorage.setItem('theme', data.theme);
