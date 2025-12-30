@@ -529,7 +529,6 @@ const equipmentPotentialData = {
     },
     legendary: {
         line1: [
-            { stat: "Skill Cooldown Decrease", value: "1.5sec", weight: 1, prime: false },
             { stat: "Critical Rate %", value: 12, weight: 2.5, prime: false },
             { stat: "Attack Speed %", value: 7, weight: 2.5, prime: false },
             { stat: "Damage %", value: 25, weight: 4, prime: false },
@@ -548,8 +547,6 @@ const equipmentPotentialData = {
             { stat: "Luk", value: 600, weight: 9.25, prime: false }
         ],
         line2: [
-            { stat: "Skill Cooldown Decrease", value: "1sec", weight: 0.76, prime: false },
-            { stat: "Skill Cooldown Decrease", value: "1.5sec", weight: 0.24, prime: true },
             { stat: "Critical Rate %", value: 9, weight: 1.9, prime: false },
             { stat: "Critical Rate %", value: 12, weight: 0.6, prime: true },
             { stat: "Attack Speed %", value: 5, weight: 1.9, prime: false },
@@ -584,8 +581,6 @@ const equipmentPotentialData = {
             { stat: "Luk", value: 600, weight: 2.22, prime: true }
         ],
         line3: [
-            { stat: "Skill Cooldown Decrease", value: "1sec", weight: 0.92, prime: false },
-            { stat: "Skill Cooldown Decrease", value: "1.5sec", weight: 0.08, prime: true },
             { stat: "Critical Rate %", value: 9, weight: 2.3, prime: false },
             { stat: "Critical Rate %", value: 12, weight: 0.2, prime: true },
             { stat: "Attack Speed %", value: 5, weight: 2.3, prime: false },
@@ -622,7 +617,6 @@ const equipmentPotentialData = {
     },
     mystic: {
         line1: [
-            { stat: "Skill Cooldown Decrease", value: "2sec", weight: 1, prime: false },
             { stat: "Critical Rate %", value: 15, weight: 2.5, prime: false },
             { stat: "Attack Speed %", value: 10, weight: 2.5, prime: false },
             { stat: "Damage %", value: 35, weight: 4, prime: false },
@@ -641,8 +635,6 @@ const equipmentPotentialData = {
             { stat: "Luk", value: 1000, weight: 9.25, prime: false }
         ],
         line2: [
-            { stat: "Skill Cooldown Decrease", value: "1.5sec", weight: 0.76, prime: false },
-            { stat: "Skill Cooldown Decrease", value: "2sec", weight: 0.24, prime: true },
             { stat: "Critical Rate %", value: 12, weight: 1.9, prime: false },
             { stat: "Critical Rate %", value: 15, weight: 0.6, prime: true },
             { stat: "Attack Speed %", value: 7, weight: 1.9, prime: false },
@@ -677,8 +669,6 @@ const equipmentPotentialData = {
             { stat: "Luk", value: 1000, weight: 2.22, prime: true }
         ],
         line3: [
-            { stat: "Skill Cooldown Decrease", value: "1.5sec", weight: 0.92, prime: false },
-            { stat: "Skill Cooldown Decrease", value: "2sec", weight: 0.08, prime: true },
             { stat: "Critical Rate %", value: 12, weight: 2.3, prime: false },
             { stat: "Critical Rate %", value: 15, weight: 0.2, prime: true },
             { stat: "Attack Speed %", value: 7, weight: 2.3, prime: false },
