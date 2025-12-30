@@ -540,6 +540,7 @@
                 <div class="flex flex-wrap gap-2.5 mb-5 border-b-2 border-gray-200/50 dark:border-gray-700/50 pb-0">
                     <button id="cube-tab-comparison" class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg">Comparison</button>
                     <button id="cube-tab-rankings" class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg">Rankings</button>
+                    <button id="cube-tab-summary" class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg">Summary</button>
                 </div>
 
                 <!-- Comparison Tab Content -->
@@ -602,6 +603,30 @@
 
                     <!-- Rankings Results -->
                     <div id="cube-rankings-results"></div>
+                </div>
+
+                <!-- Summary Tab Content -->
+                <div id="cube-summary-content" style="display: none;">
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="color: var(--accent-primary); margin-bottom: 10px; font-size: 1.2em; font-weight: 600;">
+                            All Slots Potential Summary
+                        </h3>
+                        <p style="color: var(--text-secondary); font-size: 0.9em;">
+                            Overview of Set A DPS gains for all equipment slots (Regular and Bonus Potential)
+                        </p>
+                    </div>
+
+                    <!-- Loading Progress -->
+                    <div id="cube-summary-progress" style="display: none; margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.05)); border: 2px solid rgba(0, 122, 255, 0.3); border-radius: 12px;">
+                        <div style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 8px; text-align: center;">
+                            <span id="cube-summary-progress-text">Loading rankings...</span>
+                        </div>
+                        <div style="background: var(--border-color); height: 8px; border-radius: 4px; overflow: hidden;">
+                            <div id="cube-summary-progress-fill" style="background: linear-gradient(90deg, var(--accent-primary), var(--accent-success)); height: 100%; width: 0%; transition: width 0.3s;"></div>
+                        </div>
+                    </div>
+
+                    <div id="cube-summary-results"></div>
                 </div>
             </div>
         </div>

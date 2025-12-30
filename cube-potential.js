@@ -286,25 +286,44 @@ function selectCubeSlot(slotId) {
 function setupCubeTabs() {
     const comparisonTab = document.getElementById('cube-tab-comparison');
     const rankingsTab = document.getElementById('cube-tab-rankings');
+    const summaryTab = document.getElementById('cube-tab-summary');
     const comparisonContent = document.getElementById('cube-comparison-content');
     const rankingsContent = document.getElementById('cube-rankings-content');
+    const summaryContent = document.getElementById('cube-summary-content');
 
-    if (comparisonTab && rankingsTab && comparisonContent && rankingsContent) {
+    if (comparisonTab && rankingsTab && summaryTab && comparisonContent && rankingsContent && summaryContent) {
         comparisonTab.addEventListener('click', () => {
             comparisonTab.classList.add('active');
             rankingsTab.classList.remove('active');
+            summaryTab.classList.remove('active');
             comparisonContent.style.display = 'block';
             rankingsContent.style.display = 'none';
+            summaryContent.style.display = 'none';
         });
 
         rankingsTab.addEventListener('click', () => {
             rankingsTab.classList.add('active');
             comparisonTab.classList.remove('active');
+            summaryTab.classList.remove('active');
             rankingsContent.style.display = 'block';
             comparisonContent.style.display = 'none';
+            summaryContent.style.display = 'none';
 
             // Check if rankings are ready, if not show them (with loading if needed)
             displayOrCalculateRankings();
+        });
+
+        summaryTab.addEventListener('click', () => {
+            summaryTab.classList.add('active');
+            comparisonTab.classList.remove('active');
+            rankingsTab.classList.remove('active');
+            summaryContent.style.display = 'block';
+            comparisonContent.style.display = 'none';
+            rankingsContent.style.display = 'none';
+
+            // Display summary and start loading any missing rankings
+            displayAllSlotsSummary();
+            loadAllRankingsForSummary();
         });
     }
 }
@@ -522,6 +541,12 @@ function calculateComparison() {
     const rarity = cubeSlotData[currentCubeSlot][currentPotentialType].rarity;
     if (!rankingsCache[slotId]?.[rarity]) {
         loadRankingsInBackground(slotId, rarity, setAGain, setBGain);
+    }
+
+    // If summary tab is visible, update it
+    const summaryContent = document.getElementById('cube-summary-content');
+    if (summaryContent && summaryContent.style.display !== 'none') {
+        displayAllSlotsSummary();
     }
 }
 
@@ -1169,6 +1194,12 @@ function clearCubeRankingsCache() {
         currentRankingsPage = 1;
         displayOrCalculateRankings();
     }
+
+    // If summary tab is visible, update summary
+    const summaryContent = document.getElementById('cube-summary-content');
+    if (summaryContent && summaryContent.style.display !== 'none') {
+        displayAllSlotsSummary();
+    }
 }
 
 // Save cube potential data to localStorage
@@ -1178,6 +1209,239 @@ function saveCubePotentialData() {
     } catch (error) {
         console.error('Error saving cube potential data:', error);
     }
+}
+
+// Global state for summary sorting
+let summarySortColumn = 'regular'; // 'regular' or 'bonus'
+let summarySortDescending = true;
+
+// Display summary of all slots
+function displayAllSlotsSummary() {
+    const resultsDiv = document.getElementById('cube-summary-results');
+    if (!resultsDiv) return;
+
+    if (!selectedClass) {
+        resultsDiv.innerHTML = '<p style="text-align: center; color: var(--text-secondary);">Please select a class to view summary.</p>';
+        return;
+    }
+
+    const baseStats = getStats('base');
+    const baseDPS = calculateDamage(baseStats, 'boss').dps;
+
+    // Calculate DPS gain for each slot + potential type
+    const summaryData = [];
+
+    slotNames.forEach(slot => {
+        // Regular Potential
+        const regularData = cubeSlotData[slot.id].regular;
+        const regularStats = { ...baseStats };
+        for (let lineNum = 1; lineNum <= 3; lineNum++) {
+            const line = regularData.setA[`line${lineNum}`];
+            if (!line || !line.stat) continue;
+            const mapped = potentialStatToDamageStat(line.stat, line.value);
+            if (mapped.stat) {
+                regularStats[mapped.stat] = (regularStats[mapped.stat] || 0) + mapped.value;
+            }
+        }
+        const regularDPS = calculateDamage(regularStats, 'boss').dps;
+        const regularGain = ((regularDPS - baseDPS) / baseDPS * 100);
+
+        // Bonus Potential
+        const bonusData = cubeSlotData[slot.id].bonus;
+        const bonusStats = { ...baseStats };
+        for (let lineNum = 1; lineNum <= 3; lineNum++) {
+            const line = bonusData.setA[`line${lineNum}`];
+            if (!line || !line.stat) continue;
+            const mapped = potentialStatToDamageStat(line.stat, line.value);
+            if (mapped.stat) {
+                bonusStats[mapped.stat] = (bonusStats[mapped.stat] || 0) + mapped.value;
+            }
+        }
+        const bonusDPS = calculateDamage(bonusStats, 'boss').dps;
+        const bonusGain = ((bonusDPS - baseDPS) / baseDPS * 100);
+
+        summaryData.push({
+            slotId: slot.id,
+            slotName: slot.name,
+            regularGain,
+            regularRarity: regularData.rarity,
+            bonusGain,
+            bonusRarity: bonusData.rarity
+        });
+    });
+
+    // Sort by selected column
+    if (summarySortColumn === 'regular') {
+        summaryData.sort((a, b) => summarySortDescending ? b.regularGain - a.regularGain : a.regularGain - b.regularGain);
+    } else {
+        summaryData.sort((a, b) => summarySortDescending ? b.bonusGain - a.bonusGain : a.bonusGain - b.bonusGain);
+    }
+
+    // Build HTML table with sortable headers
+    const regularSortIndicator = summarySortColumn === 'regular' ? (summarySortDescending ? ' ▼' : ' ▲') : '';
+    const bonusSortIndicator = summarySortColumn === 'bonus' ? (summarySortDescending ? ' ▼' : ' ▲') : '';
+
+    let html = `
+        <table class="stat-weight-table">
+            <thead>
+                <tr>
+                    <th style="text-align: center;">Slot</th>
+                    <th style="text-align: center; cursor: pointer; user-select: none;" onclick="sortSummaryBy('regular')">
+                        Regular Potential${regularSortIndicator}<br>
+                        <span style="font-size: 0.8em; font-weight: 400;">(Set A Gain)</span>
+                    </th>
+                    <th style="text-align: center; cursor: pointer; user-select: none;" onclick="sortSummaryBy('bonus')">
+                        Bonus Potential${bonusSortIndicator}<br>
+                        <span style="font-size: 0.8em; font-weight: 400;">(Set A Gain)</span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    summaryData.forEach((data) => {
+        const rarityColor = getRarityColor(data.regularRarity);
+        const bonusRarityColor = getRarityColor(data.bonusRarity);
+
+        // Get percentile for regular and bonus
+        const regularPercentile = getPercentileForGain(data.slotId, data.regularRarity, data.regularGain);
+        const bonusPercentile = getPercentileForGain(data.slotId, data.bonusRarity, data.bonusGain);
+
+        html += `
+            <tr>
+                <td style="font-weight: 600; text-align: center;">${data.slotName}</td>
+                <td style="text-align: center;">
+                    <div style="color: ${data.regularGain >= 0 ? '#4ade80' : '#f87171'}; font-weight: 600; margin-bottom: 4px;">
+                        ${data.regularGain >= 0 ? '+' : ''}${data.regularGain.toFixed(2)}%
+                    </div>
+                    <div style="font-size: 0.8em; color: var(--text-secondary);">
+                        ${data.regularRarity.charAt(0).toUpperCase() + data.regularRarity.slice(1)}
+                        ${regularPercentile}
+                    </div>
+                </td>
+                <td style="text-align: center;">
+                    <div style="color: ${data.bonusGain >= 0 ? '#4ade80' : '#f87171'}; font-weight: 600; margin-bottom: 4px;">
+                        ${data.bonusGain >= 0 ? '+' : ''}${data.bonusGain.toFixed(2)}%
+                    </div>
+                    <div style="font-size: 0.8em; color: var(--text-secondary);">
+                        ${data.bonusRarity.charAt(0).toUpperCase() + data.bonusRarity.slice(1)}
+                        ${bonusPercentile}
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+
+    html += `
+            </tbody>
+        </table>
+    `;
+
+    resultsDiv.innerHTML = html;
+}
+
+// Load all rankings needed for summary
+async function loadAllRankingsForSummary() {
+    if (!selectedClass) return;
+
+    // Collect all unique slot+rarity combinations that need ranking
+    const rankingsToLoad = [];
+
+    slotNames.forEach(slot => {
+        // Regular potential
+        const regularRarity = cubeSlotData[slot.id].regular.rarity;
+        const regularKey = `${slot.id}-${regularRarity}`;
+        if (!rankingsCache[slot.id]?.[regularRarity] && !rankingsInProgress[regularKey]) {
+            rankingsToLoad.push({ slotId: slot.id, rarity: regularRarity, slotName: slot.name, type: 'Regular' });
+        }
+
+        // Bonus potential
+        const bonusRarity = cubeSlotData[slot.id].bonus.rarity;
+        const bonusKey = `${slot.id}-${bonusRarity}`;
+        if (!rankingsCache[slot.id]?.[bonusRarity] && !rankingsInProgress[bonusKey]) {
+            rankingsToLoad.push({ slotId: slot.id, rarity: bonusRarity, slotName: slot.name, type: 'Bonus' });
+        }
+    });
+
+    // If nothing to load, we're done
+    if (rankingsToLoad.length === 0) return;
+
+    const progressBar = document.getElementById('cube-summary-progress');
+    const progressFill = document.getElementById('cube-summary-progress-fill');
+    const progressText = document.getElementById('cube-summary-progress-text');
+
+    // Show progress bar
+    if (progressBar) progressBar.style.display = 'block';
+
+    const total = rankingsToLoad.length;
+
+    // Calculate each ranking in sequence (to avoid overwhelming the browser)
+    for (let i = 0; i < rankingsToLoad.length; i++) {
+        const { slotId, rarity, slotName, type } = rankingsToLoad[i];
+
+        // Update progress text
+        if (progressText) {
+            progressText.textContent = `Loading rankings for ${slotName} (${type} - ${rarity})... ${i + 1}/${total}`;
+        }
+        if (progressFill) {
+            progressFill.style.width = `${((i / total) * 100)}%`;
+        }
+
+        await calculateRankingsForRarity(rarity, slotId);
+
+        // Update summary display after each ranking is calculated
+        const summaryContent = document.getElementById('cube-summary-content');
+        if (summaryContent && summaryContent.style.display !== 'none') {
+            displayAllSlotsSummary();
+        }
+    }
+
+    // Hide progress bar
+    if (progressFill) progressFill.style.width = '100%';
+    setTimeout(() => {
+        if (progressBar) progressBar.style.display = 'none';
+    }, 500);
+}
+
+// Sort summary table by column
+function sortSummaryBy(column) {
+    if (summarySortColumn === column) {
+        // Same column - toggle direction
+        summarySortDescending = !summarySortDescending;
+    } else {
+        // Different column - set new column and default to descending
+        summarySortColumn = column;
+        summarySortDescending = true;
+    }
+    displayAllSlotsSummary();
+}
+
+// Get percentile for a given DPS gain (helper for summary)
+function getPercentileForGain(slotId, rarity, dpsGain) {
+    const key = `${slotId}-${rarity}`;
+    const rankings = rankingsCache[slotId]?.[rarity];
+
+    // Check if currently loading
+    if (rankingsInProgress[key]) {
+        return '<span style="color: var(--text-secondary); font-style: italic;">Loading...</span>';
+    }
+
+    if (!rankings || rankings.length === 0) {
+        return '<span style="color: var(--text-secondary);">—</span>';
+    }
+
+    // Find percentile
+    let percentile = 0;
+    for (let i = 0; i < rankings.length; i++) {
+        if (rankings[i].dpsGain <= dpsGain) {
+            percentile = ((i / rankings.length) * 100).toFixed(1);
+            break;
+        }
+    }
+    if (percentile === 0 && dpsGain >= rankings[0].dpsGain) percentile = 0;
+    if (percentile === 0 && dpsGain < rankings[rankings.length - 1].dpsGain) percentile = 100;
+
+    return `<span style="color: var(--accent-primary);">Top ${percentile}%</span>`;
 }
 
 // Load cube potential data from localStorage
