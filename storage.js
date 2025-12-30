@@ -88,7 +88,7 @@ function saveToLocalStorage() {
     });
 
     // Save Equipment Slots
-    const slotNames = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck'];
+    const slotNames = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck', 'eye-accessory'];
     data.equipmentSlots = {};
 
     slotNames.forEach(slotId => {
@@ -215,7 +215,7 @@ function loadFromLocalStorage() {
 
         // Load Equipment Slots
         if (data.equipmentSlots) {
-            const slotNames = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck'];
+            const slotNames = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck', 'eye-accessory'];
 
             slotNames.forEach(slotId => {
                 if (data.equipmentSlots[slotId]) {

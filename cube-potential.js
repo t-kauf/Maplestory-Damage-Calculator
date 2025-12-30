@@ -140,7 +140,9 @@ function getRarityColor(rarity) {
         'normal': '#9ca3af',      // Gray
         'rare': '#60a5fa',        // Blue
         'epic': '#a78bfa',        // Purple
-        'unique': '#fbbf24'       // Yellow/Gold
+        'unique': '#fbbf24',      // Yellow/Gold
+        'legendary': '#33ce85',   // Green
+        'mystic': '#ff3f42'       // Red
     };
     return colors[rarity] || colors['normal'];
 }
@@ -208,7 +210,7 @@ function setupRaritySelector() {
     // Clear existing options
     raritySelector.innerHTML = '';
 
-    const rarities = ['normal', 'rare', 'epic', 'unique'];
+    const rarities = ['normal', 'rare', 'epic', 'unique', 'legendary', 'mystic'];
     rarities.forEach(rarity => {
         const option = document.createElement('option');
         option.value = rarity;

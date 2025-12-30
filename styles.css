@@ -83,6 +83,28 @@ select option {
     }
 }
 
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+}
+
 .tab-button {
     background: transparent;
     color: #6b7280;
@@ -1125,4 +1147,35 @@ select option {
 .dark #analysis-cube-potential select option {
     background-color: #374151;
     color: #f3f4f6;
+}
+
+/* Donate notification theme styles */
+.donate-notification-theme {
+    background: #fef3c7;
+    border: 2px solid #fbbf24;
+    color: #f59e0b;
+}
+
+.dark .donate-notification-theme {
+    background: #1f2937;
+    border: 2px solid #f59e0b;
+    color: #fbbf24;
+}
+
+.donate-notification-close {
+    background: rgba(251, 191, 36, 0.2);
+    color: #f59e0b;
+}
+
+.donate-notification-close:hover {
+    background: rgba(251, 191, 36, 0.3);
+}
+
+.dark .donate-notification-close {
+    background: rgba(251, 191, 36, 0.2);
+    color: #fbbf24;
+}
+
+.dark .donate-notification-close:hover {
+    background: rgba(251, 191, 36, 0.3);
 }

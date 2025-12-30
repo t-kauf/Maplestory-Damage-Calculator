@@ -320,7 +320,46 @@ window.onload = function () {
     } else {
         calculate();
     }
+    // Show donation notification if needed
+    showDonateNotificationIfNeeded();
 };
+
+// Donation notification functions
+function showDonateNotificationIfNeeded() {
+    try {
+        const today = new Date().toDateString();
+        const lastShown = localStorage.getItem('donateNotificationLastShown');
+
+        // Only show if not shown today
+        if (lastShown !== today) {
+            const notification = document.getElementById('donate-notification');
+            if (notification) {
+                notification.style.display = 'block';
+
+                // Auto-dismiss after 15 seconds
+                setTimeout(() => {
+                    dismissDonateNotification();
+                }, 15000);
+
+                // Mark as shown today
+                localStorage.setItem('donateNotificationLastShown', today);
+            }
+        }
+    } catch (error) {
+        console.error('Error showing donate notification:', error);
+    }
+}
+
+function dismissDonateNotification() {
+    const notification = document.getElementById('donate-notification');
+    if (notification) {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => {
+            notification.style.display = 'none';
+            notification.style.animation = 'slideIn 0.4s ease-out';
+        }, 300);
+    }
+}
 
 function enableGlobalNumberInputAutoSelect() {
     document.addEventListener('focusin', (e) => {

@@ -942,6 +942,204 @@ function updateUpgradePriorityChain() {
     priorityChain.innerHTML = html;
 }
 
+function calculateCurrencyUpgrades() {
+    const currencyInput = document.getElementById('upgrade-currency-input');
+    const resultsDiv = document.getElementById('currency-upgrade-results');
+    const attackGainDisplay = document.getElementById('currency-attack-gain');
+    const dpsGainDisplay = document.getElementById('currency-dps-gain');
+    const pathDisplay = document.getElementById('currency-upgrade-path');
+
+    if (!currencyInput || !resultsDiv) return;
+
+    const currency = parseFloat(currencyInput.value) || 0;
+
+    if (currency <= 0) {
+        resultsDiv.style.display = 'none';
+        return;
+    }
+
+    // Collect current weapon states
+    const weaponStates = [];
+    const initialWeaponLevels = {};
+    rarities.forEach(rarity => {
+        tiers.forEach(tier => {
+            const levelInput = document.getElementById(`level-${rarity}-${tier}`);
+            const starsInput = document.getElementById(`stars-${rarity}-${tier}`);
+            if (levelInput) {
+                const level = parseInt(levelInput.value) || 0;
+                const stars = starsInput?.value !== undefined && starsInput?.value !== ''
+                    ? parseInt(starsInput.value)
+                    : 5;
+                const maxLevel = getMaxLevelForStars(stars);
+                const key = `${rarity}-${tier}`;
+                initialWeaponLevels[key] = level;
+
+                if (level > 0 && level < maxLevel) {
+                    weaponStates.push({
+                        rarity,
+                        tier,
+                        level,
+                        stars,
+                        maxLevel
+                    });
+                }
+            }
+        });
+    });
+
+    if (weaponStates.length === 0) {
+        resultsDiv.style.display = 'none';
+        return;
+    }
+
+    // Calculate initial DPS
+    const baseStats = getStats('base');
+    const initialDPS = calculateDamage(baseStats, 'boss').dps;
+
+    // Simulate spending currency
+    const upgradeSequence = [];
+    const weaponLevels = {};
+    const weaponMaxLevels = {};
+    let remainingCurrency = currency;
+    let totalAttackGain = 0;
+
+    // Initialize current levels and max levels
+    weaponStates.forEach(ws => {
+        const key = `${ws.rarity}-${ws.tier}`;
+        weaponLevels[key] = ws.level;
+        weaponMaxLevels[key] = ws.maxLevel;
+    });
+
+    // Keep upgrading until we run out of currency
+    while (remainingCurrency > 0) {
+        let bestWeapon = null;
+        let bestEfficiency = 0;
+        let bestCost = 0;
+        let bestGain = 0;
+
+        // Find the most efficient upgrade we can afford
+        weaponStates.forEach(ws => {
+            const key = `${ws.rarity}-${ws.tier}`;
+            const currentLevel = weaponLevels[key];
+            const maxLevel = weaponMaxLevels[key];
+
+            if (currentLevel >= maxLevel) return;
+
+            const cost = getUpgradeCost(ws.rarity, ws.tier, currentLevel + 1);
+
+            // Skip if we can't afford this upgrade
+            if (cost > remainingCurrency) return;
+
+            const currentAttack = calculateWeaponAttacks(ws.rarity, ws.tier, currentLevel).inventoryAttack;
+            const nextAttack = calculateWeaponAttacks(ws.rarity, ws.tier, currentLevel + 1).inventoryAttack;
+            const gain = nextAttack - currentAttack;
+
+            const efficiency = cost > 0 ? (gain / cost) * 1000 : 0;
+
+            if (efficiency > bestEfficiency) {
+                bestEfficiency = efficiency;
+                bestWeapon = { rarity: ws.rarity, tier: ws.tier, key };
+                bestCost = cost;
+                bestGain = gain;
+            }
+        });
+
+        // If no affordable upgrade found, stop
+        if (!bestWeapon) break;
+
+        // Apply this upgrade
+        upgradeSequence.push(bestWeapon);
+        weaponLevels[bestWeapon.key]++;
+        remainingCurrency -= bestCost;
+        totalAttackGain += bestGain;
+    }
+
+    if (upgradeSequence.length === 0) {
+        resultsDiv.style.display = 'none';
+        return;
+    }
+
+    // Calculate weapon attack bonus with simulated upgraded levels
+    let newWeaponAttackBonus = 0;
+    let equippedBonus = 0;
+
+    rarities.forEach(rarity => {
+        tiers.forEach(tier => {
+            const key = `${rarity}-${tier}`;
+            const newLevel = weaponLevels[key] || initialWeaponLevels[key] || 0;
+
+            if (newLevel === 0) return;
+
+            const { inventoryAttack, equippedAttack } = calculateWeaponAttacks(rarity, tier, newLevel);
+            newWeaponAttackBonus += inventoryAttack;
+
+            // Check if this weapon is equipped
+            const equippedDisplay = document.getElementById(`equipped-display-${rarity}-${tier}`);
+            if (equippedDisplay && equippedDisplay.style.display !== 'none') {
+                equippedBonus = equippedAttack;
+            }
+        });
+    });
+
+    newWeaponAttackBonus += equippedBonus;
+
+    // Calculate new DPS with new weapon attack bonus
+    const newStats = { ...baseStats };
+    const currentWeaponBonus = getWeaponAttackBonus();
+    const weaponBonusDiff = newWeaponAttackBonus - currentWeaponBonus;
+
+    // Apply the weapon attack bonus difference to attack
+    // Weapon attack bonus is a % that multiplies base attack
+    const baseAttackWithoutWeaponBonus = baseStats.attack / (1 + currentWeaponBonus / 100);
+    newStats.attack = baseAttackWithoutWeaponBonus * (1 + newWeaponAttackBonus / 100);
+
+    const newDPS = calculateDamage(newStats, 'boss').dps;
+    const dpsGainPct = ((newDPS - initialDPS) / initialDPS * 100);
+
+    // Group consecutive upgrades
+    const groupedUpgrades = [];
+    let currentGroup = null;
+
+    upgradeSequence.forEach(upgrade => {
+        if (!currentGroup || currentGroup.rarity !== upgrade.rarity || currentGroup.tier !== upgrade.tier) {
+            if (currentGroup) {
+                groupedUpgrades.push(currentGroup);
+            }
+            currentGroup = {
+                rarity: upgrade.rarity,
+                tier: upgrade.tier,
+                count: 1
+            };
+        } else {
+            currentGroup.count++;
+        }
+    });
+
+    if (currentGroup) {
+        groupedUpgrades.push(currentGroup);
+    }
+
+    // Build path HTML
+    let pathHTML = '';
+    groupedUpgrades.forEach((group, index) => {
+        const rarityColor = rarityColors[group.rarity.charAt(0).toUpperCase() + group.rarity.slice(1)];
+        const tierUpper = group.tier.toUpperCase();
+        const rarityFirstLetter = group.rarity.charAt(0).toUpperCase();
+
+        pathHTML += `<span style="color: ${rarityColor}; font-weight: 600;">${tierUpper} ${rarityFirstLetter} x${group.count}</span>`;
+
+        if (index < groupedUpgrades.length - 1) {
+            pathHTML += ' <span style="color: var(--text-secondary);">→</span> ';
+        }
+    });
+
+    // Display results
+    attackGainDisplay.textContent = `+${totalAttackGain.toFixed(2)}%`;
+    dpsGainDisplay.textContent = `+${dpsGainPct.toFixed(2)}%`;
+    pathDisplay.innerHTML = pathHTML;
+    resultsDiv.style.display = 'block';
+}
+
 // Display functions
 function displayResults(itemName, stats, uniqueId, isEquipped = false, equippedDamageValues = null) {
     const bossResults = calculateDamage(stats, 'boss');
@@ -1344,13 +1542,13 @@ function loadHeroPowerPresets() {
 
 // Equipment Slots Management
 function initializeEquipmentSlots() {
-    const slots = ['Head', 'Cape', 'Chest', 'Shoulders', 'Legs', 'Belt', 'Gloves', 'Boots', 'Ring', 'Neck'];
+    const slots = ['Head', 'Cape', 'Chest', 'Shoulders', 'Legs', 'Belt', 'Gloves', 'Boots', 'Ring', 'Neck', 'Eye Accessory'];
     const container = document.getElementById('equipment-slots-grid');
     if (!container) return;
 
     let html = '';
     slots.forEach((slotName, index) => {
-        const slotId = slotName.toLowerCase();
+        const slotId = slotName.toLowerCase().replace(/\s+/g, '-');
         html += `
             <div style="background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.05)); border: 1px solid var(--accent-primary); border-radius: 12px; padding: 15px; box-shadow: 0 4px 16px var(--shadow); min-width: 0;">
                 <div style="color: var(--accent-primary); font-weight: 600; font-size: 0.95em; margin-bottom: 12px;">${slotName}</div>
@@ -1369,9 +1567,9 @@ function initializeEquipmentSlots() {
                     </div>
                 </div>
                 <div style="background: rgba(79, 195, 247, 0.1); border-radius: 8px; padding: 10px;">
-                    <div style="color: var(--text-secondary); font-size: 0.75em; margin-bottom: 6px; font-weight: 500;">DPS Gain % (Boss / Normal)</div>
-                    <div style="color: var(--accent-primary); font-size: 0.9em; font-weight: 600;">
-                        <span id="slot-${slotId}-boss-dps">0%</span> / <span id="slot-${slotId}-normal-dps">0%</span>
+                    <div style="color: var(--text-secondary); font-size: 0.75em; margin-bottom: 6px; font-weight: 500;">DPS Gain %</div>
+                    <div style="color: var(--accent-primary); font-size: 1.1em; font-weight: 600;">
+                        <span id="slot-${slotId}-dps">0%</span>
                     </div>
                 </div>
             </div>
@@ -1383,7 +1581,7 @@ function initializeEquipmentSlots() {
     // Attach save listeners
     setTimeout(() => {
         slots.forEach(slot => {
-            const slotId = slot.toLowerCase();
+            const slotId = slot.toLowerCase().replace(/\s+/g, '-');
             const attackInput = document.getElementById(`slot-${slotId}-attack`);
             const mainStatInput = document.getElementById(`slot-${slotId}-main-stat`);
             const damageAmpInput = document.getElementById(`slot-${slotId}-damage-amp`);
@@ -1397,7 +1595,7 @@ function initializeEquipmentSlots() {
 
 function saveEquipmentSlots() {
     const slots = {};
-    const slotNames = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck'];
+    const slotNames = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck', 'eye-accessory'];
 
     slotNames.forEach(slotId => {
         const attackInput = document.getElementById(`slot-${slotId}-attack`);
@@ -1420,7 +1618,7 @@ function loadEquipmentSlots() {
 
     try {
         const slots = JSON.parse(saved);
-        const slotNames = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck'];
+        const slotNames = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck', 'eye-accessory'];
 
         slotNames.forEach(slotId => {
             if (slots[slotId]) {
@@ -1440,7 +1638,16 @@ function loadEquipmentSlots() {
 
 function calculateEquipmentSlotDPS() {
     const baseStats = getStats('base');
-    const slotNames = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck'];
+    const slotNames = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck', 'eye-accessory'];
+    const weaponAttackBonus = getWeaponAttackBonus();
+
+    // Calculate baseline DPS (with all slots)
+    const baselineDPS = calculateDamage(baseStats, 'boss').dps;
+
+    // Track total stats from all slots for total DPS calculation
+    let totalAttackFromSlots = 0;
+    let totalStatDamageFromSlots = 0;
+    let totalDamageAmpFromSlots = 0;
 
     slotNames.forEach(slotId => {
         const attackInput = document.getElementById(`slot-${slotId}-attack`);
@@ -1451,16 +1658,16 @@ function calculateEquipmentSlotDPS() {
         const slotMainStat = parseFloat(mainStatInput?.value) || 0;
         const slotDamageAmp = parseFloat(damageAmpInput?.value) || 0;
 
-        // Calculate baseline DPS (base stats WITH this slot included)
-        const baselineBossDPS = calculateDamage(baseStats, 'boss').dps;
-        const baselineNormalDPS = calculateDamage(baseStats, 'normal').dps;
-
         // Calculate weapon attack bonus (same as scrolling tab)
-        const weaponAttackBonus = getWeaponAttackBonus();
         const effectiveAttackIncrease = slotAttack * (1 + weaponAttackBonus / 100);
 
         // Convert main stat to stat damage (100:1 ratio)
         const statDamageFromMainStat = slotMainStat / 100;
+
+        // Add to totals
+        totalAttackFromSlots += effectiveAttackIncrease;
+        totalStatDamageFromSlots += statDamageFromMainStat;
+        totalDamageAmpFromSlots += slotDamageAmp;
 
         // Remove this slot's stats from base to see DPS without it
         const statsWithoutSlot = { ...baseStats };
@@ -1469,20 +1676,28 @@ function calculateEquipmentSlotDPS() {
         statsWithoutSlot.damageAmp -= slotDamageAmp;
 
         // Calculate DPS without this slot
-        const withoutSlotBossDPS = calculateDamage(statsWithoutSlot, 'boss').dps;
-        const withoutSlotNormalDPS = calculateDamage(statsWithoutSlot, 'normal').dps;
+        const withoutSlotDPS = calculateDamage(statsWithoutSlot, 'boss').dps;
 
-        // Calculate percentage gain (same formula as scrolling tab: (new - old) / old * 100)
-        const bossDPSGainPct = ((baselineBossDPS - withoutSlotBossDPS) / baselineBossDPS * 100);
-        const normalDPSGainPct = ((baselineNormalDPS - withoutSlotNormalDPS) / baselineNormalDPS * 100);
+        // Calculate percentage gain
+        const dpsGainPct = ((baselineDPS - withoutSlotDPS) / baselineDPS * 100);
 
         // Display results
-        const bossDPSDisplay = document.getElementById(`slot-${slotId}-boss-dps`);
-        const normalDPSDisplay = document.getElementById(`slot-${slotId}-normal-dps`);
-
-        if (bossDPSDisplay) bossDPSDisplay.textContent = `+${bossDPSGainPct.toFixed(2)}%`;
-        if (normalDPSDisplay) normalDPSDisplay.textContent = `+${normalDPSGainPct.toFixed(2)}%`;
+        const dpsDisplay = document.getElementById(`slot-${slotId}-dps`);
+        if (dpsDisplay) dpsDisplay.textContent = `+${dpsGainPct.toFixed(2)}%`;
     });
+
+    // Calculate total DPS gain from all slots
+    const statsWithoutAllSlots = { ...baseStats };
+    statsWithoutAllSlots.attack -= totalAttackFromSlots;
+    statsWithoutAllSlots.statDamage -= totalStatDamageFromSlots;
+    statsWithoutAllSlots.damageAmp -= totalDamageAmpFromSlots;
+
+    const withoutAllSlotsDPS = calculateDamage(statsWithoutAllSlots, 'boss').dps;
+    const totalDPSGainPct = ((baselineDPS - withoutAllSlotsDPS) / baselineDPS * 100);
+
+    // Display total DPS gain
+    const totalDPSDisplay = document.getElementById('total-slots-dps');
+    if (totalDPSDisplay) totalDPSDisplay.textContent = `+${totalDPSGainPct.toFixed(2)}%`;
 }
 
 // Help Sidebar System
