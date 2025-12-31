@@ -255,9 +255,9 @@ function setupRaritySelector() {
     raritySelector.value = cubeSlotData[currentCubeSlot][currentPotentialType].rarity;
     raritySelector.onchange = (e) => {
         cubeSlotData[currentCubeSlot][currentPotentialType].rarity = e.target.value;
-        saveCubePotentialData();
         updateSlotButtonColors(); // Update slot button border colors
-        updateCubePotentialUI();
+        updateCubePotentialUI(); // This will clear invalid lines
+        saveCubePotentialData(); // Save after clearing invalid lines
 
         // If rankings tab is visible, update rankings display
         const rankingsContent = document.getElementById('cube-rankings-content');
@@ -471,18 +471,26 @@ function updatePotentialLineDropdowns(setName, rarity) {
 function restorePotentialLineValues(setName, setData) {
     for (let lineNum = 1; lineNum <= 3; lineNum++) {
         const lineData = setData[`line${lineNum}`];
-        if (!lineData || !lineData.stat) continue;
-
         const statSelect = document.getElementById(`cube-${setName}-line${lineNum}-stat`);
 
         if (!statSelect) continue;
+
+        if (!lineData || !lineData.stat) {
+            // No saved data - just ensure dropdown is empty
+            statSelect.value = '';
+            continue;
+        }
 
         // Find matching option
         const key = `${lineData.stat}|${lineData.value}|${lineData.prime}`;
         const option = Array.from(statSelect.options).find(opt => opt.value === key);
 
         if (option) {
+            // Line exists in this rarity - restore it
             statSelect.value = key;
+        } else {
+            // Line doesn't exist in this rarity - just clear dropdown (don't touch saved data)
+            statSelect.value = '';
         }
     }
 }
@@ -491,6 +499,32 @@ function restorePotentialLineValues(setName, setData) {
 function getMainStatForClass() {
     if (!selectedClass) return null;
     return classMainStatMap[selectedClass];
+}
+
+// Check if a potential line exists in a given rarity for a given slot and line number
+function lineExistsInRarity(slotId, rarity, lineNum, lineStat, lineValue, linePrime) {
+    if (!lineStat) return false;
+
+    const potentialData = equipmentPotentialData[rarity];
+    if (!potentialData) return false;
+
+    // Get base potential lines for this line number
+    let availableLines = [...(potentialData[`line${lineNum}`] || [])];
+
+    // Add slot-specific lines if available
+    if (slotSpecificPotentials[slotId] && slotSpecificPotentials[slotId][rarity]) {
+        const slotSpecificLines = slotSpecificPotentials[slotId][rarity][`line${lineNum}`];
+        if (slotSpecificLines) {
+            availableLines = [...slotSpecificLines, ...availableLines];
+        }
+    }
+
+    // Check if this exact line exists
+    return availableLines.some(line =>
+        line.stat === lineStat &&
+        line.value === lineValue &&
+        line.prime === linePrime
+    );
 }
 
 // Convert potential stat to damage stat
@@ -539,9 +573,12 @@ function calculateComparison() {
     // Calculate base DPS (no potential lines)
     const baseDPS = calculateDamage(baseStats, 'boss').dps;
 
-    // Calculate Set A stats and DPS (base + Set A lines)
+    // Calculate Set A stats and DPS (base + Set A lines that exist in current rarity)
     const setAStats = { ...baseStats };
     for (let lineNum = 1; lineNum <= 3; lineNum++) {
+        const statSelect = document.getElementById(`cube-setA-line${lineNum}-stat`);
+        if (!statSelect || !statSelect.value) continue;
+
         const line = slotData.setA[`line${lineNum}`];
         if (!line || !line.stat) continue;
 
@@ -552,9 +589,12 @@ function calculateComparison() {
     }
     const setADPS = calculateDamage(setAStats, 'boss').dps;
 
-    // Calculate Set B stats and DPS (base + Set B lines)
+    // Calculate Set B stats and DPS (base + Set B lines that exist in current rarity)
     const setBStats = { ...baseStats };
     for (let lineNum = 1; lineNum <= 3; lineNum++) {
+        const statSelect = document.getElementById(`cube-setB-line${lineNum}-stat`);
+        if (!statSelect || !statSelect.value) continue;
+
         const line = slotData.setB[`line${lineNum}`];
         if (!line || !line.stat) continue;
 
@@ -1087,14 +1127,17 @@ async function calculateRankingsForRarity(rarity, slotId = currentCubeSlot) {
             }
         }
 
-        // Cache the deduplicated results for this slot and rarity
-        rankingsCache[slotId][rarity] = deduplicatedRankings;
+        // Filter out combinations with 0% or negligible DPS gain
+        const filteredRankings = deduplicatedRankings.filter(combo => combo.dpsGain > 0.01);
+
+        // Cache the filtered results for this slot and rarity
+        rankingsCache[slotId][rarity] = filteredRankings;
 
         // If this is the current slot and rankings tab is visible, display results
         if (isCurrentSlot) {
             const rankingsContent = document.getElementById('cube-rankings-content');
             if (rankingsContent && rankingsContent.style.display !== 'none') {
-                displayRankings(rankings, rarity);
+                displayRankings(filteredRankings, rarity);
             }
 
             // Hide progress bar
@@ -1275,6 +1318,10 @@ function displayAllSlotsSummary() {
         for (let lineNum = 1; lineNum <= 3; lineNum++) {
             const line = regularData.setA[`line${lineNum}`];
             if (!line || !line.stat) continue;
+
+            // Only apply line if it exists in the current rarity for this slot
+            if (!lineExistsInRarity(slot.id, regularData.rarity, lineNum, line.stat, line.value, line.prime)) continue;
+
             const mapped = potentialStatToDamageStat(line.stat, line.value);
             if (mapped.stat) {
                 regularStats[mapped.stat] = (regularStats[mapped.stat] || 0) + mapped.value;
@@ -1289,6 +1336,10 @@ function displayAllSlotsSummary() {
         for (let lineNum = 1; lineNum <= 3; lineNum++) {
             const line = bonusData.setA[`line${lineNum}`];
             if (!line || !line.stat) continue;
+
+            // Only apply line if it exists in the current rarity for this slot
+            if (!lineExistsInRarity(slot.id, bonusData.rarity, lineNum, line.stat, line.value, line.prime)) continue;
+
             const mapped = potentialStatToDamageStat(line.stat, line.value);
             if (mapped.stat) {
                 bonusStats[mapped.stat] = (bonusStats[mapped.stat] || 0) + mapped.value;
