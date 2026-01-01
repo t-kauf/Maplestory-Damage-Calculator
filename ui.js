@@ -1160,6 +1160,24 @@ function calculateCurrencyUpgrades() {
     dpsGainDisplay.textContent = `+${dpsGainPct.toFixed(2)}%`;
     pathDisplay.innerHTML = pathHTML;
     resultsDiv.style.display = 'block';
+    const applyUpgradesBtn = document.getElementById('apply-upgrade-path-btn');
+
+    // update weapon levels after user has leveled weps accordingly
+    applyUpgradesBtn.onclick = () => {
+        for (const key in weaponLevels) {
+            const levelInput = document.getElementById(`level-${key}`);
+            levelInput.value = weaponLevels[key];
+        }
+
+        // reset currency input
+        const currencyInput = document.getElementById('upgrade-currency-input');
+        currencyInput.value = '0';
+
+        // update/save stats
+        calculateCurrencyUpgrades();
+        saveToLocalStorage();
+        updateWeaponBonuses();
+    }
 }
 
 // Display functions
