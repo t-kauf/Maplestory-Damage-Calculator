@@ -4,6 +4,7 @@
 import { rarities, tiers, stageDefenses, availableStats, comparisonItemCount, setComparisonItemCount } from './constants.js';
 import { calculateDamage, calculateWeaponAttacks, calculateStatWeights, formatNumber, toggleStatChart } from './calculations.js';
 import { loadFromLocalStorage, attachSaveListeners, saveToLocalStorage, exportData, importData } from './storage.js';
+import { extractText, functionParseBaseStatText } from './ocr.js';
 import {
     loadTheme,
     initializeHeroPowerPresets,
@@ -458,6 +459,83 @@ window.onload = function () {
     showDonateNotificationIfNeeded();
     loadSelectedClass();
 };
+
+function showToast(message, success = true, duration = 5000) {
+    const toast = document.createElement('div');
+    toast.textContent = message;
+
+    toast.style.position = 'fixed';
+    toast.style.bottom = '20px';
+    toast.style.left = '50%';
+    toast.style.transform = 'translateX(-50%)';
+    toast.style.zIndex = '1000';
+
+    toast.style.backgroundColor = success ? '#4caf50' : '#f44336';
+    toast.style.color = '#fff';
+    toast.style.padding = '10px 20px';
+    toast.style.borderRadius = '5px';
+    toast.style.boxShadow = '0 2px 5px rgba(0, 0, 0, 0.2)';
+    toast.style.fontSize = '14px';
+    toast.style.fontWeight = 'bold';
+
+    // Add fade-in animation
+    toast.style.opacity = '0';
+    toast.style.transition = 'opacity 0.3s ease-in';
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '1';
+    }, 10);
+
+    setTimeout(() => {
+        // Add fade-out animation
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            toast.remove();
+        }, 300);
+    }, duration);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const pasteArea = document.getElementById('paste-image-section');
+
+    pasteArea.addEventListener('paste', async (event) => {
+        const items = Array.from(event.clipboardData.items);
+        const pastedImage = items.filter(x => x.type.startsWith("image/"))[0];
+        if (!pastedImage) return;
+
+        const file = pastedImage.getAsFile();
+        const imageURL = URL.createObjectURL(file);
+        const extractedText = await extractText(imageURL, false);
+        try {
+            const parsedStats = functionParseBaseStatText(extractedText);
+            console.log('Parsed Stats:', parsedStats);
+            for (const parsedStat of parsedStats) {
+                console.log(`Setting ${parsedStat[0]} to ${parsedStat[1]}`);
+                const inputElement = document.getElementById(parsedStat[0]);
+                if (inputElement) {
+                    inputElement.value = parsedStat[1];
+                    // Add a permanent outline until the input is changed again
+                    inputElement.style.outline = '2px solid #95b993'; // Outline color
+                    inputElement.addEventListener('input', () => {
+                        inputElement.style.outline = ''; // Reset to default on change
+                    }, { once: true });
+                }
+            }
+
+            if (parsedStats.length > 0) {
+                showToast(`Parsing successful! ${parsedStats.length} stats updated. "Min Damage Multiplier" may need to be entered manually.`, true);
+            } else {
+                console.log("No supported stats were parsed from the extracted text.");
+                showToast("Parsing failed! Make sure you are ONLY screenshotting the stats rows from the Character page and nothing else", false);
+            }
+        }
+        catch (e) {
+            console.error(e);
+            showToast(e, false);
+        }
+
+    });
+});
 
 // Expose functions to window for HTML onclick handlers
 window.switchTab = switchTab;
