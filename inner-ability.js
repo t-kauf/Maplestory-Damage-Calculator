@@ -1,6 +1,6 @@
 // Inner Ability stat mapping and calculations
 
-import { innerAbilitiesData } from './inner-ability-data.js';
+import { innerAbilitiesData } from './src/data/inner-ability-data.js';
 import { calculateDamage, formatNumber } from './calculations.js';
 import { getStats } from './main.js';
 

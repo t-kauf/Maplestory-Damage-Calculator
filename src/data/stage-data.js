@@ -1,6 +1,17 @@
-// Auto-generated stage data from game files
-// Generated: 2026-01-02T15:23:02.282Z
-// Do not edit manually - regenerate using: node scripts/generate-stage-data.js
+// Stage defense data - organized by content type
+export const stageDefenses = {
+    none: {
+        label: "None / Training Dummy",
+        defense: 0,
+        damageReduction: 0,
+        accuracy: 0
+    },
+    // Auto-generated data from game files
+    stageHunts: stageData.stageHunts,
+    chapterBosses: stageData.chapterBosses,
+    worldBosses: stageData.worldBosses,
+    growthDungeons: stageData.growthDungeons
+};
 
 export const stageData = {
   "stageHunts": [

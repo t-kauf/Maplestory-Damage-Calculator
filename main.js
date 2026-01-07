@@ -2,6 +2,15 @@
 // This is the single entry point that orchestrates the entire application
 
 import { rarities, tiers, stageDefenses, comparisonItemCount } from './constants.js';
+import {
+    getStats,
+    getItemStats,
+    getSelectedStageDefense,
+    getSelectedClass,
+    setSelectedClass,
+    getCurrentContentType,
+    setCurrentContentType
+} from './src/core/state.js';
 import { calculateDamage, calculateWeaponAttacks, calculateStatWeights, toggleStatChart, calculateStatEquivalency } from './calculations.js';
 import { loadFromLocalStorage, attachSaveListeners, saveToLocalStorage, exportData, importData, updateAnalysisTabs, getSavedContentTypeData } from './storage.js';
 import {
@@ -10,42 +19,6 @@ import {
     getAllDarkKnightSkills,
     DARK_KNIGHT_SKILLS
 } from './skill-coefficient.js';
-import {
-    loadTheme,
-    initializeHeroPowerPresets,
-    initializeWeapons,
-    updateWeaponBonuses,
-    loadHeroPowerPresets,
-    initializeEquipmentSlots,
-    loadEquipmentSlots,
-    saveEquipmentSlots,
-    calculateEquipmentSlotDPS,
-    displayResults,
-    switchTab,
-    switchScrollingSubTab,
-    toggleTheme,
-    unequipItem,
-    equipItem,
-    addEquippedStat,
-    removeEquippedStat,
-    addComparisonItem,
-    removeComparisonItem,
-    addComparisonItemStat,
-    removeComparisonItemStat,
-    setWeaponStars,
-    previewStars,
-    resetStarPreview,
-    handleEquippedCheckboxChange,
-    handleWeaponLevelChange,
-    calculateCurrencyUpgrades,
-    toggleSubDetails,
-    toggleDetails,
-    switchPreset,
-    handlePresetEquipped,
-    openHelpSidebar,
-    closeHelpSidebar,
-    scrollToSection
-} from './ui.js';
 import { initializeInnerAbilityAnalysis, switchInnerAbilityTab, toggleLineBreakdown, sortPresetTable, sortTheoreticalTable } from './inner-ability.js';
 import { initializeArtifactPotential, sortArtifactTable } from './artifact-potential.js';
 import { runScrollSimulation, switchScrollStrategyTab, updateScrollLevelInfo } from './scroll-optimizer.js';
@@ -58,94 +31,17 @@ import {
     runCubeSimulation
 } from './cube-potential.js';
 
+import { loadTheme, toggleTheme } from './src/ui/theme.js';
+import { initializeHeroPowerPresets, loadHeroPowerPresets, calculateCurrencyUpgrades, toggleSubDetails, toggleDetails, switchPreset, handlePresetEquipped } from './src/ui/presets-ui.js';
+import { initializeWeapons, updateWeaponBonuses, setWeaponStars, previewStars, resetStarPreview, handleEquippedCheckboxChange, handleWeaponLevelChange } from './src/ui/weapons-ui.js';
+import { initializeEquipmentSlots, loadEquipmentSlots, unequipItem, equipItem, addEquippedStat, removeEquippedStat, saveEquipmentSlots, calculateEquipmentSlotDPS, addComparisonItem, removeComparisonItem, addComparisonItemStat, removeComparisonItemStat } from './src/ui/equipment-ui.js';
+import { switchTab, switchScrollingSubTab } from './src/ui/tabs.js';
+import { openHelpSidebar, closeHelpSidebar, scrollToSection } from './src/ui/help-sidebar.js';
+import { displayResults } from './src/ui/results-display.js';
+
 // Data extraction functions
-export function getStats(setup) {
-    return {
-        attack: parseFloat(document.getElementById(`attack-${setup}`).value),
-        critRate: parseFloat(document.getElementById(`crit-rate-${setup}`).value),
-        critDamage: parseFloat(document.getElementById(`crit-damage-${setup}`).value),
-        statDamage: parseFloat(document.getElementById(`stat-damage-${setup}`).value),
-        damage: parseFloat(document.getElementById(`damage-${setup}`).value),
-        finalDamage: parseFloat(document.getElementById(`final-damage-${setup}`).value),
-        damageAmp: parseFloat(document.getElementById(`damage-amp-${setup}`).value),
-        attackSpeed: parseFloat(document.getElementById(`attack-speed-${setup}`).value),
-        defPen: parseFloat(document.getElementById(`def-pen-${setup}`).value),
-        bossDamage: parseFloat(document.getElementById(`boss-damage-${setup}`).value),
-        normalDamage: parseFloat(document.getElementById(`normal-damage-${setup}`).value),
-        skillCoeff: parseFloat(document.getElementById(`skill-coeff-${setup}`).value),
-        skillMastery: parseFloat(document.getElementById(`skill-mastery-${setup}`).value),
-        skillMasteryBoss: parseFloat(document.getElementById(`skill-mastery-boss-${setup}`).value),
-        minDamage: parseFloat(document.getElementById(`min-damage-${setup}`).value),
-        maxDamage: parseFloat(document.getElementById(`max-damage-${setup}`).value)
-    };
-}
-
-export function getItemStats(prefix) {
-    const stats = {
-        name: document.getElementById(`${prefix}-name`)?.value || '',
-        attack: parseFloat(document.getElementById(`${prefix}-attack`)?.value) || 0,
-        mainStat: 0,
-        defense: 0,
-        critRate: 0,
-        critDamage: 0,
-        skillLevel: 0,
-        normalDamage: 0,
-        bossDamage: 0,
-        damage: 0
-    };
-
-    // Get stats from dropdown selections
-    if (prefix === 'equipped') {
-        // Get equipped item stats
-        for (let i = 1; i <= 10; i++) {
-            const typeElem = document.getElementById(`equipped-stat-${i}-type`);
-            const valueElem = document.getElementById(`equipped-stat-${i}-value`);
-
-            if (typeElem && valueElem) {
-                const statType = typeElem.value;
-                const value = parseFloat(valueElem.value) || 0;
-
-                switch (statType) {
-                    case 'attack': stats.attack += value; break;
-                    case 'main-stat': stats.mainStat += value; break;
-                    case 'defense': stats.defense += value; break;
-                    case 'crit-rate': stats.critRate += value; break;
-                    case 'crit-damage': stats.critDamage += value; break;
-                    case 'skill-level': stats.skillLevel += value; break;
-                    case 'normal-damage': stats.normalDamage += value; break;
-                    case 'boss-damage': stats.bossDamage += value; break;
-                    case 'damage': stats.damage += value; break;
-                }
-            }
-        }
-    } else {
-        // Get comparison item stats
-        const itemId = prefix.split('-')[1];
-        for (let i = 1; i <= 10; i++) {
-            const typeElem = document.getElementById(`item-${itemId}-stat-${i}-type`);
-            const valueElem = document.getElementById(`item-${itemId}-stat-${i}-value`);
-
-            if (typeElem && valueElem) {
-                const statType = typeElem.value;
-                const value = parseFloat(valueElem.value) || 0;
-
-                switch (statType) {
-                    case 'attack': stats.attack += value; break;
-                    case 'main-stat': stats.mainStat += value; break;
-                    case 'defense': stats.defense += value; break;
-                    case 'crit-rate': stats.critRate += value; break;
-                    case 'crit-damage': stats.critDamage += value; break;
-                    case 'skill-level': stats.skillLevel += value; break;
-                    case 'normal-damage': stats.normalDamage += value; break;
-                    case 'boss-damage': stats.bossDamage += value; break;
-                    case 'damage': stats.damage += value; break;
-                }
-            }
-        }
-    }
-
-    return stats;
-}
+// getStats and getItemStats moved to state.js
+export { getStats, getItemStats };
 
 export function getWeaponAttackBonus() {
     let totalInventory = 0;
@@ -173,12 +69,13 @@ export function getWeaponAttackBonus() {
 }
 
 // Current content type selection
-let currentContentType = 'none';
+// currentContentType moved to state.js
+export { getCurrentContentType, setCurrentContentType };
 
 // Stage defense functions
 export function selectContentType(contentType, skipSave = false) {
     // Update selected state
-    currentContentType = contentType;
+    setCurrentContentType(contentType);
 
     // Update UI - remove selected class from all
     document.querySelectorAll('.content-type-selector').forEach(el => {
@@ -263,10 +160,10 @@ export function updateStageDropdown(skipSave = false) {
 
     const subcategory = subcategorySelect.value;
 
-    if (currentContentType === 'stageHunt') {
+    if (getCurrentContentType() ==='stageHunt') {
         const chapter = subcategory.replace('chapter-', '');
         populateStageDropdownFiltered('stageHunt', chapter);
-    } else if (currentContentType === 'growthDungeon') {
+    } else if (getCurrentContentType() === 'growthDungeon') {
         populateStageDropdownFiltered('growthDungeon', subcategory);
     }
 
@@ -350,40 +247,8 @@ export function populateStageDropdown(contentType = null) {
     });
 }
 
-export function getSelectedStageDefense() {
-    // If none is selected, return early
-    if (currentContentType === 'none') {
-        return { defense: 0, damageReduction: 0 };
-    }
-
-    const select = document.getElementById('target-stage-base');
-    if (!select) return { defense: 0, damageReduction: 0 };
-
-    const value = select.value;
-
-    if (value === 'none') {
-        return { defense: 0, damageReduction: 0 };
-    }
-
-    const [category, ...rest] = value.split('-');
-    const identifier = rest.join('-'); // Handle identifiers with dashes like "1000-1"
-
-    if (category === 'stageHunt') {
-        const entry = stageDefenses.stageHunts.find(e => e.stage === identifier);
-        return entry ? { defense: entry.defense, damageReduction: entry.damageReduction || 0 } : { defense: 0, damageReduction: 0 };
-    } else if (category === 'chapterBoss') {
-        const entry = stageDefenses.chapterBosses.find(e => e.chapter === identifier);
-        return entry ? { defense: entry.defense, damageReduction: entry.damageReduction || 0 } : { defense: 0, damageReduction: 0 };
-    } else if (category === 'worldBoss') {
-        const entry = stageDefenses.worldBosses.find(e => e.stage === identifier);
-        return entry ? { defense: entry.defense, damageReduction: entry.damageReduction || 0 } : { defense: 0, damageReduction: 0 };
-    } else if (category === 'growthDungeon') {
-        const entry = stageDefenses.growthDungeons.find(e => e.stage === identifier);
-        return entry ? { defense: entry.defense, damageReduction: entry.damageReduction || 0 } : { defense: 0, damageReduction: 0 };
-    }
-
-    return { defense: 0, damageReduction: 0 };
-}
+// getSelectedStageDefense moved to state.js
+export { getSelectedStageDefense };
 
 // Apply item stats to base stats
 export function applyItemToStats(baseStats, equippedItem, comparisonItem) {
@@ -518,11 +383,8 @@ function enableGlobalNumberInputAutoSelect() {
 }
 
 // Class Selection
-let selectedClass = null;
-
-export function getSelectedClass() {
-    return selectedClass;
-}
+// selectedClass moved to state.js
+export { getSelectedClass };
 
 export function selectClass(className) {
     document.querySelectorAll('.class-selector').forEach(el => {
@@ -532,7 +394,7 @@ export function selectClass(className) {
     const classElement = document.getElementById(`class-${className}`);
     if (classElement) {
         classElement.classList.add('selected');
-        selectedClass = className;
+        setSelectedClass(className);
 
         const defenseInputGroup = document.getElementById('defense-input-group');
         if (defenseInputGroup) {
@@ -616,9 +478,11 @@ export function updateSkillCoefficient() {
     if (jobTier === '4th') {
         const skillLevelInput = document.getElementById('skill-level-4th-base');
         skillLevel = parseInt(skillLevelInput?.value) || 0;
+        console.log('[DEBUG] 4th Job - Character Level:', characterLevel, 'Skill Level:', skillLevel, 'Input Level:', (characterLevel - 100) * 3 + skillLevel);
     } else {
         const skillLevelInput = document.getElementById('skill-level-3rd-base');
         skillLevel = parseInt(skillLevelInput?.value) || 0;
+        console.log('[DEBUG] 3rd Job - Character Level:', characterLevel, 'Skill Level:', skillLevel, 'Input Level:', Math.min((characterLevel - 60) * 3, 120) + skillLevel);
     }
 
     let coefficient;
@@ -628,6 +492,7 @@ export function updateSkillCoefficient() {
         coefficient = calculate3rdJobSkillCoefficient(characterLevel, skillLevel);
     }
 
+    console.log('[DEBUG] Job Tier:', jobTier, 'Coefficient:', coefficient.toFixed(2) + '%');
     coefficientInput.value = coefficient.toFixed(2);
 }
 

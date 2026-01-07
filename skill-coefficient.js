@@ -3,7 +3,7 @@
 
 // Import the complete factor table extracted from SkillLevelFactorTable.json
 // This table maps character level (1-300) to skill scaling factors
-import { SKILL_LEVEL_FACTOR_TABLE } from './factor-table-data.js';
+import { SKILL_LEVEL_FACTOR_TABLE } from './src/data/factor-table-data.js';
 
 // 3rd Job Skills Configuration
 // All main 3rd job attacking skills share these parameters:
@@ -20,7 +20,7 @@ const THIRD_JOB_SKILLS = {
 // - Factor index: 22 (index into the Factor array for level scaling)
 const FOURTH_JOB_SKILLS = {
     baseDamage: 2900,     // Base damage value (divide by 10 to get %)
-    factorIndex: 22       // Index in the Factor array for level scaling
+    factorIndex: 21       // Index in the Factor array for level scaling
 };
 
 /**

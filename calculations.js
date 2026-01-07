@@ -1,10 +1,9 @@
 import { weaponRatesPerLevel, weaponBaseAttackEquipped } from './constants.js';
-import { getSelectedStageDefense, getStats, getWeaponAttackBonus, getSelectedClass } from './main.js';
+import { getWeaponAttackBonus } from './main.js';
+import { getSelectedStageDefense, getStats, getSelectedClass } from './src/core/state.js';
+import { formatNumber } from './src/utils/formatters.js';
 
-// Number formatting utility
-export function formatNumber(num) {
-    return Math.round(num).toLocaleString();
-}
+export { formatNumber };
 
 // Calculate stat damage gain from main stat % increase
 // This is the canonical implementation used by both the predicted damage table and cube potential

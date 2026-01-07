@@ -46,24 +46,6 @@ export const rarityColors = {
     'Ancient': '#2266cc'
 };
 
-// Import stage data from separate file (auto-generated from game files)
-import { stageData } from './stage-data.js';
-
-// Stage defense data - organized by content type
-export const stageDefenses = {
-    none: {
-        label: "None / Training Dummy",
-        defense: 0,
-        damageReduction: 0,
-        accuracy: 0
-    },
-    // Auto-generated data from game files
-    stageHunts: stageData.stageHunts,
-    chapterBosses: stageData.chapterBosses,
-    worldBosses: stageData.worldBosses,
-    growthDungeons: stageData.growthDungeons
-};
-
 // Global state variables
 export let comparisonItemCount = 0;
 export let equippedStatCount = 0;

@@ -1,9 +1,11 @@
 import { comparisonItemCount, equippedStatCount, rarities, tiers } from './constants.js';
-import { addEquippedStat, addComparisonItem, addComparisonItemStat, handleWeaponLevelChange, handleEquippedCheckboxChange, updateEquippedWeaponIndicator } from './ui.js';
 import { calculate } from './main.js';
 import { renderTheoreticalBest, renderPresetComparison } from './inner-ability.js';
 import { renderArtifactPotential } from './artifact-potential.js';
 import { clearCubeRankingsCache } from './cube-potential.js';
+import { addComparisonItemStat, addComparisonItem } from './src/ui/comparison-ui.js';
+import { addEquippedStat } from './src/ui/equipment-ui.js';
+import { handleWeaponLevelChange, handleEquippedCheckboxChange, updateEquippedWeaponIndicator } from './src/ui/weapons-ui.js';
 
 // Flag to prevent saving during load
 let isLoading = false;
