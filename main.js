@@ -1,7 +1,7 @@
 // Main Entry Point - ES6 Module
 // This is the single entry point that orchestrates the entire application
 
-import { rarities, tiers, stageDefenses, comparisonItemCount } from './constants.js';
+import { stageDefenses } from './src/core/state.js';
 import {
     getStats,
     getItemStats,
@@ -11,8 +11,13 @@ import {
     getCurrentContentType,
     setCurrentContentType
 } from './src/core/state.js';
-import { calculateDamage, calculateWeaponAttacks, calculateStatWeights, toggleStatChart, calculateStatEquivalency } from './calculations.js';
+import { calculateDamage } from './src/core/damage-calculations.js';
+import { calculateWeaponAttacks } from './src/core/weapon-calculations.js';
+import { calculateStatWeights, calculateStatEquivalency } from './src/core/damage-calculations.js';
+import { toggleStatChart } from './src/ui/stat-chart.js';
 import { loadFromLocalStorage, attachSaveListeners, saveToLocalStorage, exportData, importData, updateAnalysisTabs, getSavedContentTypeData } from './storage.js';
+import { rarities, tiers, comparisonItemCount } from './constants.js';
+import { updateClassWarning } from './src/ui/cube-ui.js';
 import {
     calculate3rdJobSkillCoefficient,
     calculate4thJobSkillCoefficient,
@@ -26,15 +31,17 @@ import { initializeArtifacts, switchArtifactPreset, selectArtifactSlot, previewA
 import {
     initializeCubePotential,
     switchPotentialType,
-    selectCubeSlot,
-    updateClassWarning,
-    runCubeSimulation
+    selectCubeSlot    
 } from './cube-potential.js';
+import { runCubeSimulation } from './src/core/cube-simulation.js';
 
 import { loadTheme, toggleTheme } from './src/ui/theme.js';
-import { initializeHeroPowerPresets, loadHeroPowerPresets, calculateCurrencyUpgrades, toggleSubDetails, toggleDetails, switchPreset, handlePresetEquipped } from './src/ui/presets-ui.js';
+import { initializeHeroPowerPresets, loadHeroPowerPresets, switchPreset, handlePresetEquipped } from './src/ui/presets-ui.js';
+import { calculateCurrencyUpgrades } from './src/ui/weapons-ui.js';
+import { toggleSubDetails, toggleDetails } from './src/ui/results-display.js';
 import { initializeWeapons, updateWeaponBonuses, setWeaponStars, previewStars, resetStarPreview, handleEquippedCheckboxChange, handleWeaponLevelChange } from './src/ui/weapons-ui.js';
-import { initializeEquipmentSlots, loadEquipmentSlots, unequipItem, equipItem, addEquippedStat, removeEquippedStat, saveEquipmentSlots, calculateEquipmentSlotDPS, addComparisonItem, removeComparisonItem, addComparisonItemStat, removeComparisonItemStat } from './src/ui/equipment-ui.js';
+import { initializeEquipmentSlots, loadEquipmentSlots, unequipItem, equipItem, addEquippedStat, removeEquippedStat, saveEquipmentSlots } from './src/ui/equipment-ui.js';
+import { calculateEquipmentSlotDPS } from './src/ui/results-display.js';
 import { switchTab, switchScrollingSubTab } from './src/ui/tabs.js';
 import { openHelpSidebar, closeHelpSidebar, scrollToSection } from './src/ui/help-sidebar.js';
 import { displayResults } from './src/ui/results-display.js';
@@ -478,11 +485,9 @@ export function updateSkillCoefficient() {
     if (jobTier === '4th') {
         const skillLevelInput = document.getElementById('skill-level-4th-base');
         skillLevel = parseInt(skillLevelInput?.value) || 0;
-        console.log('[DEBUG] 4th Job - Character Level:', characterLevel, 'Skill Level:', skillLevel, 'Input Level:', (characterLevel - 100) * 3 + skillLevel);
     } else {
         const skillLevelInput = document.getElementById('skill-level-3rd-base');
         skillLevel = parseInt(skillLevelInput?.value) || 0;
-        console.log('[DEBUG] 3rd Job - Character Level:', characterLevel, 'Skill Level:', skillLevel, 'Input Level:', Math.min((characterLevel - 60) * 3, 120) + skillLevel);
     }
 
     let coefficient;
@@ -492,7 +497,6 @@ export function updateSkillCoefficient() {
         coefficient = calculate3rdJobSkillCoefficient(characterLevel, skillLevel);
     }
 
-    console.log('[DEBUG] Job Tier:', jobTier, 'Coefficient:', coefficient.toFixed(2) + '%');
     coefficientInput.value = coefficient.toFixed(2);
 }
 
@@ -873,10 +877,6 @@ window.addEquippedStat = addEquippedStat;
 window.removeEquippedStat = removeEquippedStat;
 window.saveEquipmentSlots = saveEquipmentSlots;
 window.calculateEquipmentSlotDPS = calculateEquipmentSlotDPS;
-window.addComparisonItem = addComparisonItem;
-window.removeComparisonItem = removeComparisonItem;
-window.addComparisonItemStat = addComparisonItemStat;
-window.removeComparisonItemStat = removeComparisonItemStat;
 window.setWeaponStars = setWeaponStars;
 window.previewStars = previewStars;
 window.resetStarPreview = resetStarPreview;
@@ -922,3 +922,4 @@ window.showSkillDescription = showSkillDescription;
 window.saveToLocalStorage = saveToLocalStorage;
 window.updateAnalysisTabs = updateAnalysisTabs;
 window.calculateStatEquivalency = calculateStatEquivalency;
+window.calculate = calculate;

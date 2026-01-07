@@ -1,18 +1,3 @@
-// Stage defense data - organized by content type
-export const stageDefenses = {
-    none: {
-        label: "None / Training Dummy",
-        defense: 0,
-        damageReduction: 0,
-        accuracy: 0
-    },
-    // Auto-generated data from game files
-    stageHunts: stageData.stageHunts,
-    chapterBosses: stageData.chapterBosses,
-    worldBosses: stageData.worldBosses,
-    growthDungeons: stageData.growthDungeons
-};
-
 export const stageData = {
   "stageHunts": [
     {

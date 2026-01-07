@@ -1,6 +1,5 @@
 // Hero Power Presets UI functionality
 
-import { saveToLocalStorage } from '../../storage.js';
 import { innerAbilityStats } from '../data/inner-ability-data.js';
 
 export function initializeHeroPowerPresets() {

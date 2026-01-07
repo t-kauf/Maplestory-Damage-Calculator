@@ -1,7 +1,7 @@
 // Comparison items UI functionality
-
-import { comparisonItemCount, setComparisonItemCount, availableStats } from '../../constants.js';
 import { saveToLocalStorage } from '../../storage.js';
+import { comparisonItemCount, setComparisonItemCount, availableStats } from '../../constants.js';
+import { calculate } from '../../main.js';
 
 export function addComparisonItem() {
     setComparisonItemCount(comparisonItemCount + 1);
@@ -37,7 +37,7 @@ export function addComparisonItem() {
     container.appendChild(itemDiv);
     saveToLocalStorage();
 }
-
+window.addComparisonItem = addComparisonItem;
 
 export function removeComparisonItem(id) {
     const item = document.getElementById(`comparison-item-${id}`);
@@ -47,7 +47,6 @@ export function removeComparisonItem(id) {
         calculate();
     }
 }
-
 
 export function addComparisonItemStat(itemId) {
     const container = document.getElementById(`item-${itemId}-stats-container`);

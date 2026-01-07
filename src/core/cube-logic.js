@@ -1,9 +1,11 @@
 // Business logic for cube potential system
 // Pure business logic functions with no DOM manipulation
 
-import { classMainStatMap, slotSpecificPotentials, equipmentPotentialData } from '../cube-potential-data.js';
-import { calculateDamage, calculateMainStatPercentGain } from '../calculations.js';
-import { getSelectedClass } from '../main.js';
+import { classMainStatMap, slotSpecificPotentials, equipmentPotentialData } from '../data/cube-potential-data.js';
+import { calculateDamage } from './damage-calculations.js';
+import { getStats } from './state.js';
+import { calculateMainStatPercentGain } from './stat-calculations.js';
+import { getSelectedClass } from '../../main.js';
 
 // Get rarity color for slot button borders
 export function getRarityColor(rarity) {
@@ -173,6 +175,77 @@ export function loadCubePotentialData(cubeSlotData, slotNames) {
     } catch (error) {
         console.error('Error loading cube potential data:', error);
     }
+}
+
+// Calculate comparison between Set A and Set B
+export function calculateComparison(cubeSlotData, currentCubeSlot, currentPotentialType, rankingsCache) {
+    if (!getSelectedClass()) {
+        return;
+    }
+
+    const slotData = cubeSlotData[currentCubeSlot][currentPotentialType];
+    const baseStats = getStats('base');
+
+    // Calculate base DPS (no potential lines)
+    const baseDPS = calculateDamage(baseStats, 'boss').dps;
+
+    // Calculate Set A stats and DPS (base + Set A lines that exist in current rarity)
+    const setAStats = { ...baseStats };
+    let setAAccumulatedMainStatPct = 0; // Track accumulated main stat % for diminishing returns
+    for (let lineNum = 1; lineNum <= 3; lineNum++) {
+        const statSelect = document.getElementById(`cube-setA-line${lineNum}-stat`);
+        if (!statSelect || !statSelect.value) continue;
+
+        const line = slotData.setA[`line${lineNum}`];
+        if (!line || !line.stat) continue;
+
+        const mapped = potentialStatToDamageStat(line.stat, line.value, setAAccumulatedMainStatPct);
+        if (mapped.stat) {
+            setAStats[mapped.stat] = (setAStats[mapped.stat] || 0) + mapped.value;
+            // Track if this was a main stat % line
+            if (mapped.isMainStatPct) {
+                setAAccumulatedMainStatPct += line.value;
+            }
+        }
+    }
+    const setADPS = calculateDamage(setAStats, 'boss').dps;
+
+    // Calculate Set B stats and DPS (base + Set B lines that exist in current rarity)
+    const setBStats = { ...baseStats };
+    let setBAccumulatedMainStatPct = 0; // Track accumulated main stat % for diminishing returns
+    for (let lineNum = 1; lineNum <= 3; lineNum++) {
+        const statSelect = document.getElementById(`cube-setB-line${lineNum}-stat`);
+        if (!statSelect || !statSelect.value) continue;
+
+        const line = slotData.setB[`line${lineNum}`];
+        if (!line || !line.stat) continue;
+
+        const mapped = potentialStatToDamageStat(line.stat, line.value, setBAccumulatedMainStatPct);
+        if (mapped.stat) {
+            setBStats[mapped.stat] = (setBStats[mapped.stat] || 0) + mapped.value;
+            // Track if this was a main stat % line
+            if (mapped.isMainStatPct) {
+                setBAccumulatedMainStatPct += line.value;
+            }
+        }
+    }
+    const setBDPS = calculateDamage(setBStats, 'boss').dps;
+
+    // Calculate gains (both compared to base stats with no potential)
+    const setAGain = ((setADPS - baseDPS) / baseDPS * 100);
+    const setBGain = ((setBDPS - baseDPS) / baseDPS * 100);
+    const deltaGain = setBGain - setAGain;
+
+    // Return the results instead of calling display functions
+    return {
+        setAGain,
+        setBGain,
+        deltaGain,
+        setAStats,
+        setBStats,
+        slotId: currentCubeSlot,
+        rarity: cubeSlotData[currentCubeSlot][currentPotentialType].rarity
+    };
 }
 
 // Get percentile for a given DPS gain (helper for summary)

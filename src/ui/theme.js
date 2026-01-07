@@ -1,6 +1,5 @@
 // Theme toggle functionality
 
-import { rarities, tiers } from '../../constants.js';
 import { initializeWeapons } from './weapons-ui.js';
 import { updateWeaponBonuses } from './weapons-ui.js';
 import { handleEquippedCheckboxChange } from './weapons-ui.js';

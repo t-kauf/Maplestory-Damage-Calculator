@@ -1,4 +1,12 @@
 // Cache for simulation performance
+import { getStats } from './state.js';
+import { slotNames, equipmentPotentialData, slotSpecificPotentials, RARITY_UPGRADE_RATES } from './../data/cube-potential-data.js';
+import { calculateDamage } from './damage-calculations.js';
+import { potentialStatToDamageStat } from './cube-logic.js';
+import { rarities } from '../../constants.js';
+import { getSelectedClass } from '../../main.js';
+import { updateClassWarning, displayRankings, displaySimulationResults } from '../ui/cube-ui.js';
+import { currentCubeSlot, currentPotentialType, cubeSlotData, rankingsCache, rankingsInProgress } from '../../cube-potential.js';
 let simCache = {
     baseStats: null,
     baseDPS: null,
@@ -132,6 +140,208 @@ export function calculateTotalDPSGain(slots) {
     const totalDPS = calculateDamage(totalStats, 'boss').dps;
     return ((totalDPS - simCache.baseDPS) / simCache.baseDPS * 100);
 }
+
+// Calculate rankings for a specific rarity and slot
+export async function calculateRankingsForRarity(rarity, slotId = currentCubeSlot) {
+    const key = `${slotId}-${rarity}`;
+
+    // Declare these variables outside try block so they're accessible in catch
+    let progressBar;
+    let isCurrentSlot;
+
+    try {
+        // Initialize slot cache if needed
+        if (!rankingsCache[slotId]) {
+            rankingsCache[slotId] = {};
+        }
+
+        // Check if already calculated for this slot and rarity
+        if (rankingsCache[slotId][rarity]) {
+            return;
+        }
+
+        // Check if already calculating this combination
+        if (rankingsInProgress[key]) {
+            return; // Already calculating, skip
+        }
+
+        // Mark as in progress
+        rankingsInProgress[key] = true;
+
+        // Check if class is selected
+        if (!getSelectedClass()) {
+            updateClassWarning();
+            delete rankingsInProgress[key];
+            return;
+        }
+
+        progressBar = document.getElementById('cube-rankings-progress');
+        const progressFill = document.getElementById('cube-rankings-progress-fill');
+        const progressText = document.getElementById('cube-rankings-progress-text');
+        const resultsDiv = document.getElementById('cube-rankings-results');
+
+        // Only show progress bar if calculating for the currently visible slot
+        isCurrentSlot = slotId === currentCubeSlot;
+        if (isCurrentSlot) {
+            if (progressBar) progressBar.style.display = 'block';
+            if (progressFill) progressFill.style.width = '0%';
+            if (progressText) progressText.textContent = 'Calculating... 0%';
+            if (resultsDiv) resultsDiv.innerHTML = '';
+        }
+
+        const potentialData = equipmentPotentialData[rarity];
+        if (!potentialData) {
+            if (progressBar) progressBar.style.display = 'none';
+            delete rankingsInProgress[key];
+            return;
+        }
+
+        // Get base potential lines
+        let line1Options = [...(potentialData.line1 || [])];
+        let line2Options = [...(potentialData.line2 || [])];
+        let line3Options = [...(potentialData.line3 || [])];
+
+        // Add slot-specific lines if available for current slot
+        if (slotSpecificPotentials[slotId] && slotSpecificPotentials[slotId][rarity]) {
+            const slotSpecific = slotSpecificPotentials[slotId][rarity];
+            if (slotSpecific.line1) {
+                line1Options = [...line1Options, ...slotSpecific.line1];
+            }
+            if (slotSpecific.line2) {
+                line2Options = [...line2Options, ...slotSpecific.line2];
+            }
+            if (slotSpecific.line3) {
+                line3Options = [...line3Options, ...slotSpecific.line3];
+            }
+        }
+
+        const totalCombinations = line1Options.length * line2Options.length * line3Options.length;
+        const rankings = [];
+        const baseStats = getStats('base');
+        const baseDPS = calculateDamage(baseStats, 'boss').dps;
+
+        let processedCount = 0;
+        const batchSize = 50; // Smaller batch for more frequent UI updates
+
+        // Process in batches
+        for (let i = 0; i < line1Options.length; i++) {
+            for (let j = 0; j < line2Options.length; j++) {
+                for (let k = 0; k < line3Options.length; k++) {
+                    const combo = {
+                        line1: line1Options[i],
+                        line2: line2Options[j],
+                        line3: line3Options[k]
+                    };
+
+                    // Calculate stats for this combination
+                    const comboStats = { ...baseStats };
+                    let accumulatedMainStatPct = 0;
+
+                    [combo.line1, combo.line2, combo.line3].forEach(line => {
+                        const mapped = potentialStatToDamageStat(line.stat, line.value, accumulatedMainStatPct);
+                        if (mapped.stat) {
+                            comboStats[mapped.stat] = (comboStats[mapped.stat] || 0) + mapped.value;
+                            if (mapped.isMainStatPct) {
+                                accumulatedMainStatPct += line.value;
+                            }
+                        }
+                    });
+
+                    const comboDPS = calculateDamage(comboStats, 'boss').dps;
+                    const gain = ((comboDPS - baseDPS) / baseDPS * 100);
+
+                    rankings.push({
+                        line1: combo.line1,
+                        line2: combo.line2,
+                        line3: combo.line3,
+                        dpsGain: gain
+                    });
+
+                    processedCount++;
+
+                    // Update progress periodically
+                    if (processedCount % batchSize === 0) {
+                        const progress = (processedCount / totalCombinations * 100);
+
+                        // Check if user is now viewing this slot's rankings
+                        const nowCurrentSlot = slotId === currentCubeSlot;
+                        const rankingsContent = document.getElementById('cube-rankings-content');
+                        const shouldShowProgress = nowCurrentSlot && rankingsContent && rankingsContent.style.display !== 'none';
+
+                        if (shouldShowProgress) {
+                            const progressBar = document.getElementById('cube-rankings-progress');
+                            const progressFill = document.getElementById('cube-rankings-progress-fill');
+                            const progressText = document.getElementById('cube-rankings-progress-text');
+
+                            if (progressBar) progressBar.style.display = 'block';
+                            if (progressFill) progressFill.style.width = `${progress}%`;
+                            if (progressText) progressText.textContent = `Calculating... ${Math.round(progress)}%`;
+                        }
+
+                        // Allow UI to update
+                        await new Promise(resolve => setTimeout(resolve, 0));
+                    }
+                }
+            }
+        }
+
+        // Sort by DPS gain descending
+        rankings.sort((a, b) => b.dpsGain - a.dpsGain);
+
+        // Deduplicate: keep only unique combinations of lines (order doesn't matter)
+        const seen = new Set();
+        const deduplicatedRankings = [];
+
+        for (const combo of rankings) {
+            // Create a signature by sorting the 3 lines alphabetically
+            const signature = [combo.line1, combo.line2, combo.line3]
+                .map(line => `${line.stat}|${line.value}|${line.prime}`)
+                .sort()
+                .join('||');
+
+            if (!seen.has(signature)) {
+                seen.add(signature);
+                deduplicatedRankings.push(combo);
+            }
+        }
+
+        // Filter out combinations with 0% or negligible DPS gain
+        const filteredRankings = deduplicatedRankings.filter(combo => combo.dpsGain > 0.01);
+
+        // Cache the filtered results for this slot and rarity
+        rankingsCache[slotId][rarity] = filteredRankings;
+
+        // If this is the current slot and rankings tab is visible, display results
+        if (isCurrentSlot) {
+            const rankingsContent = document.getElementById('cube-rankings-content');
+            if (rankingsContent && rankingsContent.style.display !== 'none') {
+                displayRankings(filteredRankings, rarity);
+            }
+
+            // Hide progress bar
+            if (progressBar) {
+                progressBar.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error('Error calculating rankings:', error);
+        if (isCurrentSlot && progressBar) {
+            progressBar.style.display = 'none';
+        }
+    } finally {
+        // Always mark as complete and remove from in-progress tracker
+        delete rankingsInProgress[key];
+    }
+}
+
+// Calculate rankings for current slot's rarity
+export async function calculateRankings() {
+    const slotId = currentCubeSlot;
+    const rarity = cubeSlotData[currentCubeSlot][currentPotentialType].rarity;
+    await calculateRankingsForRarity(rarity, slotId);
+    displayRankings(rankingsCache[slotId][rarity], rarity);
+}
+
 
 // Get top 25% percentile threshold for a slot and rarity
 export async function getTop25PercentileThreshold(slotId, rarity) {

@@ -1,7 +1,8 @@
 // Artifact Potential stat mapping and calculations
 
 import { artifactPotentialData } from './src/data/artifact-potential-data.js';
-import { calculateDamage, formatNumber } from './calculations.js';
+import { calculateDamage } from './src/core/damage-calculations.js';
+import { formatNumber } from './src/utils/formatters.js';
 import { getSelectedClass, getStats } from './main.js';
 
 // Map artifact potential stat to base stat properties

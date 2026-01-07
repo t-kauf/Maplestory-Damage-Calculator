@@ -1,7 +1,6 @@
 // Pure state extraction - no UI, no calculations
+import { stageData } from '../data/stage-data.js';
 // Handles reading DOM state into structured data
-
-import { stageDefenses } from '../../constants.js';
 
 let currentContentType = 'none';
 let selectedClass = null;
@@ -42,6 +41,21 @@ export function getStats(setup) {
         maxDamage: parseFloat(document.getElementById(`max-damage-${setup}`).value)
     };
 }
+
+// Stage defense data - organized by content type
+export const stageDefenses = {
+    none: {
+        label: "None / Training Dummy",
+        defense: 0,
+        damageReduction: 0,
+        accuracy: 0
+    },
+    // Auto-generated data from game files
+    stageHunts: stageData.stageHunts,
+    chapterBosses: stageData.chapterBosses,
+    worldBosses: stageData.worldBosses,
+    growthDungeons: stageData.growthDungeons
+};
 
 export function getItemStats(prefix) {
     const stats = {

@@ -1,10 +1,10 @@
 // Equipment UI functionality
 
-import { equippedStatCount, setEquippedStatCount, availableStats } from '../../constants.js';
 import { saveToLocalStorage } from '../../storage.js';
 import { calculate, getItemStats, getWeaponAttackBonus } from '../../main.js';
 import { getSelectedClass } from '../../src/core/state.js';
-import { removeComparisonItem } from './comparison-ui.js';
+import { removeComparisonItem, addComparisonItem, addComparisonItemStat } from './comparison-ui.js';
+import { comparisonItemCount, equippedStatCount, setEquippedStatCount, availableStats } from '../../constants.js';
 
 export function unequipItem() {
     // Get equipped item data

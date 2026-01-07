@@ -1,10 +1,11 @@
 // Weapons UI functionality
 
-import { rarities, tiers, weaponBaseAttackEquipped, rarityColors } from '../../constants.js';
-import { calculateWeaponAttacks, getMaxLevelForStars, getUpgradeCost, calculateUpgradeGain, calculateDamage } from '../../calculations.js';
+import { calculateWeaponAttacks, getMaxLevelForStars, getUpgradeCost, calculateUpgradeGain } from '../../src/core/weapon-calculations.js';
+import { calculateDamage } from '../../src/core/damage-calculations.js';
 import { saveToLocalStorage } from '../../storage.js';
 import { getStats, calculate } from '../../main.js';
-
+import { getWeaponAttackBonus } from './../../main.js';
+import { rarities, tiers, rarityColors, weaponBaseAttackEquipped } from '../../constants.js';
 
 export function initializeWeapons() {
     const weaponsGrid = document.getElementById('weapons-grid');

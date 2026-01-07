@@ -1,7 +1,8 @@
 // Scroll Optimizer - Level 65 and Level 85 Scrolls
 // This module simulates different scrolling strategies and calculates damage gains
 
-import { calculateDamage, formatNumber } from './calculations.js';
+import { calculateDamage } from './src/core/damage-calculations.js';
+import { formatNumber } from './src/utils/formatters.js';
 import { getStats, getWeaponAttackBonus } from './main.js';
 
 // Scroll definitions
