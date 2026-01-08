@@ -1,7 +1,8 @@
 import { getSelectedStageDefense } from '../state.js';
 import { formatNumber } from '../../utils/formatters.js';
-import { getWeaponAttackBonus } from '../main.js';
-import { calculateMainStatPercentGain } from './stat-calculations.js'
+import { getWeaponAttackBonus, getSelectedJobTier } from '../main.js';
+import { calculateMainStatPercentGain } from './stat-calculations.js';
+import { calculate3rdJobSkillCoefficient, calculate4thJobSkillCoefficient } from '../skill-coefficient.js';
 
 // Main damage calculation function
 export function calculateDamage(stats, monsterType) {
@@ -396,7 +397,20 @@ export function calculateStatEquivalency(sourceStat) {
             label: '3rd Job Skill +',
             getValue: () => parseFloat(document.getElementById('equiv-skill-level').value) || 0,
             applyToStats: (stats, value) => {
-                const skillCoeffIncrease = value * 0.3; // 1 skill level = 0.3% skill coefficient
+                // Calculate proper skill coefficient using character level and job tier
+                const characterLevel = parseInt(document.getElementById('character-level')?.value) || 0;
+                const jobTier = getSelectedJobTier();
+                const baseSkillLevel = parseInt(document.getElementById(jobTier === '4th' ? 'skill-level-4th-base' : 'skill-level-3rd-base')?.value) || 0;
+
+                const currentCoeff = jobTier === '4th'
+                    ? calculate4thJobSkillCoefficient(characterLevel, baseSkillLevel)
+                    : calculate3rdJobSkillCoefficient(characterLevel, baseSkillLevel);
+
+                const newCoeff = jobTier === '4th'
+                    ? calculate4thJobSkillCoefficient(characterLevel, baseSkillLevel + value)
+                    : calculate3rdJobSkillCoefficient(characterLevel, baseSkillLevel + value);
+
+                const skillCoeffIncrease = newCoeff - currentCoeff;
                 return { ...stats, skillCoeff: stats.skillCoeff + skillCoeffIncrease };
             },
             formatValue: (val) => `+${Math.round(val)}`

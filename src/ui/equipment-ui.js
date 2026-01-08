@@ -1,7 +1,7 @@
 // Equipment UI functionality
 
 import { saveToLocalStorage } from '../core/storage.js';
-import { calculate, getItemStats, getWeaponAttackBonus } from '../core/main.js';
+import { calculate, getItemStats, getWeaponAttackBonus, getSelectedJobTier, updateSkillCoefficient } from '../core/main.js';
 import { getSelectedClass } from '../../src/core/state.js';
 import { removeComparisonItem, addComparisonItem, addComparisonItemStat } from './comparison-ui.js';
 import { comparisonItemCount, equippedStatCount, setEquippedStatCount, availableStats, allItemStatProperties } from '../core/constants.js';
@@ -38,8 +38,13 @@ export function unequipItem() {
     const critDamageBase = document.getElementById('crit-damage-base');
     critDamageBase.value = (parseFloat(critDamageBase.value) - equippedItem.critDamage).toFixed(1);
 
-    const skillCoeffBase = document.getElementById('skill-coeff-base');
-    skillCoeffBase.value = (parseFloat(skillCoeffBase.value) - (equippedItem.skillLevel * 0.3)).toFixed(1);
+    // Remove skill level from the appropriate job tier input and recalculate coefficient
+    const jobTier = getSelectedJobTier();
+    const skillLevelInput = document.getElementById(jobTier === '4th' ? 'skill-level-4th-base' : 'skill-level-3rd-base');
+    if (skillLevelInput) {
+        skillLevelInput.value = Math.max(0, parseInt(skillLevelInput.value || 0) - equippedItem.skillLevel);
+        updateSkillCoefficient();
+    }
 
     const normalDamageBase = document.getElementById('normal-damage-base');
     normalDamageBase.value = (parseFloat(normalDamageBase.value) - equippedItem.normalDamage).toFixed(1);
@@ -137,8 +142,13 @@ export function equipItem(itemId) {
     const critDamageBase = document.getElementById('crit-damage-base');
     critDamageBase.value = (parseFloat(critDamageBase.value) + comparisonItem.critDamage).toFixed(1);
 
-    const skillCoeffBase = document.getElementById('skill-coeff-base');
-    skillCoeffBase.value = (parseFloat(skillCoeffBase.value) + (comparisonItem.skillLevel * 0.3)).toFixed(1);
+    // Add skill level to the appropriate job tier input and recalculate coefficient
+    const jobTier = getSelectedJobTier();
+    const skillLevelInput = document.getElementById(jobTier === '4th' ? 'skill-level-4th-base' : 'skill-level-3rd-base');
+    if (skillLevelInput) {
+        skillLevelInput.value = parseInt(skillLevelInput.value || 0) + comparisonItem.skillLevel;
+        updateSkillCoefficient();
+    }
 
     const normalDamageBase = document.getElementById('normal-damage-base');
     normalDamageBase.value = (parseFloat(normalDamageBase.value) + comparisonItem.normalDamage).toFixed(1);

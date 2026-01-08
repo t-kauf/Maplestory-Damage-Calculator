@@ -282,6 +282,29 @@ export function applyItemToStats(baseStats, equippedItem, comparisonItem) {
     newStats.attack -= equippedItem.attack * weaponMultiplier;
     newStats.attack += comparisonItem.attack * weaponMultiplier;
 
+    // Apply skillLevel changes using proper coefficient calculation
+    // Get character level and current job tier
+    const characterLevel = parseInt(document.getElementById('character-level')?.value) || 0;
+    const jobTier = getSelectedJobTier();
+
+    // Get base skill level (without items)
+    const baseSkillLevel3rd = parseInt(document.getElementById('skill-level-3rd-base')?.value) || 0;
+    const baseSkillLevel4th = parseInt(document.getElementById('skill-level-4th-base')?.value) || 0;
+
+    // Calculate coefficient with equipped item's skill level
+    const equippedSkillLevel = jobTier === '4th' ? baseSkillLevel4th : baseSkillLevel3rd;
+    const coeffWithEquipped = jobTier === '4th'
+        ? calculate4thJobSkillCoefficient(characterLevel, equippedSkillLevel + (equippedItem.skillLevel || 0))
+        : calculate3rdJobSkillCoefficient(characterLevel, equippedSkillLevel + (equippedItem.skillLevel || 0));
+
+    // Calculate coefficient with comparison item's skill level
+    const coeffWithComparison = jobTier === '4th'
+        ? calculate4thJobSkillCoefficient(characterLevel, equippedSkillLevel + (comparisonItem.skillLevel || 0))
+        : calculate3rdJobSkillCoefficient(characterLevel, equippedSkillLevel + (comparisonItem.skillLevel || 0));
+
+    // Apply the difference
+    newStats.skillCoeff += (coeffWithComparison - coeffWithEquipped);
+
     // Apply all other stats dynamically
     const statsToApply = allItemStatProperties.filter(prop =>
         prop !== 'attack' && prop !== 'mainStat' && prop !== 'defense' && prop !== 'skillLevel'
@@ -293,9 +316,6 @@ export function applyItemToStats(baseStats, equippedItem, comparisonItem) {
             newStats[prop] += comparisonItem[prop] || 0;
         }
     });
-
-    // Skill coefficient is already handled by equip/unequip buttons modifying skill-coeff-base
-    // So we don't need to apply skillLevel here
 
     return newStats;
 }
