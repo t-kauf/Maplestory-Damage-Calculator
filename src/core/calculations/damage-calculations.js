@@ -458,6 +458,20 @@ export function calculateStatEquivalency(sourceStat) {
             applyToStats: (stats, value) => ({ ...stats, damageAmp: stats.damageAmp + value }),
             formatValue: (val) => `${val.toFixed(2)}x`,
             suffix: 'x'
+        },
+        'min-damage': {
+            label: 'Min Damage Multiplier',
+            getValue: () => parseFloat(document.getElementById('equiv-min-damage').value) || 0,
+            applyToStats: (stats, value) => ({ ...stats, minDamage: stats.minDamage + value }),
+            formatValue: (val) => `${val.toFixed(2)}%`,
+            suffix: '%'
+        },
+        'max-damage': {
+            label: 'Max Damage Multiplier',
+            getValue: () => parseFloat(document.getElementById('equiv-max-damage').value) || 0,
+            applyToStats: (stats, value) => ({ ...stats, maxDamage: stats.maxDamage + value }),
+            formatValue: (val) => `${val.toFixed(2)}%`,
+            suffix: '%'
         }
     };
 

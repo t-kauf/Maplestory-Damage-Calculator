@@ -1,5 +1,6 @@
 // Pure state extraction - no UI, no calculations
 import { stageData } from '../data/stage-data.js';
+import { itemStatProperties, allItemStatProperties } from './constants.js';
 // Handles reading DOM state into structured data
 
 let currentContentType = 'none';
@@ -58,18 +59,18 @@ export const stageDefenses = {
 };
 
 export function getItemStats(prefix) {
+    // Initialize stats object with all properties set to 0
     const stats = {
         name: document.getElementById(`${prefix}-name`)?.value || '',
-        attack: parseFloat(document.getElementById(`${prefix}-attack`)?.value) || 0,
-        mainStat: 0,
-        defense: 0,
-        critRate: 0,
-        critDamage: 0,
-        skillLevel: 0,
-        normalDamage: 0,
-        bossDamage: 0,
-        damage: 0
+        attack: parseFloat(document.getElementById(`${prefix}-attack`)?.value) || 0
     };
+
+    // Initialize all stat properties to 0
+    allItemStatProperties.forEach(prop => {
+        if (prop !== 'attack') { // attack already handled above
+            stats[prop] = 0;
+        }
+    });
 
     // Get stats from dropdown selections
     if (prefix === 'equipped') {
@@ -81,17 +82,10 @@ export function getItemStats(prefix) {
             if (typeElem && valueElem) {
                 const statType = typeElem.value;
                 const value = parseFloat(valueElem.value) || 0;
+                const propName = itemStatProperties[statType];
 
-                switch (statType) {
-                    case 'attack': stats.attack += value; break;
-                    case 'main-stat': stats.mainStat += value; break;
-                    case 'defense': stats.defense += value; break;
-                    case 'crit-rate': stats.critRate += value; break;
-                    case 'crit-damage': stats.critDamage += value; break;
-                    case 'skill-level': stats.skillLevel += value; break;
-                    case 'normal-damage': stats.normalDamage += value; break;
-                    case 'boss-damage': stats.bossDamage += value; break;
-                    case 'damage': stats.damage += value; break;
+                if (propName) {
+                    stats[propName] += value;
                 }
             }
         }
@@ -105,17 +99,10 @@ export function getItemStats(prefix) {
             if (typeElem && valueElem) {
                 const statType = typeElem.value;
                 const value = parseFloat(valueElem.value) || 0;
+                const propName = itemStatProperties[statType];
 
-                switch (statType) {
-                    case 'attack': stats.attack += value; break;
-                    case 'main-stat': stats.mainStat += value; break;
-                    case 'defense': stats.defense += value; break;
-                    case 'crit-rate': stats.critRate += value; break;
-                    case 'crit-damage': stats.critDamage += value; break;
-                    case 'skill-level': stats.skillLevel += value; break;
-                    case 'normal-damage': stats.normalDamage += value; break;
-                    case 'boss-damage': stats.bossDamage += value; break;
-                    case 'damage': stats.damage += value; break;
+                if (propName) {
+                    stats[propName] += value;
                 }
             }
         }

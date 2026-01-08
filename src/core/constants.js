@@ -21,7 +21,31 @@ export const availableStats = [
     { value: 'skill-level', label: '3rd Job Skill Level' },
     { value: 'normal-damage', label: 'Normal Monster Damage (%)' },
     { value: 'boss-damage', label: 'Boss Monster Damage (%)' },
-    { value: 'damage', label: 'Damage (%)' }
+    { value: 'damage', label: 'Damage (%)' },
+    { value: 'min-damage', label: 'Min Damage Multiplier (%)' },
+    { value: 'max-damage', label: 'Max Damage Multiplier (%)' }
+];
+
+// Map of stat type values to their property names in item stat objects
+export const itemStatProperties = {
+    'attack': 'attack',
+    'main-stat': 'mainStat',
+    'defense': 'defense',
+    'crit-rate': 'critRate',
+    'crit-damage': 'critDamage',
+    'skill-level': 'skillLevel',
+    'normal-damage': 'normalDamage',
+    'boss-damage': 'bossDamage',
+    'damage': 'damage',
+    'min-damage': 'minDamage',
+    'max-damage': 'maxDamage'
+};
+
+// List of all stat properties that can exist on an item (for iteration)
+export const allItemStatProperties = [
+    'attack', 'mainStat', 'defense', 'critRate', 'critDamage',
+    'skillLevel', 'normalDamage', 'bossDamage', 'damage',
+    'minDamage', 'maxDamage'
 ];
 
 // Rarity colors

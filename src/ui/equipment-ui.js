@@ -4,16 +4,15 @@ import { saveToLocalStorage } from '../core/storage.js';
 import { calculate, getItemStats, getWeaponAttackBonus } from '../core/main.js';
 import { getSelectedClass } from '../../src/core/state.js';
 import { removeComparisonItem, addComparisonItem, addComparisonItemStat } from './comparison-ui.js';
-import { comparisonItemCount, equippedStatCount, setEquippedStatCount, availableStats } from '../core/constants.js';
+import { comparisonItemCount, equippedStatCount, setEquippedStatCount, availableStats, allItemStatProperties } from '../core/constants.js';
 
 export function unequipItem() {
     // Get equipped item data
     const equippedItem = getItemStats('equipped');
 
-    if (!equippedItem.name && equippedItem.attack === 0 && equippedItem.mainStat === 0 &&
-        equippedItem.defense === 0 && equippedItem.critRate === 0 && equippedItem.critDamage === 0 &&
-        equippedItem.skillLevel === 0 && equippedItem.normalDamage === 0 &&
-        equippedItem.bossDamage === 0 && equippedItem.damage === 0) {
+    // Check if any stat property is non-zero
+    const hasStats = allItemStatProperties.some(prop => equippedItem[prop] !== 0);
+    if (!equippedItem.name && !hasStats) {
         alert('No item currently equipped');
         return;
     }
@@ -51,6 +50,12 @@ export function unequipItem() {
     const damageBase = document.getElementById('damage-base');
     damageBase.value = (parseFloat(damageBase.value) - equippedItem.damage).toFixed(1);
 
+    const minDamageBase = document.getElementById('min-damage-base');
+    minDamageBase.value = (parseFloat(minDamageBase.value) - equippedItem.minDamage).toFixed(1);
+
+    const maxDamageBase = document.getElementById('max-damage-base');
+    maxDamageBase.value = (parseFloat(maxDamageBase.value) - equippedItem.maxDamage).toFixed(1);
+
     // Move to comparison items
     addComparisonItem();
     document.getElementById(`item-${comparisonItemCount}-name`).value = equippedItem.name || 'Unequipped Item';
@@ -65,7 +70,9 @@ export function unequipItem() {
         { type: 'skill-level', value: equippedItem.skillLevel },
         { type: 'normal-damage', value: equippedItem.normalDamage },
         { type: 'boss-damage', value: equippedItem.bossDamage },
-        { type: 'damage', value: equippedItem.damage }
+        { type: 'damage', value: equippedItem.damage },
+        { type: 'min-damage', value: equippedItem.minDamage },
+        { type: 'max-damage', value: equippedItem.maxDamage }
     ];
 
     statMapping.forEach(stat => {
@@ -96,9 +103,9 @@ export function unequipItem() {
 export function equipItem(itemId) {
     // Check if there's already an equipped item
     const currentEquipped = getItemStats('equipped');
-    if (currentEquipped.attack !== 0 || currentEquipped.mainStat !== 0 ||
-        currentEquipped.defense !== 0 || currentEquipped.critRate !== 0 ||
-        currentEquipped.critDamage !== 0 || currentEquipped.skillLevel !== 0) {
+    const hasStats = allItemStatProperties.some(prop => currentEquipped[prop] !== 0);
+
+    if (hasStats) {
         if (!confirm('This will replace your currently equipped item. Continue?')) {
             return;
         }
@@ -142,6 +149,12 @@ export function equipItem(itemId) {
     const damageBase = document.getElementById('damage-base');
     damageBase.value = (parseFloat(damageBase.value) + comparisonItem.damage).toFixed(1);
 
+    const minDamageBase = document.getElementById('min-damage-base');
+    minDamageBase.value = (parseFloat(minDamageBase.value) + comparisonItem.minDamage).toFixed(1);
+
+    const maxDamageBase = document.getElementById('max-damage-base');
+    maxDamageBase.value = (parseFloat(maxDamageBase.value) + comparisonItem.maxDamage).toFixed(1);
+
     // Move to equipped item
     document.getElementById('equipped-name').value = comparisonItem.name || 'Equipped Item';
     document.getElementById('equipped-attack').value = comparisonItem.attack;
@@ -155,7 +168,9 @@ export function equipItem(itemId) {
         { type: 'skill-level', value: comparisonItem.skillLevel },
         { type: 'normal-damage', value: comparisonItem.normalDamage },
         { type: 'boss-damage', value: comparisonItem.bossDamage },
-        { type: 'damage', value: comparisonItem.damage }
+        { type: 'damage', value: comparisonItem.damage },
+        { type: 'min-damage', value: comparisonItem.minDamage },
+        { type: 'max-damage', value: comparisonItem.maxDamage }
     ];
 
     statMapping.forEach(stat => {

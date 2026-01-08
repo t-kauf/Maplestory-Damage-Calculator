@@ -16,7 +16,7 @@ import { calculateWeaponAttacks } from './calculations/weapon-calculations.js';
 import { calculateStatWeights, calculateStatEquivalency } from './calculations/damage-calculations.js';
 import { toggleStatChart } from '../ui/stat-chart.js';
 import { loadFromLocalStorage, attachSaveListeners, saveToLocalStorage, exportData, importData, updateAnalysisTabs, getSavedContentTypeData } from './storage.js';
-import { rarities, tiers, comparisonItemCount } from './constants.js';
+import { rarities, tiers, comparisonItemCount, allItemStatProperties } from './constants.js';
 import { updateClassWarning } from './cube/cube-ui.js';
 import {
     calculate3rdJobSkillCoefficient,
@@ -263,11 +263,8 @@ export function applyItemToStats(baseStats, equippedItem, comparisonItem) {
     const weaponAttackBonus = getWeaponAttackBonus();
     const weaponMultiplier = 1 + (weaponAttackBonus / 100);
 
-    // For Dark Knight, defense from items needs to be handled specially
-    // because it affects main stat which is then multiplied by main stat %
+    // Special handling for mainStat and defense (Dark Knight conversion)
     let mainStatChange = 0;
-
-    // Calculate main stat change from flat main stat on items
     mainStatChange -= equippedItem.mainStat;
     mainStatChange += comparisonItem.mainStat;
 
@@ -281,29 +278,24 @@ export function applyItemToStats(baseStats, equippedItem, comparisonItem) {
     // Convert main stat change to stat damage (100 main stat = 1% stat damage)
     newStats.statDamage += mainStatChange / 100;
 
-    // Apply other stats
+    // Apply attack with weapon multiplier
     newStats.attack -= equippedItem.attack * weaponMultiplier;
     newStats.attack += comparisonItem.attack * weaponMultiplier;
 
-    newStats.critRate -= equippedItem.critRate;
-    newStats.critRate += comparisonItem.critRate;
+    // Apply all other stats dynamically
+    const statsToApply = allItemStatProperties.filter(prop =>
+        prop !== 'attack' && prop !== 'mainStat' && prop !== 'defense' && prop !== 'skillLevel'
+    );
 
-    newStats.critDamage -= equippedItem.critDamage;
-    newStats.critDamage += comparisonItem.critDamage;
+    statsToApply.forEach(prop => {
+        if (newStats[prop] !== undefined) {
+            newStats[prop] -= equippedItem[prop] || 0;
+            newStats[prop] += comparisonItem[prop] || 0;
+        }
+    });
 
     // Skill coefficient is already handled by equip/unequip buttons modifying skill-coeff-base
-    // So we don't need to apply it here in the comparison
-    // newStats.skillCoeff -= equippedItem.skillLevel * 0.3;
-    // newStats.skillCoeff += comparisonItem.skillLevel * 0.3;
-
-    newStats.normalDamage -= equippedItem.normalDamage;
-    newStats.normalDamage += comparisonItem.normalDamage;
-
-    newStats.bossDamage -= equippedItem.bossDamage;
-    newStats.bossDamage += comparisonItem.bossDamage;
-
-    newStats.damage -= equippedItem.damage;
-    newStats.damage += comparisonItem.damage;
+    // So we don't need to apply skillLevel here
 
     return newStats;
 }
