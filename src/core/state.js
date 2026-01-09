@@ -24,22 +24,22 @@ export function setSelectedClass(className) {
 
 export function getStats(setup) {
     return {
-        attack: parseFloat(document.getElementById(`attack-${setup}`).value),
-        critRate: parseFloat(document.getElementById(`crit-rate-${setup}`).value),
-        critDamage: parseFloat(document.getElementById(`crit-damage-${setup}`).value),
-        statDamage: parseFloat(document.getElementById(`stat-damage-${setup}`).value),
-        damage: parseFloat(document.getElementById(`damage-${setup}`).value),
-        finalDamage: parseFloat(document.getElementById(`final-damage-${setup}`).value),
-        damageAmp: parseFloat(document.getElementById(`damage-amp-${setup}`).value),
-        attackSpeed: parseFloat(document.getElementById(`attack-speed-${setup}`).value),
-        defPen: parseFloat(document.getElementById(`def-pen-${setup}`).value),
-        bossDamage: parseFloat(document.getElementById(`boss-damage-${setup}`).value),
-        normalDamage: parseFloat(document.getElementById(`normal-damage-${setup}`).value),
-        skillCoeff: parseFloat(document.getElementById(`skill-coeff-${setup}`).value),
-        skillMastery: parseFloat(document.getElementById(`skill-mastery-${setup}`).value),
-        skillMasteryBoss: parseFloat(document.getElementById(`skill-mastery-boss-${setup}`).value),
-        minDamage: parseFloat(document.getElementById(`min-damage-${setup}`).value),
-        maxDamage: parseFloat(document.getElementById(`max-damage-${setup}`).value)
+        attack: parseFloat(document.getElementById(`attack-${setup}`).value) || 0,
+        critRate: parseFloat(document.getElementById(`crit-rate-${setup}`).value) || 0,
+        critDamage: parseFloat(document.getElementById(`crit-damage-${setup}`).value) || 0,
+        statDamage: parseFloat(document.getElementById(`stat-damage-${setup}`).value) || 0,
+        damage: parseFloat(document.getElementById(`damage-${setup}`).value) || 0,
+        finalDamage: parseFloat(document.getElementById(`final-damage-${setup}`).value) || 0,
+        damageAmp: parseFloat(document.getElementById(`damage-amp-${setup}`).value) || 0,
+        attackSpeed: parseFloat(document.getElementById(`attack-speed-${setup}`).value) || 0,
+        defPen: parseFloat(document.getElementById(`def-pen-${setup}`).value) || 0,
+        bossDamage: parseFloat(document.getElementById(`boss-damage-${setup}`).value) || 0,
+        normalDamage: parseFloat(document.getElementById(`normal-damage-${setup}`).value) || 0,
+        skillCoeff: parseFloat(document.getElementById(`skill-coeff-${setup}`).value) || 0,
+        skillMastery: parseFloat(document.getElementById(`skill-mastery-${setup}`).value) || 0,
+        skillMasteryBoss: parseFloat(document.getElementById(`skill-mastery-boss-${setup}`).value) || 0,
+        minDamage: parseFloat(document.getElementById(`min-damage-${setup}`).value) || 0,
+        maxDamage: parseFloat(document.getElementById(`max-damage-${setup}`).value) || 0
     };
 }
 
