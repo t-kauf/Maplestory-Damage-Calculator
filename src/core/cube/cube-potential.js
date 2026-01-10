@@ -178,14 +178,14 @@ export function calculateComparisonOrchestrator() {
 
     if (!results) return;
 
-    // Display results
-    displayComparisonResults(results.setAGain, results.setBGain, results.deltaGain, results.setAStats, results.setBStats);
+    // Display results (use setBAbsoluteGain for ranking comparison)
+    displayComparisonResults(results.setAGain, results.setBGain, results.setBAbsoluteGain, results.deltaGain, results.setAStats, results.setBStats);
 
     // Start loading rankings in the background if not already loaded
     const slotId = currentCubeSlot;
     const rarity = cubeSlotData[currentCubeSlot][currentPotentialType].rarity;
     if (!rankingsCache[slotId]?.[rarity]) {
-        loadRankingsInBackground(slotId, rarity, results.setAGain, results.setBGain);
+        loadRankingsInBackground(slotId, rarity, results.setAGain, results.setBAbsoluteGain);
     }
 
     // If summary tab is visible, update it

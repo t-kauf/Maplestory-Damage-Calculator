@@ -1,7 +1,7 @@
 import { slotNames, rankingsPerPage, slotSpecificPotentials, equipmentPotentialData } from './cube-potential-data.js';
 import { calculateDamage } from '../calculations/damage-calculations.js';
 import { getSelectedClass, getStats } from '../main.js';
-import { lineExistsInRarity, potentialStatToDamageStat, getRarityColor, getPercentileForGain, saveCubePotentialData } from './cube-logic.js';
+import { lineExistsInRarity, potentialStatToDamageStat, getRarityColor, getPercentileForGain, saveCubePotentialData, calculateSlotSetGain } from './cube-logic.js';
 import { calculateRankingsForRarity, calculateRankings } from './cube-simulation.js';
 import { cubeSlotData, currentCubeSlot, currentPotentialType, rankingsCache, rankingsInProgress, calculateComparisonOrchestrator, selectCubeSlot } from './cube-potential.js';
 
@@ -385,7 +385,7 @@ export function restorePotentialLineValues(setName, setData) {
 }
 
 // Display comparison results
-export function displayComparisonResults(setAGain, setBGain, deltaGain, setAStats, setBStats) {
+export function displayComparisonResults(setAGain, setBGain, setBAbsoluteGain, deltaGain, setAStats, setBStats) {
     const resultsDiv = document.getElementById('cube-comparison-results');
     if (!resultsDiv) return;
 
@@ -395,7 +395,8 @@ export function displayComparisonResults(setAGain, setBGain, deltaGain, setAStat
     const rankingsReady = rankingsCache[slotId]?.[rarity];
 
     const setAComparison = rankingsReady ? getRankingComparison(setAGain, rarity) : { percentile: getLoadingPlaceholder(), details: null, chartData: null };
-    const setBComparison = rankingsReady ? getRankingComparison(setBGain, rarity) : { percentile: getLoadingPlaceholder(), details: null, chartData: null };
+    // Use setBAbsoluteGain for ranking comparison (since rankings are based on absolute gains from base)
+    const setBComparison = rankingsReady ? getRankingComparison(setBAbsoluteGain, rarity) : { percentile: getLoadingPlaceholder(), details: null, chartData: null };
 
     // Format stats for display
     const formatStats = (stats) => {
@@ -425,7 +426,7 @@ export function displayComparisonResults(setAGain, setBGain, deltaGain, setAStat
     resultsDiv.innerHTML = `
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
             <div style="background: linear-gradient(135deg, rgba(52, 199, 89, 0.1), rgba(0, 122, 255, 0.05)); border: 2px solid var(--accent-success); border-radius: 12px; padding: 20px; box-shadow: 0 4px 16px var(--shadow); text-align: center;">
-                <div style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 8px;">Set A Gain</div>
+                <div style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 8px;">Set A Gain<br><span style="font-size: 0.85em;">(vs Baseline)</span></div>
                 <div style="font-size: 1.8em; font-weight: 700; color: ${setAGain >= 0 ? '#4ade80' : '#f87171'};">
                     ${setAGain >= 0 ? '+' : ''}${setAGain.toFixed(2)}%
                 </div>
@@ -440,7 +441,7 @@ export function displayComparisonResults(setAGain, setBGain, deltaGain, setAStat
                 ` : ''}
             </div>
             <div style="background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.05)); border: 2px solid #3b82f6; border-radius: 12px; padding: 20px; box-shadow: 0 4px 16px var(--shadow); text-align: center;">
-                <div style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 8px;">Set B Gain</div>
+                <div style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 8px;">Set B Gain<br><span style="font-size: 0.85em;">(vs Set A)</span></div>
                 <div style="font-size: 1.8em; font-weight: 700; color: ${setBGain >= 0 ? '#4ade80' : '#f87171'};">
                     ${setBGain >= 0 ? '+' : ''}${setBGain.toFixed(2)}%
                 </div>
@@ -1209,56 +1210,21 @@ export function displayAllSlotsSummary() {
         return;
     }
 
-    const baseStats = getStats('base');
-    const baseDPS = calculateDamage(baseStats, 'boss').dps;
+    const currentStats = getStats('base');
 
     // Calculate DPS gain for each slot + potential type
     const summaryData = [];
 
     slotNames.forEach(slot => {
-        // Regular Potential
+        // Regular Potential - use shared calculation function
         const regularData = cubeSlotData[slot.id].regular;
-        const regularStats = { ...baseStats };
-        let regularAccumulatedMainStatPct = 0;
-        for (let lineNum = 1; lineNum <= 3; lineNum++) {
-            const line = regularData.setA[`line${lineNum}`];
-            if (!line || !line.stat) continue;
+        const regularResult = calculateSlotSetGain(slot.id, regularData.rarity, regularData.setA, currentStats);
+        const regularGain = regularResult.gain;
 
-            // Only apply line if it exists in the current rarity for this slot
-            if (!lineExistsInRarity(slot.id, regularData.rarity, lineNum, line.stat, line.value, line.prime)) continue;
-
-            const mapped = potentialStatToDamageStat(line.stat, line.value, regularAccumulatedMainStatPct);
-            if (mapped.stat) {
-                regularStats[mapped.stat] = (regularStats[mapped.stat] || 0) + mapped.value;
-                if (mapped.isMainStatPct) {
-                    regularAccumulatedMainStatPct += line.value;
-                }
-            }
-        }
-        const regularDPS = calculateDamage(regularStats, 'boss').dps;
-        const regularGain = ((regularDPS - baseDPS) / baseDPS * 100);
-
-        // Bonus Potential
+        // Bonus Potential - use shared calculation function
         const bonusData = cubeSlotData[slot.id].bonus;
-        const bonusStats = { ...baseStats };
-        let bonusAccumulatedMainStatPct = 0;
-        for (let lineNum = 1; lineNum <= 3; lineNum++) {
-            const line = bonusData.setA[`line${lineNum}`];
-            if (!line || !line.stat) continue;
-
-            // Only apply line if it exists in the current rarity for this slot
-            if (!lineExistsInRarity(slot.id, bonusData.rarity, lineNum, line.stat, line.value, line.prime)) continue;
-
-            const mapped = potentialStatToDamageStat(line.stat, line.value, bonusAccumulatedMainStatPct);
-            if (mapped.stat) {
-                bonusStats[mapped.stat] = (bonusStats[mapped.stat] || 0) + mapped.value;
-                if (mapped.isMainStatPct) {
-                    bonusAccumulatedMainStatPct += line.value;
-                }
-            }
-        }
-        const bonusDPS = calculateDamage(bonusStats, 'boss').dps;
-        const bonusGain = ((bonusDPS - baseDPS) / baseDPS * 100);
+        const bonusResult = calculateSlotSetGain(slot.id, bonusData.rarity, bonusData.setA, currentStats);
+        const bonusGain = bonusResult.gain;
 
         summaryData.push({
             slotId: slot.id,
@@ -1334,11 +1300,12 @@ export function displayAllSlotsSummary() {
         </table>
     `;
 
-    // Calculate total DPS gain from all current potential lines
-    const totalStats = { ...baseStats };
-    let totalAccumulatedMainStatPct = 0;
+    // Calculate total DPS gain: current stats (includes all potential) vs baseline (no potential)
+    // Step 1: Calculate baseline by removing ALL slots' potential from current stats
+    const baselineStats = { ...currentStats };
+    let accumulatedMainStatPct = 0;
 
-    // Add all regular potential stats
+    // Subtract all regular potential stats
     slotNames.forEach(slot => {
         const regularData = cubeSlotData[slot.id].regular;
         for (let lineNum = 1; lineNum <= 3; lineNum++) {
@@ -1346,34 +1313,35 @@ export function displayAllSlotsSummary() {
             if (!line || !line.stat) continue;
             if (!lineExistsInRarity(slot.id, regularData.rarity, lineNum, line.stat, line.value, line.prime)) continue;
 
-            const mapped = potentialStatToDamageStat(line.stat, line.value, totalAccumulatedMainStatPct);
+            const mapped = potentialStatToDamageStat(line.stat, line.value, accumulatedMainStatPct);
             if (mapped.stat) {
-                totalStats[mapped.stat] = (totalStats[mapped.stat] || 0) + mapped.value;
+                baselineStats[mapped.stat] = (baselineStats[mapped.stat] || 0) - mapped.value;
                 if (mapped.isMainStatPct) {
-                    totalAccumulatedMainStatPct += line.value;
+                    accumulatedMainStatPct += line.value;
                 }
             }
         }
 
-        // Add all bonus potential stats
+        // Subtract all bonus potential stats
         const bonusData = cubeSlotData[slot.id].bonus;
         for (let lineNum = 1; lineNum <= 3; lineNum++) {
             const line = bonusData.setA[`line${lineNum}`];
             if (!line || !line.stat) continue;
             if (!lineExistsInRarity(slot.id, bonusData.rarity, lineNum, line.stat, line.value, line.prime)) continue;
 
-            const mapped = potentialStatToDamageStat(line.stat, line.value, totalAccumulatedMainStatPct);
+            const mapped = potentialStatToDamageStat(line.stat, line.value, accumulatedMainStatPct);
             if (mapped.stat) {
-                totalStats[mapped.stat] = (totalStats[mapped.stat] || 0) + mapped.value;
+                baselineStats[mapped.stat] = (baselineStats[mapped.stat] || 0) - mapped.value;
                 if (mapped.isMainStatPct) {
-                    totalAccumulatedMainStatPct += line.value;
+                    accumulatedMainStatPct += line.value;
                 }
             }
         }
     });
 
-    const totalDPS = calculateDamage(totalStats, 'boss').dps;
-    const totalGain = ((totalDPS - baseDPS) / baseDPS * 100);
+    const currentDPS = calculateDamage(currentStats, 'boss').dps;
+    const baselineDPS = calculateDamage(baselineStats, 'boss').dps;
+    const totalGain = ((currentDPS - baselineDPS) / baselineDPS * 100);
 
     html += `
         <div style="background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.05)); border: 2px solid rgba(0, 122, 255, 0.3); border-radius: 12px; padding: 20px; margin-top: 20px;">

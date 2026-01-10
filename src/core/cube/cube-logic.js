@@ -105,31 +105,56 @@ export function potentialStatToDamageStat(potentialStat, value, accumulatedMainS
     return { ...mapped, isMainStatPct: false };
 }
 
-// Calculate DPS gains for a set of potential lines
-export function calculateSetDPSGain(slotId, rarity, setData, baseStats, baseDPS) {
-    const stats = { ...baseStats };
+// Calculate DPS gain for a specific slot's potential set
+// This properly handles the baseline by subtracting the set first, then adding it back
+export function calculateSlotSetGain(slotId, rarity, setData, currentStats) {
+    // Step 1: Calculate baseline by removing this set's contribution from current stats
+    const baselineStats = { ...currentStats };
     let accumulatedMainStatPct = 0;
 
     for (let lineNum = 1; lineNum <= 3; lineNum++) {
         const line = setData[`line${lineNum}`];
         if (!line || !line.stat) continue;
 
-        // Only apply line if it exists in the current rarity for this slot
+        // Only process line if it exists in the current rarity for this slot
         if (!lineExistsInRarity(slotId, rarity, lineNum, line.stat, line.value, line.prime)) continue;
 
         const mapped = potentialStatToDamageStat(line.stat, line.value, accumulatedMainStatPct);
         if (mapped.stat) {
-            stats[mapped.stat] = (stats[mapped.stat] || 0) + mapped.value;
+            // Subtract to get baseline
+            baselineStats[mapped.stat] = (baselineStats[mapped.stat] || 0) - mapped.value;
             if (mapped.isMainStatPct) {
                 accumulatedMainStatPct += line.value;
             }
         }
     }
 
-    const dps = calculateDamage(stats, 'boss').dps;
-    const gain = ((dps - baseDPS) / baseDPS * 100);
+    const baselineDPS = calculateDamage(baselineStats, 'boss').dps;
 
-    return { gain, stats };
+    // Step 2: Calculate stats with this set applied to baseline
+    const setStats = { ...baselineStats };
+    accumulatedMainStatPct = 0;
+
+    for (let lineNum = 1; lineNum <= 3; lineNum++) {
+        const line = setData[`line${lineNum}`];
+        if (!line || !line.stat) continue;
+
+        if (!lineExistsInRarity(slotId, rarity, lineNum, line.stat, line.value, line.prime)) continue;
+
+        const mapped = potentialStatToDamageStat(line.stat, line.value, accumulatedMainStatPct);
+        if (mapped.stat) {
+            // Add to baseline
+            setStats[mapped.stat] = (setStats[mapped.stat] || 0) + mapped.value;
+            if (mapped.isMainStatPct) {
+                accumulatedMainStatPct += line.value;
+            }
+        }
+    }
+
+    const setDPS = calculateDamage(setStats, 'boss').dps;
+    const gain = ((setDPS - baselineDPS) / baselineDPS * 100);
+
+    return { gain, stats: setStats, baselineStats };
 }
 
 // Save cube potential data to localStorage
@@ -184,35 +209,19 @@ export function calculateComparison(cubeSlotData, currentCubeSlot, currentPotent
     }
 
     const slotData = cubeSlotData[currentCubeSlot][currentPotentialType];
-    const baseStats = getStats('base');
+    const currentStats = getStats('base'); // User's current stats (includes all equipped potential)
+    const rarity = slotData.rarity;
 
-    // Calculate base DPS (no potential lines)
-    const baseDPS = calculateDamage(baseStats, 'boss').dps;
+    // Use shared function to calculate Set A
+    const setAResult = calculateSlotSetGain(currentCubeSlot, rarity, slotData.setA, currentStats);
+    const setAGain = setAResult.gain;
+    const setAStats = setAResult.stats;
+    const baselineStats = setAResult.baselineStats;
 
-    // Calculate Set A stats and DPS (base + Set A lines that exist in current rarity)
-    const setAStats = { ...baseStats };
-    let setAAccumulatedMainStatPct = 0; // Track accumulated main stat % for diminishing returns
-    for (let lineNum = 1; lineNum <= 3; lineNum++) {
-        const statSelect = document.getElementById(`cube-setA-line${lineNum}-stat`);
-        if (!statSelect || !statSelect.value) continue;
+    // Calculate Set B using the same baseline
+    const setBStats = { ...baselineStats };
+    let setBAccumulatedMainStatPct = 0;
 
-        const line = slotData.setA[`line${lineNum}`];
-        if (!line || !line.stat) continue;
-
-        const mapped = potentialStatToDamageStat(line.stat, line.value, setAAccumulatedMainStatPct);
-        if (mapped.stat) {
-            setAStats[mapped.stat] = (setAStats[mapped.stat] || 0) + mapped.value;
-            // Track if this was a main stat % line
-            if (mapped.isMainStatPct) {
-                setAAccumulatedMainStatPct += line.value;
-            }
-        }
-    }
-    const setADPS = calculateDamage(setAStats, 'boss').dps;
-
-    // Calculate Set B stats and DPS (base + Set B lines that exist in current rarity)
-    const setBStats = { ...baseStats };
-    let setBAccumulatedMainStatPct = 0; // Track accumulated main stat % for diminishing returns
     for (let lineNum = 1; lineNum <= 3; lineNum++) {
         const statSelect = document.getElementById(`cube-setB-line${lineNum}-stat`);
         if (!statSelect || !statSelect.value) continue;
@@ -223,23 +232,27 @@ export function calculateComparison(cubeSlotData, currentCubeSlot, currentPotent
         const mapped = potentialStatToDamageStat(line.stat, line.value, setBAccumulatedMainStatPct);
         if (mapped.stat) {
             setBStats[mapped.stat] = (setBStats[mapped.stat] || 0) + mapped.value;
-            // Track if this was a main stat % line
             if (mapped.isMainStatPct) {
                 setBAccumulatedMainStatPct += line.value;
             }
         }
     }
     const setBDPS = calculateDamage(setBStats, 'boss').dps;
+    const baselineDPS = calculateDamage(baselineStats, 'boss').dps;
+    const setADPS = calculateDamage(setAStats, 'boss').dps;
 
-    // Calculate gains (both compared to base stats with no potential)
-    const setAGain = ((setADPS - baseDPS) / baseDPS * 100);
-    const setBGain = ((setBDPS - baseDPS) / baseDPS * 100);
+    // Calculate gains
+    // Set B Absolute Gain: compared to baseline (for ranking comparison)
+    const setBAbsoluteGain = ((setBDPS - baselineDPS) / baselineDPS * 100);
+    // Set B Relative Gain: compared to Set A (shows the delta when swapping from A to B)
+    const setBGain = ((setBDPS - setADPS) / setADPS * 100);
     const deltaGain = setBGain - setAGain;
 
     // Return the results instead of calling display functions
     return {
         setAGain,
         setBGain,
+        setBAbsoluteGain, // For ranking comparison
         deltaGain,
         setAStats,
         setBStats,
