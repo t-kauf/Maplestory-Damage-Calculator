@@ -316,8 +316,15 @@ export function switchInnerAbilityTab(tabName) {
         selectedTab.style.display = 'block';
     }
 
-    // Activate button
-    event.target.classList.add('active');
+    // Activate button - Find the button by matching the onclick attribute
+    // This works both when called from a click event and during initialization
+    const buttons = document.querySelectorAll('#analysis-inner-ability .tab-button');
+    buttons.forEach(btn => {
+        const onclickAttr = btn.getAttribute('onclick');
+        if (onclickAttr && onclickAttr.includes(`'${tabName}'`)) {
+            btn.classList.add('active');
+        }
+    });
 
     // Render content
     if (tabName === 'preset-comparison') {
@@ -568,6 +575,10 @@ export function sortTheoreticalTable(column) {
 
 // Initialize Inner Ability Analysis
 export function initializeInnerAbilityAnalysis() {
+    // Initialize the default tab (My Ability Pages) to ensure proper styling on page load
+    switchInnerAbilityTab('my-ability-pages');
+
+    // Pre-render other tabs
     renderPresetComparison();
     renderTheoreticalBest();
 }

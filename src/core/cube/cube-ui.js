@@ -190,8 +190,10 @@ export async function setupCubeTabs() {
     const comparisonContent = document.getElementById('cube-comparison-content');
     const rankingsContent = document.getElementById('cube-rankings-content');
 
+    mainSelectedTab.classList.add('active');
+
     // Setup main tab switching
-    if (mainSummaryTab && mainSelectedTab && mainSimulationTab && mainSummaryContent && mainSelectedContent && mainSimulationContent) {
+    if (mainSummaryTab && mainSelectedTab && mainSimulationTab && mainSummaryContent && mainSelectedContent && mainSimulationContent) {      
         mainSummaryTab.addEventListener('click', async () => {
             mainSummaryTab.classList.add('active');
             mainSelectedTab.classList.remove('active');

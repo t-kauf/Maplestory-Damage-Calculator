@@ -1,6 +1,7 @@
 // Main Entry Point - ES6 Module
 // This is the single entry point that orchestrates the entire application
 
+import { initializeRouter } from './router.js';
 import { stageDefenses } from './state.js';
 import {
     getStats,
@@ -706,8 +707,14 @@ export function switchBaseStatsSubTab(subTabName) {
         button.classList.remove('active');
     });
 
-    // Find and activate the clicked button
-    event.target.classList.add('active');
+    // Activate button - Find the button by matching the onclick attribute
+    // This works both when called from a click event and during initialization
+    buttons.forEach(btn => {
+        const onclickAttr = btn.getAttribute('onclick');
+        if (onclickAttr && onclickAttr.includes(`'${subTabName}'`)) {
+            btn.classList.add('active');
+        }
+    });
 
     // If switching to skill details, populate the skills
     if (subTabName === 'skill-details') {
@@ -918,6 +925,7 @@ function loadSelectedJobTier() {
 
 // Initialize application
 window.onload = function () {
+    initializeRouter(); // Initialize routing system first
     loadTheme();
     initializeHeroPowerPresets();
     initializeWeapons();
@@ -967,7 +975,37 @@ window.onload = function () {
     loadSelectedClass();
     loadSelectedJobTier();
     updateSkillCoefficient();
+
+    // Force initialize all default active tabs to ensure CSS applies correctly
+    // This fixes issues where Tailwind CDN loads after custom CSS
+    initializeDefaultTabStates();
 };
+
+// Initialize default tab active states on page load
+function initializeDefaultTabStates() {
+    // Use requestAnimationFrame to ensure DOM is ready and Tailwind has loaded
+    requestAnimationFrame(() => {
+        // Find all tab button containers
+        const tabContainers = [
+            document.querySelector('#analysis-inner-ability .flex.flex-wrap'),
+            document.querySelector('#analysis-scroll-optimizer .flex.flex-wrap'),
+            document.querySelector('#analysis-cube-potential #tab=container-main'),
+            document.querySelector('#analysis-cube-potential #tab=container-cube-tab'),
+            document.querySelector('#cube-main-selected-content .flex.flex-wrap:has(#cube-tab-comparison)')
+        ].filter(Boolean);
+
+        tabContainers.forEach(container => {
+            const buttons = container.querySelectorAll('.tab-button');
+            if (buttons.length > 0) {
+                // Ensure first button in each container has active class
+                const firstButton = buttons[0];
+                if (!firstButton.classList.contains('active')) {
+                    firstButton.classList.add('active');
+                }
+            }
+        });
+    });
+}
 
 // Expose functions to window for HTML onclick handlers
 window.switchTab = switchTab;

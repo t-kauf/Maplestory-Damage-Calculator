@@ -1,6 +1,7 @@
 // Tab switching functionality
 
 import { renderArtifactPotential } from '../core/artifact-potential.js';
+import { resetSubTabsToDefault } from '../core/router.js';
 
 // Tab switching function
 export function switchTab(group, tabName) {
@@ -35,6 +36,18 @@ export function switchTab(group, tabName) {
     if (group === 'analysis' && tabName === 'artifact-potential') {
         renderArtifactPotential();
     }
+
+    // Reset sub-tabs to their default state
+    // Map group names to page names for the router
+    const pageNameMap = {
+        'setup': 'setup',
+        'analysis': 'optimization',
+        'predictions': 'predictions'
+    };
+    const pageName = pageNameMap[group];
+    if (pageName) {
+        resetSubTabsToDefault(pageName, tabName);
+    }
 }
 
 // Scrolling sub-tab switching function
@@ -47,7 +60,7 @@ export function switchScrollingSubTab(tabName) {
     });
 
     // Remove active class from all scrolling sub-tab buttons
-    const buttons = event.currentTarget.parentElement.querySelectorAll('.tab-button');
+    const buttons = document.querySelectorAll('#analysis-scroll-optimizer .tab-button');
     buttons.forEach(button => {
         button.classList.remove('active');
     });
@@ -59,6 +72,12 @@ export function switchScrollingSubTab(tabName) {
         selectedSubtab.classList.add('active');
     }
 
-    // Add active class to clicked button
-    event.currentTarget.classList.add('active');
+    // Activate button - Find the button by matching the onclick attribute
+    // This works both when called from a click event and during initialization
+    buttons.forEach(btn => {
+        const onclickAttr = btn.getAttribute('onclick');
+        if (onclickAttr && onclickAttr.includes(`'${tabName}'`)) {
+            btn.classList.add('active');
+        }
+    });
 }

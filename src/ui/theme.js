@@ -8,15 +8,18 @@ import { handleWeaponLevelChange, updateEquippedWeaponIndicator } from './weapon
 export function toggleTheme() {
     const html = document.documentElement;
     const themeToggle = document.getElementById('theme-toggle');
+    const themeToggleSidebar = document.getElementById('theme-icon-sidebar');
     const isDark = html.classList.contains('dark');
 
     if (isDark) {
         html.classList.remove('dark');
-        themeToggle.textContent = '🌙';
+        if (themeToggle) themeToggle.textContent = '🌙';
+        if (themeToggleSidebar) themeToggleSidebar.textContent = '🌙';
         localStorage.setItem('theme', 'light');
     } else {
         html.classList.add('dark');
-        themeToggle.textContent = '☀️';
+        if (themeToggle) themeToggle.textContent = '☀️';
+        if (themeToggleSidebar) themeToggleSidebar.textContent = '☀️';
         localStorage.setItem('theme', 'dark');
     }
 
@@ -75,12 +78,15 @@ export function loadTheme() {
     const savedTheme = localStorage.getItem('theme') || 'dark';
     const html = document.documentElement;
     const themeToggle = document.getElementById('theme-toggle');
+    const themeToggleSidebar = document.getElementById('theme-icon-sidebar');
 
     if (savedTheme === 'dark') {
         html.classList.add('dark');
         if (themeToggle) themeToggle.textContent = '☀️';
+        if (themeToggleSidebar) themeToggleSidebar.textContent = '☀️';
     } else {
         html.classList.remove('dark');
         if (themeToggle) themeToggle.textContent = '🌙';
+        if (themeToggleSidebar) themeToggleSidebar.textContent = '🌙';
     }
 }
