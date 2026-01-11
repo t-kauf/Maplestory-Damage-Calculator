@@ -131,16 +131,16 @@ export function getSelectedStageDefense() {
 
     if (category === 'stageHunt') {
         const entry = stageDefenses.stageHunts.find(e => e.stage === identifier);
-        return entry ? { defense: entry.defense, damageReduction: entry.damageReduction || 0 } : { defense: 0, damageReduction: 0 };
+        return entry ? { defense: entry.defense * 100, damageReduction: entry.damageReduction || 0 } : { defense: 0, damageReduction: 0 };
     } else if (category === 'chapterBoss') {
         const entry = stageDefenses.chapterBosses.find(e => e.chapter === identifier);
-        return entry ? { defense: entry.defense, damageReduction: entry.damageReduction || 0 } : { defense: 0, damageReduction: 0 };
+        return entry ? { defense: entry.defense * 100, damageReduction: entry.damageReduction || 0 } : { defense: 0, damageReduction: 0 };
     } else if (category === 'worldBoss') {
         const entry = stageDefenses.worldBosses.find(e => e.stage === identifier);
-        return entry ? { defense: entry.defense, damageReduction: entry.damageReduction || 0 } : { defense: 0, damageReduction: 0 };
+        return entry ? { defense: entry.defense * 10, damageReduction: entry.damageReduction || 0 } : { defense: 0, damageReduction: 0 };
     } else if (category === 'growthDungeon') {
         const entry = stageDefenses.growthDungeons.find(e => e.stage === identifier);
-        return entry ? { defense: entry.defense, damageReduction: entry.damageReduction || 0 } : { defense: 0, damageReduction: 0 };
+        return entry ? { defense: entry.defense * 100, damageReduction: entry.damageReduction || 0 } : { defense: 0, damageReduction: 0 };
     }
 
     return { defense: 0, damageReduction: 0 };

@@ -212,7 +212,14 @@ export function populateStageDropdownFiltered(contentType, filter) {
         const identifier = entry.stage;
         opt.value = `${prefix}-${identifier}`;
         const accuracy = entry.accuracy ? `, Acc: ${entry.accuracy}` : '';
-        opt.textContent = `${identifier} (Def: ${entry.defense}%${accuracy})`;
+
+        if(contentType === 'worldBoss')
+        {
+            opt.textContent = `${identifier} (Def: ${Math.floor(entry.defense * 10)} ${accuracy})`;
+        } else {
+            opt.textContent = `${identifier} (Def: ${Math.floor(entry.defense * 100)} ${accuracy})`;
+        }
+   
         select.appendChild(opt);
     });
 }
@@ -251,7 +258,14 @@ export function populateStageDropdown(contentType = null) {
         opt.value = `${prefix}-${identifier}`;
         const label = contentType === 'chapterBoss' ? `Chapter ${identifier}` : identifier;
         const accuracy = entry.accuracy ? `, Acc: ${entry.accuracy}` : '';
-        opt.textContent = `${label} (Def: ${entry.defense}%${accuracy})`;
+
+        if(contentType === 'worldBoss')
+        {
+            opt.textContent = `${label} (Def: ${Math.floor(entry.defense * 10)} ${accuracy})`;
+        } else {
+            opt.textContent = `${label} (Def: ${Math.floor(entry.defense * 100)} ${accuracy})`;
+        }
+        
         select.appendChild(opt);
     });
 }

@@ -19,12 +19,9 @@ export function calculateDamage(stats, monsterType) {
     // Defense Penetration: Reduce enemy's effective defense
     const effectiveDefense = stageDefense.defense * (1 - stats.defPen / 100);
 
-    // Defense uses diminishing returns formula: damage dealt = 100 / (100 + defense)
+    // Defense uses diminishing returns formula: damage dealt = 6000 / (6000 + defense)
     // This ensures defense never reduces damage to zero, even at very high values
-    const defPenMultiplier = 100 / (100 + effectiveDefense);
-
-    // Damage Reduction: 1 - damageReduction%
-    const damageReduction = 1 - (stageDefense.damageReduction / 100);
+    const damageReduction = 6000 / (6000 + effectiveDefense);
 
     const monsterDamage = monsterType === 'boss' ? stats.bossDamage : stats.normalDamage;
 
@@ -35,7 +32,6 @@ export function calculateDamage(stats, monsterType) {
         (1 + stats.damage / 100) *
         (1 + monsterDamage / 100) *
         damageAmpMultiplier *
-        defPenMultiplier *
         damageReduction *
         finalDamageMultiplier;
 
@@ -75,7 +71,6 @@ export function calculateDamage(stats, monsterType) {
         expectedDamage,
         dps,
         damageAmpMultiplier,
-        defPenMultiplier,
         attackSpeedMultiplier,
         finalDamageMultiplier
     };
