@@ -272,8 +272,14 @@ export function calculateStatWeights(setup, stats) {
             const baseDPS = stat.key === "bossDamage" ? baseBossDPS : baseNormalDPS;
             let previousDPS = baseDPS;
 
+            let stepSize = increase <= 5 ? 0.1 : 1;
+
             // Step through in 1% increments (or 0.1% for small increases)
-            const stepSize = increase <= 5 ? 0.1 : 1;
+            if(stat.key === "finalDamage")
+            {
+                stepSize = increase;
+            }
+            
             const numSteps = Math.round(increase / stepSize);
 
             for (let step = 1; step <= numSteps; step++) {
