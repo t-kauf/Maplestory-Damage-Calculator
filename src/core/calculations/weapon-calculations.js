@@ -67,7 +67,7 @@ export function getUpgradeCost(rarity, tier, level) {
     // Apply tier multiplier (1.2x for each tier above T4)
     let tierAdjustedCost = baseCost * Math.pow(1.2, tierSteps);
 
-    if(rarity === "ancient" && tier === "t3")
+    if(rarity === "ancient" && (tier === "t3" || tier === "t2"))
     {
         if(tier === "t3")
         {
