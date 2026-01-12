@@ -6,6 +6,8 @@ import { addComparisonItemStat, addComparisonItem } from '../ui/comparison-ui.js
 import { addEquippedStat } from '../ui/equipment-ui.js';
 import { handleWeaponLevelChange, handleEquippedCheckboxChange, updateEquippedWeaponIndicator } from '../ui/weapons-ui.js';
 import { rarities, tiers, comparisonItemCount, equippedStatCount } from './constants.js';
+import { getCompanionsState, setCompanionsState } from './state.js';
+import { refreshCompanionsUI } from '../ui/companions-ui.js';
 
 // Flag to prevent saving during load
 let isLoading = false;
@@ -192,6 +194,9 @@ export function saveToLocalStorage() {
             data.masteryBonuses['4th'].boss[level] = checkbox.checked;
         }
     });
+
+    // Save Companions
+    data.companions = getCompanionsState();
 
     localStorage.setItem('damageCalculatorData', JSON.stringify(data));
 }
@@ -419,6 +424,15 @@ export function loadFromLocalStorage() {
             // Update the mastery bonus totals and hidden inputs
             if (typeof window.updateMasteryBonuses === 'function') {
                 window.updateMasteryBonuses();
+            }
+        }
+
+        // Load Companions
+        if (data.companions) {
+            setCompanionsState(data.companions);
+            // Refresh UI if companions tab is visible
+            if (typeof refreshCompanionsUI === 'function') {
+                refreshCompanionsUI();
             }
         }
 

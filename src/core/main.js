@@ -48,6 +48,7 @@ import { calculateEquipmentSlotDPS } from '../ui/results-display.js';
 import { switchTab, switchScrollingSubTab } from '../ui/tabs.js';
 import { openHelpSidebar, closeHelpSidebar, scrollToSection } from '../ui/help-sidebar.js';
 import { displayResults } from '../ui/results-display.js';
+import { initializeCompanionsUI } from '../ui/companions-ui.js';
 
 // Data extraction functions
 // getStats and getItemStats moved to state.js
@@ -575,6 +576,41 @@ export function selectClass(className) {
     }
 }
 
+// Helper functions to determine class main stat types
+function isStrMainStatClass(className) {
+    return className === 'hero' || className === 'dark-knight';
+}
+
+function isDexMainStatClass(className) {
+    return className === 'bowmaster' || className === 'marksman';
+}
+
+function isIntMainStatClass(className) {
+    return className === 'arch-mage-il' || className === 'arch-mage-fp';
+}
+
+function isLukMainStatClass(className) {
+    return className === 'night-lord' || className === 'shadower';
+}
+
+// Returns 'primary', 'secondary', or null based on className and statId
+function getStatType(className, statId) {
+    if (isStrMainStatClass(className)) {
+        if (statId === 'str-base') return 'primary';
+        if (statId === 'dex-base') return 'secondary';
+    } else if (isDexMainStatClass(className)) {
+        if (statId === 'dex-base') return 'primary';
+        if (statId === 'str-base') return 'secondary';
+    } else if (isIntMainStatClass(className)) {
+        if (statId === 'int-base') return 'primary';
+        if (statId === 'luk-base') return 'secondary';
+    } else if (isLukMainStatClass(className)) {
+        if (statId === 'luk-base') return 'primary';
+        if (statId === 'dex-base') return 'secondary';
+    }
+    return null;
+}
+
 // Sync main stat inputs (STR, DEX, INT, LUK) with hidden primary/secondary fields
 function syncMainStatsToHidden() {
     const className = getSelectedClass();
@@ -588,19 +624,19 @@ function syncMainStatsToHidden() {
     if (!primaryInput || !secondaryInput) return;
 
     // Map class to primary/secondary stats
-    if (className === 'hero' || className === 'dark-knight') {
+    if (isStrMainStatClass(className)) {
         // Warriors: STR (primary), DEX (secondary)
         if (strInput) primaryInput.value = strInput.value || 1000;
         if (dexInput) secondaryInput.value = dexInput.value || 0;
-    } else if (className === 'bowmaster' || className === 'marksman') {
+    } else if (isDexMainStatClass(className)) {
         // Archers: DEX (primary), STR (secondary)
         if (dexInput) primaryInput.value = dexInput.value || 1000;
         if (strInput) secondaryInput.value = strInput.value || 0;
-    } else if (className === 'arch-mage-il' || className === 'arch-mage-fp') {
+    } else if (isIntMainStatClass(className)) {
         // Mages: INT (primary), LUK (secondary)
         if (intInput) primaryInput.value = intInput.value || 1000;
         if (lukInput) secondaryInput.value = lukInput.value || 0;
-    } else if (className === 'night-lord' || className === 'shadower') {
+    } else if (isLukMainStatClass(className)) {
         // Thieves: LUK (primary), DEX (secondary)
         if (lukInput) primaryInput.value = lukInput.value || 1000;
         if (dexInput) secondaryInput.value = dexInput.value || 0;
@@ -1046,6 +1082,7 @@ window.onload = function () {
     loadEquipmentSlots();
     initializeArtifacts();
     initializeCubePotential();
+    initializeCompanionsUI();
     attachSaveListeners();
     if (loaded) {
         updateWeaponBonuses();
@@ -1088,7 +1125,7 @@ function initializeDefaultTabStates() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', () => {   
     const pasteArea = document.getElementById('base-stats-paste-image-section');
 
     pasteArea.addEventListener('paste', async (event) => {
@@ -1112,6 +1149,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     inputElement.addEventListener('input', () => {
                         inputElement.style.outline = ''; // Reset to default on change
                     }, { once: true });
+
+                    const className = getSelectedClass();
+                    const primaryInput = document.getElementById('primary-main-stat-base');
+                    const secondaryInput = document.getElementById('secondary-main-stat-base');
+
+                    const statType = getStatType(className, parsedStat[0]);
+                    if (statType === 'primary') {
+                        primaryInput.value = parsedStat[1] || 1000;
+                    } else if (statType === 'secondary') {
+                        secondaryInput.value = parsedStat[1] || 1000;
+                    }
                 }
             }
 
@@ -1121,6 +1169,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 console.log("No supported stats were parsed from the extracted text.");
                 showToast("Parsing failed! Make sure you are ONLY screenshotting the stats rows from the Character page and nothing else", false);
             }
+
+            saveToLocalStorage();
+            calculate();
         }
         catch (e) {
             console.error(e);

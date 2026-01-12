@@ -145,3 +145,34 @@ export function getSelectedStageDefense() {
 
     return { defense: 0, damageReduction: 0 };
 }
+
+// Companions state
+let companionsState = {};
+
+/**
+ * Get all companions state
+ */
+export function getCompanionsState() {
+    return companionsState;
+}
+
+/**
+ * Set companions state (used for loading saved data)
+ */
+export function setCompanionsState(state) {
+    companionsState = state || {};
+}
+
+/**
+ * Update a specific companion
+ */
+export function updateCompanion(companionKey, data) {
+    companionsState[companionKey] = data;
+}
+
+/**
+ * Get a specific companion's data
+ */
+export function getCompanion(companionKey) {
+    return companionsState[companionKey] || { unlocked: false, level: 1, equipped: false };
+}
