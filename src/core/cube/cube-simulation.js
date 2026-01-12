@@ -1,12 +1,12 @@
 // Cache for simulation performance
-import { rarities } from '../constants.js';
-import { cubeSlotData, currentCubeSlot, currentPotentialType, rankingsCache, rankingsInProgress } from './cube-potential.js';
-import { getSelectedClass } from '../main.js';
-import { displayRankings, displaySimulationResults, updateClassWarning } from './cube-ui.js';
-import { equipmentPotentialData, RARITY_UPGRADE_RATES, slotNames, slotSpecificPotentials } from './cube-potential-data.js';
-import { potentialStatToDamageStat } from './cube-logic.js';
-import { calculateDamage } from '../calculations/damage-calculations.js';
-import { getStats } from '../state.js';
+import { rarities } from '@core/constants.js';
+import { cubeSlotData, currentCubeSlot, currentPotentialType, rankingsCache, rankingsInProgress } from '@core/cube/cube-potential.js';
+import { getSelectedClass } from '@core/state.js';
+import { displayRankings, displaySimulationResults, updateClassWarning } from '@core/cube/cube-ui.js';
+import { equipmentPotentialData, RARITY_UPGRADE_RATES, slotNames, slotSpecificPotentials } from '@core/cube/cube-potential-data.js';
+import { potentialStatToDamageStat } from '@core/cube/cube-logic.js';
+import { calculateDamage } from '@core/calculations/damage-calculations.js';
+import { getStats } from '@core/state.js';
 let simCache = {
     baseStats: null,
     baseDPS: null,

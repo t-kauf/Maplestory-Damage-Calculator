@@ -1,9 +1,9 @@
 // Inner Ability stat mapping and calculations
 
-import { innerAbilitiesData } from '../data/inner-ability-data.js';
-import { calculateDamage } from './calculations/damage-calculations.js';
-import { formatNumber } from '../utils/formatters.js';
-import { getStats } from './main.js';
+import { innerAbilitiesData } from '@data/inner-ability-data.js';
+import { calculateDamage } from '@core/calculations/damage-calculations.js';
+import { formatNumber } from '@utils/formatters.js';
+import { getStats } from '@core/main.js';
 
 // Map inner ability stats to base stat properties
 export function mapInnerAbilityStat(statName, value, baseStats) {

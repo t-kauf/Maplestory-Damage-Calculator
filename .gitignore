@@ -29,3 +29,5 @@ ignore/
 *.md
 
 scripts/
+
+tmpclaude**

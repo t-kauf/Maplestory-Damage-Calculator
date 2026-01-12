@@ -1,8 +1,8 @@
 // Artifacts System
 // Manage artifact data, presets, and UI
 
-import { artifactsData } from '../data/artifacts-data.js';
-import { artifactPotentialData } from '../data/artifact-potential-data.js';
+import { artifactsData } from '@data/artifacts-data.js';
+import { artifactPotentialData } from '@data/artifact-potential-data.js';
 
 // Global state
 let currentArtifactPreset = 1;

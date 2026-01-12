@@ -1,7 +1,7 @@
 // Tab switching functionality
 
-import { renderArtifactPotential } from '../core/artifact-potential.js';
-import { resetSubTabsToDefault } from '../core/router.js';
+import { renderArtifactPotential } from '@core/artifact-potential.js';
+import { resetSubTabsToDefault } from '@core/router.js';
 
 // Tab switching function
 export function switchTab(group, tabName) {

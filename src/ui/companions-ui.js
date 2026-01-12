@@ -1,6 +1,6 @@
-import { getCompanionEffects, getMaxCompanionLevel } from '../core/companions/index.js';
-import { updateCompanion, getCompanionsState } from '../core/state.js';
-import { saveToLocalStorage } from '../core/storage.js';
+import { getCompanionEffects, getMaxCompanionLevel } from '@core/companions/index.js';
+import { updateCompanion, getCompanionsState } from '@core/state.js';
+import { saveToLocalStorage } from '@core/storage.js';
 
 // Mapping of class names to display names
 const CLASS_DISPLAY_NAMES = {

@@ -1,13 +1,13 @@
-import { calculate } from './main.js';
-import { renderTheoreticalBest, renderPresetComparison } from './inner-ability.js';
-import { renderArtifactPotential } from './artifact-potential.js';
-import { clearCubeRankingsCache } from './cube/cube-potential.js';
-import { addComparisonItemStat, addComparisonItem } from '../ui/comparison-ui.js';
-import { addEquippedStat } from '../ui/equipment-ui.js';
-import { handleWeaponLevelChange, handleEquippedCheckboxChange, updateEquippedWeaponIndicator } from '../ui/weapons-ui.js';
-import { rarities, tiers, comparisonItemCount, equippedStatCount } from './constants.js';
-import { getCompanionsState, setCompanionsState } from './state.js';
-import { refreshCompanionsUI } from '../ui/companions-ui.js';
+import { calculate } from '@core/main.js';
+import { renderTheoreticalBest, renderPresetComparison } from '@core/inner-ability.js';
+import { renderArtifactPotential } from '@core/artifact-potential.js';
+import { clearCubeRankingsCache } from '@core/cube/cube-potential.js';
+import { addComparisonItemStat, addComparisonItem } from '@ui/comparison-ui.js';
+import { addEquippedStat } from '@ui/equipment-ui.js';
+import { handleWeaponLevelChange, handleEquippedCheckboxChange, updateEquippedWeaponIndicator } from '@ui/weapons-ui.js';
+import { rarities, tiers, comparisonItemCount, equippedStatCount } from '@core/constants.js';
+import { getCompanionsState, setCompanionsState } from '@core/state.js';
+import { refreshCompanionsUI } from '@ui/companions-ui.js';
 
 // Flag to prevent saving during load
 let isLoading = false;

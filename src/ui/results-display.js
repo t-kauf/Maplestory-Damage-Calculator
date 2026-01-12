@@ -1,9 +1,9 @@
 // Results display functionality
 
-import { formatNumber } from '../utils/formatters.js';
-import { calculateDamage } from '../core/calculations/damage-calculations.js';
-import { getWeaponAttackBonus } from '../core/main.js';
-import { getStats } from './../core/state.js';
+import { formatNumber } from '@utils/formatters.js';
+import { calculateDamage } from '@core/calculations/damage-calculations.js';
+import { getWeaponAttackBonus } from '@core/state.js';
+import { getStats } from '@core/state.js';
 
 export function displayResults(itemName, stats, uniqueId, isEquipped = false, equippedDamageValues = null) {
     const bossResults = calculateDamage(stats, 'boss');

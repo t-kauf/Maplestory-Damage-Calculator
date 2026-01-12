@@ -1,10 +1,12 @@
 // Pure state extraction - no UI, no calculations
-import { stageData } from '../data/stage-data.js';
-import { itemStatProperties, allItemStatProperties } from './constants.js';
+import { stageData } from '@data/stage-data.js';
+import { calculateWeaponAttacks } from '@core/calculations/weapon-calculations.js';
+import { itemStatProperties, allItemStatProperties, rarities, tiers } from '@core/constants.js';
 // Handles reading DOM state into structured data
 
 let currentContentType = 'none';
 let selectedClass = null;
+let selectedJobTier = '3rd';
 
 export function getCurrentContentType() {
     return currentContentType;
@@ -20,6 +22,14 @@ export function getSelectedClass() {
 
 export function setSelectedClass(className) {
     selectedClass = className;
+}
+
+export function setSelectedJobTier(jobTier) {
+    selectedJobTier = jobTier;
+}
+
+export function getSelectedJobTier() {
+    return selectedJobTier;
 }
 
 export function getStats(setup) {
@@ -175,4 +185,28 @@ export function updateCompanion(companionKey, data) {
  */
 export function getCompanion(companionKey) {
     return companionsState[companionKey] || { unlocked: false, level: 1, equipped: false };
+}
+export function getWeaponAttackBonus() {
+    let totalInventory = 0;
+    let equippedBonus = 0;
+
+    rarities.forEach(rarity => {
+        tiers.forEach(tier => {
+            const levelInput = document.getElementById(`level-${rarity}-${tier}`);
+            const equippedDisplay = document.getElementById(`equipped-display-${rarity}-${tier}`);
+            if (!levelInput) return;
+
+            const level = parseInt(levelInput.value) || 0;
+            if (level === 0) return;
+
+            const { inventoryAttack, equippedAttack } = calculateWeaponAttacks(rarity, tier, level);
+            totalInventory += inventoryAttack;
+
+            if (equippedDisplay && equippedDisplay.style.display !== 'none') {
+                equippedBonus = equippedAttack;
+            }
+        });
+    });
+
+    return totalInventory + equippedBonus;
 }

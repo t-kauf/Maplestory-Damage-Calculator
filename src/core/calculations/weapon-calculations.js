@@ -1,4 +1,4 @@
-import { weaponBaseAttackEquipped } from '../constants.js';
+import { weaponBaseAttackEquipped } from '@core/constants.js';
 
 // Get weapon level multiplier based on level (from weapon-damage-stats.txt)
 export function getWeaponLevelMultiplier(level) {

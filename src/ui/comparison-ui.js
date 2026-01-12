@@ -1,7 +1,7 @@
 // Comparison items UI functionality
-import { saveToLocalStorage } from '../core/storage.js';
-import { comparisonItemCount, setComparisonItemCount, availableStats } from '../core/constants.js';
-import { calculate } from '../core/main.js';
+import { saveToLocalStorage } from '@core/storage.js';
+import { comparisonItemCount, setComparisonItemCount, availableStats } from '@core/constants.js';
+import { calculate } from '@core/main.js';
 
 // Track active comparison item
 let activeComparisonItemId = null;

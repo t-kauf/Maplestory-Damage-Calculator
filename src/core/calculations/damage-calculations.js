@@ -1,8 +1,8 @@
-import { getSelectedStageDefense } from '../state.js';
-import { formatNumber } from '../../utils/formatters.js';
-import { getWeaponAttackBonus, getSelectedJobTier } from '../main.js';
-import { calculateMainStatPercentGain } from './stat-calculations.js';
-import { calculate3rdJobSkillCoefficient, calculate4thJobSkillCoefficient } from '../skill-coefficient.js';
+import { getSelectedStageDefense } from '@core/state.js';
+import { formatNumber } from '@utils/formatters.js';
+import { getWeaponAttackBonus, getSelectedJobTier } from '@core/state.js';
+import { calculateMainStatPercentGain } from '@core/calculations/stat-calculations.js';
+import { calculate3rdJobSkillCoefficient, calculate4thJobSkillCoefficient } from '@core/skill-coefficient.js';
 
 // Main damage calculation function
 export function calculateDamage(stats, monsterType) {

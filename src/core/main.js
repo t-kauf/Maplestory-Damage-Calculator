@@ -1,82 +1,59 @@
 // Main Entry Point - ES6 Module
 // This is the single entry point that orchestrates the entire application
 
-import { initializeRouter } from './router.js';
+import { initializeRouter } from '@core/router.js';
 import {
     getStats,
     getItemStats,
     getSelectedClass,
-    setSelectedClass
-} from './state.js';
-import { calculateDamage } from './calculations/damage-calculations.js';
-import { calculateWeaponAttacks } from './calculations/weapon-calculations.js';
-import { showToast } from '../utils/notifications.js';
-import { calculateStatWeights, calculateStatEquivalency } from './calculations/damage-calculations.js';
-import { toggleStatChart } from '../ui/stat-chart.js';
-import { loadFromLocalStorage, attachSaveListeners, saveToLocalStorage, exportData, importData, updateAnalysisTabs, getSavedContentTypeData } from './storage.js';
-import { rarities, tiers, comparisonItemCount, allItemStatProperties } from './constants.js';
-import { updateClassWarning } from './cube/cube-ui.js';
+    getWeaponAttackBonus,
+    getSelectedJobTier
+} from '@core/state.js';
+import { calculateDamage } from '@core/calculations/damage-calculations.js';
+import { showToast } from '@utils/notifications.js';
+import { calculateStatWeights, calculateStatEquivalency } from '@core/calculations/damage-calculations.js';
+import { toggleStatChart } from '@ui/stat-chart.js';
+import { loadFromLocalStorage, attachSaveListeners, saveToLocalStorage, exportData, importData, updateAnalysisTabs, getSavedContentTypeData } from '@core/storage.js';
+import { comparisonItemCount, allItemStatProperties } from '@core/constants.js';
 import {
     calculate3rdJobSkillCoefficient,
     calculate4thJobSkillCoefficient,
     getAllDarkKnightSkills,
     DARK_KNIGHT_SKILLS,
     calculateJobSkillPassiveGains
-} from './skill-coefficient.js';
-import { initializeInnerAbilityAnalysis, switchInnerAbilityTab, toggleLineBreakdown, sortPresetTable, sortTheoreticalTable } from './inner-ability.js';
-import { initializeArtifactPotential, sortArtifactTable } from './artifact-potential.js';
-import { runScrollSimulation, switchScrollStrategyTab, updateScrollLevelInfo } from './scroll-optimizer.js';
-import { initializeArtifacts, switchArtifactPreset, selectArtifactSlot, previewArtifact, equipPreviewedArtifact, cancelPreview, setArtifactStars, setArtifactPotential, clearArtifactSlot } from './artifacts.js';
+} from '@core/skill-coefficient.js';
+import { initializeInnerAbilityAnalysis, switchInnerAbilityTab, toggleLineBreakdown, sortPresetTable, sortTheoreticalTable } from '@core/inner-ability.js';
+import { initializeArtifactPotential, sortArtifactTable } from '@core/artifact-potential.js';
+import { runScrollSimulation, switchScrollStrategyTab, updateScrollLevelInfo } from '@core/scroll-optimizer.js';
+import { initializeArtifacts, switchArtifactPreset, selectArtifactSlot, previewArtifact, equipPreviewedArtifact, cancelPreview, setArtifactStars, setArtifactPotential, clearArtifactSlot } from '@core/artifacts.js';
 import {
     initializeCubePotential,
     switchPotentialType,
     selectCubeSlot
-} from './cube/cube-potential.js';
-import { runCubeSimulation } from './cube/cube-simulation.js';
+} from '@core/cube/cube-potential.js';
+import { runCubeSimulation } from '@core/cube/cube-simulation.js';
 import {
     populateStageDropdown, selectContentType, updateStageDropdown
-} from './base-stats/base-stats.js';
-import { extractText, parseBaseStatText } from '../utils/ocr.js';
-import { loadTheme, toggleTheme } from '../ui/theme.js';
-import { initializeHeroPowerPresets, loadHeroPowerPresets, switchPreset, handlePresetEquipped } from '../ui/presets-ui.js';
-import { calculateCurrencyUpgrades } from '../ui/weapons-ui.js';
-import { toggleSubDetails, toggleDetails } from '../ui/results-display.js';
-import { initializeWeapons, updateWeaponBonuses, setWeaponStars, previewStars, resetStarPreview, handleEquippedCheckboxChange, handleWeaponLevelChange } from '../ui/weapons-ui.js';
-import { initializeEquipmentSlots, loadEquipmentSlots, unequipItem, equipItem, addEquippedStat, removeEquippedStat, saveEquipmentSlots } from '../ui/equipment-ui.js';
-import { calculateEquipmentSlotDPS } from '../ui/results-display.js';
-import { switchTab, switchScrollingSubTab } from '../ui/tabs.js';
-import { openHelpSidebar, closeHelpSidebar, scrollToSection } from '../ui/help-sidebar.js';
-import { displayResults } from '../ui/results-display.js';
-import { initializeCompanionsUI } from '../ui/companions-ui.js';
+} from '@core/base-stats/target-select.js';
+import { extractText, parseBaseStatText } from '@utils/ocr.js';
+import { loadTheme, toggleTheme } from '@ui/theme.js';
+import { initializeHeroPowerPresets, loadHeroPowerPresets, switchPreset, handlePresetEquipped } from '@ui/presets-ui.js';
+import { calculateCurrencyUpgrades } from '@ui/weapons-ui.js';
+import { toggleSubDetails, toggleDetails } from '@ui/results-display.js';
+import { initializeWeapons, updateWeaponBonuses, setWeaponStars, previewStars, resetStarPreview, handleEquippedCheckboxChange, handleWeaponLevelChange } from '@ui/weapons-ui.js';
+import { initializeEquipmentSlots, loadEquipmentSlots, unequipItem, equipItem, addEquippedStat, removeEquippedStat, saveEquipmentSlots } from '@ui/equipment-ui.js';
+import { calculateEquipmentSlotDPS } from '@ui/results-display.js';
+import { switchTab, switchScrollingSubTab } from '@ui/tabs.js';
+import { openHelpSidebar, closeHelpSidebar, scrollToSection } from '@ui/help-sidebar.js';
+import { displayResults } from '@ui/results-display.js';
+import { initializeCompanionsUI } from '@ui/companions-ui.js';
+import { updateMasteryBonuses } from './base-stats/mastery-bonus.js';
+import { getStatType, isDexMainStatClass, isIntMainStatClass, isLukMainStatClass, isStrMainStatClass, loadSelectedClass, loadSelectedJobTier, selectClass, selectJobTier } from './base-stats/class-select.js';
+import { updateSkillCoefficient } from './base-stats/base-stats.js';
 
 // Data extraction functions
 // getStats and getItemStats moved to state.js
 export { getStats, getItemStats };
-
-export function getWeaponAttackBonus() {
-    let totalInventory = 0;
-    let equippedBonus = 0;
-
-    rarities.forEach(rarity => {
-        tiers.forEach(tier => {
-            const levelInput = document.getElementById(`level-${rarity}-${tier}`);
-            const equippedDisplay = document.getElementById(`equipped-display-${rarity}-${tier}`);
-            if (!levelInput) return;
-
-            const level = parseInt(levelInput.value) || 0;
-            if (level === 0) return;
-
-            const { inventoryAttack, equippedAttack } = calculateWeaponAttacks(rarity, tier, level);
-            totalInventory += inventoryAttack;
-
-            if (equippedDisplay && equippedDisplay.style.display !== 'none') {
-                equippedBonus = equippedAttack;
-            }
-        });
-    });
-
-    return totalInventory + equippedBonus;
-}
 
 // Apply item stats to base stats
 export function applyItemToStats(baseStats, equippedItem, comparisonItem) {
@@ -144,7 +121,7 @@ export function applyItemToStats(baseStats, equippedItem, comparisonItem) {
 
     // Only calculate passive gains if there's a difference in any skill level
     const hasSkillLevelDiff = skillLevelDiff1st !== 0 || skillLevelDiff2nd !== 0 || skillLevelDiff3rd !== 0 ||
-                              skillLevelDiff4th !== 0 || skillLevelDiffAll !== 0;
+        skillLevelDiff4th !== 0 || skillLevelDiffAll !== 0;
 
     let passiveGainsDiff = { statChanges: {}, breakdown: [], complexPassives: [] };
 
@@ -311,111 +288,8 @@ function enableGlobalNumberInputAutoSelect() {
     });
 }
 
-// Class Selection
-// selectedClass moved to state.js
-export { getSelectedClass };
-
-export function selectClass(className) {
-    document.querySelectorAll('.class-selector').forEach(el => {
-        el.classList.remove('selected');
-    });
-
-    const classElement = document.getElementById(`class-${className}`);
-    if (classElement) {
-        classElement.classList.add('selected');
-        setSelectedClass(className);
-
-        const defenseInputGroup = document.getElementById('defense-input-group');
-        if (defenseInputGroup) {
-            if (className === 'dark-knight') {
-                defenseInputGroup.style.display = 'flex';
-            } else {
-                defenseInputGroup.style.display = 'none';
-            }
-        }
-
-        // Show/hide main stats based on class
-        const strRow = document.getElementById('str-row');
-        const dexRow = document.getElementById('dex-row');
-        const intRow = document.getElementById('int-row');
-        const lukRow = document.getElementById('luk-row');
-
-        // Hide all first
-        if (strRow) strRow.style.display = 'none';
-        if (dexRow) dexRow.style.display = 'none';
-        if (intRow) intRow.style.display = 'none';
-        if (lukRow) lukRow.style.display = 'none';
-
-        // Show relevant stats based on class
-        if (className === 'hero' || className === 'dark-knight') {
-            // Warriors: STR (primary), DEX (secondary)
-            if (strRow) strRow.style.display = 'flex';
-            if (dexRow) dexRow.style.display = 'flex';
-        } else if (className === 'bowmaster' || className === 'marksman') {
-            // Archers: DEX (primary), STR (secondary)
-            if (dexRow) dexRow.style.display = 'flex';
-            if (strRow) strRow.style.display = 'flex';
-        } else if (className === 'arch-mage-il' || className === 'arch-mage-fp') {
-            // Mages: INT (primary), LUK (secondary)
-            if (intRow) intRow.style.display = 'flex';
-            if (lukRow) lukRow.style.display = 'flex';
-        } else if (className === 'night-lord' || className === 'shadower') {
-            // Thieves: LUK (primary), DEX (secondary)
-            if (lukRow) lukRow.style.display = 'flex';
-            if (dexRow) dexRow.style.display = 'flex';
-        }
-
-        // Sync new stat inputs with hidden primary/secondary fields
-        syncMainStatsToHidden();
-
-        try {
-            localStorage.setItem('selectedClass', className);
-        } catch (error) {
-            console.error('Error saving selected class:', error);
-        }
-
-        // Update class warning in cube potential tab
-        updateClassWarning();
-    }
-}
-
-// Helper functions to determine class main stat types
-function isStrMainStatClass(className) {
-    return className === 'hero' || className === 'dark-knight';
-}
-
-function isDexMainStatClass(className) {
-    return className === 'bowmaster' || className === 'marksman';
-}
-
-function isIntMainStatClass(className) {
-    return className === 'arch-mage-il' || className === 'arch-mage-fp';
-}
-
-function isLukMainStatClass(className) {
-    return className === 'night-lord' || className === 'shadower';
-}
-
-// Returns 'primary', 'secondary', or null based on className and statId
-function getStatType(className, statId) {
-    if (isStrMainStatClass(className)) {
-        if (statId === 'str-base') return 'primary';
-        if (statId === 'dex-base') return 'secondary';
-    } else if (isDexMainStatClass(className)) {
-        if (statId === 'dex-base') return 'primary';
-        if (statId === 'str-base') return 'secondary';
-    } else if (isIntMainStatClass(className)) {
-        if (statId === 'int-base') return 'primary';
-        if (statId === 'luk-base') return 'secondary';
-    } else if (isLukMainStatClass(className)) {
-        if (statId === 'luk-base') return 'primary';
-        if (statId === 'dex-base') return 'secondary';
-    }
-    return null;
-}
-
 // Sync main stat inputs (STR, DEX, INT, LUK) with hidden primary/secondary fields
-function syncMainStatsToHidden() {
+export function syncMainStatsToHidden() {
     const className = getSelectedClass();
     const strInput = document.getElementById('str-base');
     const dexInput = document.getElementById('dex-base');
@@ -444,168 +318,6 @@ function syncMainStatsToHidden() {
         if (lukInput) primaryInput.value = lukInput.value || 1000;
         if (dexInput) secondaryInput.value = dexInput.value || 0;
     }
-}
-
-// Job Tier Selection
-let selectedJobTier = '3rd';
-
-export function getSelectedJobTier() {
-    return selectedJobTier;
-}
-
-export function selectJobTier(tier) {
-    document.querySelectorAll('.job-tier-btn').forEach(el => {
-        el.classList.remove('active');
-    });
-
-    const tierElement = document.getElementById(`job-tier-${tier}`);
-    if (tierElement) {
-        tierElement.classList.add('active');
-        selectedJobTier = tier;
-
-        // Show/hide appropriate mastery table
-        const mastery3rdTable = document.getElementById('mastery-table-3rd');
-        const mastery4thTable = document.getElementById('mastery-table-4th');
-
-        if (mastery3rdTable && mastery4thTable) {
-            if (tier === '3rd') {
-                mastery3rdTable.style.display = 'block';
-                mastery4thTable.style.display = 'none';
-            } else if (tier === '4th') {
-                mastery3rdTable.style.display = 'none';
-                mastery4thTable.style.display = 'block';
-            }
-        }
-
-        // Update skill coefficient for the new tier
-        updateSkillCoefficient();
-
-        // Update mastery bonuses for the new tier
-        updateMasteryBonuses();
-
-        try {
-            localStorage.setItem('selectedJobTier', tier);
-        } catch (error) {
-            console.error('Error saving selected job tier:', error);
-        }
-
-        saveToLocalStorage();
-        updateAnalysisTabs();
-    }
-}
-
-export function updateSkillCoefficient() {
-    const levelInput = document.getElementById('character-level');
-    const coefficientInput = document.getElementById('skill-coeff-base');
-
-    if (!levelInput || !coefficientInput) return;
-
-    const characterLevel = parseInt(levelInput.value) || 0;
-    const jobTier = getSelectedJobTier();
-
-    // Get the skill level for the selected job tier
-    let skillLevel = 0;
-    if (jobTier === '4th') {
-        const skillLevelInput = document.getElementById('skill-level-4th-base');
-        skillLevel = parseInt(skillLevelInput?.value) || 0;
-    } else {
-        const skillLevelInput = document.getElementById('skill-level-3rd-base');
-        skillLevel = parseInt(skillLevelInput?.value) || 0;
-    }
-
-    let coefficient;
-    if (jobTier === '4th') {
-        coefficient = calculate4thJobSkillCoefficient(characterLevel, skillLevel);
-    } else {
-        coefficient = calculate3rdJobSkillCoefficient(characterLevel, skillLevel);
-    }
-
-    coefficientInput.value = coefficient.toFixed(2);
-}
-
-export function updateMasteryBonuses() {
-    // Get current job tier
-    const currentTier = getSelectedJobTier();
-
-    // Define mastery bonuses for each tier and level
-    const masteryBonuses = {
-        '3rd': {
-            all: {
-                64: 10,
-                68: 11,
-                76: 12,
-                80: 13,
-                88: 14,
-                92: 15
-            },
-            boss: {
-                72: 10,
-                84: 10
-            }
-        },
-        '4th': {
-            all: {
-                102: 10,
-                106: 11,
-                116: 12,
-                120: 13,
-                128: 14,
-                132: 15
-            },
-            boss: {
-                111: 10,
-                124: 10
-            }
-        }
-    };
-
-    // Calculate totals for the current tier
-    let allTotal = 0;
-    let bossTotal = 0;
-
-    const tierData = masteryBonuses[currentTier];
-
-    // Sum up "All Monsters" bonuses
-    for (const [level, bonus] of Object.entries(tierData.all)) {
-        const checkbox = document.getElementById(`mastery-${currentTier}-all-${level}`);
-        if (checkbox && checkbox.checked) {
-            allTotal += bonus;
-        }
-    }
-
-    // Sum up "Boss Only" bonuses
-    for (const [level, bonus] of Object.entries(tierData.boss)) {
-        const checkbox = document.getElementById(`mastery-${currentTier}-boss-${level}`);
-        if (checkbox && checkbox.checked) {
-            bossTotal += bonus;
-        }
-    }
-
-    // Update display totals for the current tier
-    const allTotalDisplay = document.getElementById(`mastery-${currentTier}-all-total`);
-    const bossTotalDisplay = document.getElementById(`mastery-${currentTier}-boss-total`);
-
-    if (allTotalDisplay) {
-        allTotalDisplay.textContent = `${allTotal}%`;
-    }
-    if (bossTotalDisplay) {
-        bossTotalDisplay.textContent = `${bossTotal}%`;
-    }
-
-    // Update hidden inputs that are used by the calculation engine
-    const skillMasteryInput = document.getElementById('skill-mastery-base');
-    const skillMasteryBossInput = document.getElementById('skill-mastery-boss-base');
-
-    if (skillMasteryInput) {
-        skillMasteryInput.value = allTotal;
-    }
-    if (skillMasteryBossInput) {
-        skillMasteryBossInput.value = bossTotal;
-    }
-
-    // Save to localStorage and recalculate
-    saveToLocalStorage();
-    updateAnalysisTabs();
 }
 
 export function switchBaseStatsSubTab(subTabName) {
@@ -799,9 +511,9 @@ export function showSkillDescription(skillKey, category, jobTier) {
                 </div>
                 <div style="color: var(--text-secondary); font-size: 0.85em;">
                     ${jobTier === 'secondJob'
-                        ? `Character Level: ${characterLevel} → Input Level: ${baseInputLevel}${skillLevel > 0 ? ` + ${skillLevel} Skill = ${effectiveLevel}` : ''}`
-                        : `Character Level: ${characterLevel} → Input Level: ${baseInputLevel}${skillLevel > 0 ? ` + ${skillLevel} Skill = ${effectiveLevel}` : ''}`
-                    }
+                ? `Character Level: ${characterLevel} → Input Level: ${baseInputLevel}${skillLevel > 0 ? ` + ${skillLevel} Skill = ${effectiveLevel}` : ''}`
+                : `Character Level: ${characterLevel} → Input Level: ${baseInputLevel}${skillLevel > 0 ? ` + ${skillLevel} Skill = ${effectiveLevel}` : ''}`
+            }
                 </div>
             </div>
             <div style="background: rgba(0, 122, 255, 0.05); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
@@ -818,30 +530,6 @@ export function showSkillDescription(skillKey, category, jobTier) {
         `;
     }
 }
-
-function loadSelectedClass() {
-    try {
-        const savedClass = localStorage.getItem('selectedClass');
-        if (savedClass) {
-            selectClass(savedClass);
-        }
-    } catch (error) {
-        console.error('Error loading selected class:', error);
-    }
-}
-
-function loadSelectedJobTier() {
-    try {
-        const savedTier = localStorage.getItem('selectedJobTier');
-        if (savedTier) {
-            selectJobTier(savedTier);
-        }
-    } catch (error) {
-        console.error('Error loading selected job tier:', error);
-    }
-}
-
-// exportData and importData are now imported above
 
 // Initialize application
 window.onload = function () {
@@ -928,7 +616,7 @@ function initializeDefaultTabStates() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {   
+document.addEventListener('DOMContentLoaded', () => {
     const pasteArea = document.getElementById('base-stats-paste-image-section');
 
     pasteArea.addEventListener('paste', async (event) => {
@@ -1048,16 +736,17 @@ window.clearArtifactSlot = clearArtifactSlot;
 window.switchPotentialType = switchPotentialType;
 window.selectCubeSlot = selectCubeSlot;
 window.runCubeSimulation = runCubeSimulation;
+window.exportData = exportData;
+window.importData = importData;
+window.saveToLocalStorage = saveToLocalStorage;
+window.updateAnalysisTabs = updateAnalysisTabs;
+window.calculateStatEquivalency = calculateStatEquivalency;
+
+window.showSkillDescription = showSkillDescription;
 window.selectClass = selectClass;
 window.selectJobTier = selectJobTier;
 window.updateMasteryBonuses = updateMasteryBonuses;
 window.updateSkillCoefficient = updateSkillCoefficient;
 window.switchBaseStatsSubTab = switchBaseStatsSubTab;
 window.dismissDonateNotification = dismissDonateNotification;
-window.exportData = exportData;
-window.importData = importData;
-window.showSkillDescription = showSkillDescription;
-window.saveToLocalStorage = saveToLocalStorage;
-window.updateAnalysisTabs = updateAnalysisTabs;
-window.calculateStatEquivalency = calculateStatEquivalency;
 window.calculate = calculate;

@@ -1,10 +1,11 @@
 // Equipment UI functionality
 
-import { saveToLocalStorage } from '../core/storage.js';
-import { calculate, getItemStats, getWeaponAttackBonus, getSelectedJobTier, updateSkillCoefficient } from '../core/main.js';
-import { getSelectedClass } from '../../src/core/state.js';
-import { removeComparisonItem, addComparisonItem, addComparisonItemStat } from './comparison-ui.js';
-import { comparisonItemCount, equippedStatCount, setEquippedStatCount, availableStats, allItemStatProperties } from '../core/constants.js';
+import { saveToLocalStorage } from '@core/storage.js';
+import { calculate, getItemStats } from '@core/main.js';
+import { updateSkillCoefficient } from '@core/base-stats/base-stats.js';
+import { getSelectedClass, getSelectedJobTier } from '@core/state.js';
+import { removeComparisonItem, addComparisonItem, addComparisonItemStat } from '@ui/comparison-ui.js';
+import { comparisonItemCount, equippedStatCount, setEquippedStatCount, availableStats, allItemStatProperties } from '@core/constants.js';
 
 export function unequipItem() {
     // Get equipped item data
