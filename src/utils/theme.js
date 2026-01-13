@@ -4,6 +4,7 @@ import { initializeWeapons } from '@ui/weapons-ui.js';
 import { updateWeaponBonuses } from '@ui/weapons-ui.js';
 import { handleEquippedCheckboxChange } from '@ui/weapons-ui.js';
 import { handleWeaponLevelChange, updateEquippedWeaponIndicator } from '@ui/weapons-ui.js';
+import { rarities, tiers } from '@core/constants.js';
 
 window.toggleTheme = toggleTheme;
 

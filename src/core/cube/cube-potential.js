@@ -6,6 +6,9 @@ import { getSelectedClass } from '@core/state.js';
 import { loadCubePotentialData, calculateComparison, getRarityColor } from '@core/cube/cube-logic.js';
 import { setupCubeSlotSelector, updateSlotButtonColors, setupCubeTabs, updateCubePotentialUI, displayComparisonResults, displayOrCalculateRankings, updateClassWarning, displayAllSlotsSummary, loadRankingsInBackground } from '@core/cube/cube-ui.js';
 
+window.switchPotentialType = switchPotentialType;
+window.selectCubeSlot = selectCubeSlot;
+
 // Global state - shared with UI and logic modules
 export let currentCubeSlot = 'helm';
 export let currentPotentialType = 'regular'; // 'regular' or 'bonus'

@@ -3,6 +3,9 @@
 import { innerAbilityStats } from '@data/inner-ability-data.js';
 import { renderTheoreticalBest, renderPresetComparison } from '@core/inner-ability.js';
 
+window.switchPreset = switchPreset;
+window.handlePresetEquipped = handlePresetEquipped;
+
 export function initializeHeroPowerPresets() {
     const container = document.getElementById('hero-power-presets-container');
     if (!container) return;

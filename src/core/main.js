@@ -11,9 +11,8 @@ import {
 } from '@core/state.js';
 import { calculateDamage } from '@core/calculations/damage-calculations.js';
 import { showToast } from '@utils/notifications.js';
-import { calculateStatWeights, calculateStatEquivalency } from '@core/calculations/damage-calculations.js';
-import { toggleStatChart } from '@ui/stat-chart.js';
-import { loadFromLocalStorage, attachSaveListeners, saveToLocalStorage, exportData, importData, updateAnalysisTabs, getSavedContentTypeData } from '@core/storage.js';
+import { calculateStatWeights } from '@core/calculations/damage-calculations.js';
+import { loadFromLocalStorage, attachSaveListeners, saveToLocalStorage, getSavedContentTypeData } from '@core/storage.js';
 import { comparisonItemCount, allItemStatProperties } from '@core/constants.js';
 import {
     calculate3rdJobSkillCoefficient,
@@ -22,33 +21,26 @@ import {
     DARK_KNIGHT_SKILLS,
     calculateJobSkillPassiveGains
 } from '@core/skill-coefficient.js';
-import { initializeInnerAbilityAnalysis, switchInnerAbilityTab, toggleLineBreakdown, sortPresetTable, sortTheoreticalTable } from '@core/inner-ability.js';
-import { initializeArtifactPotential, sortArtifactTable } from '@core/artifact-potential.js';
-import { runScrollSimulation, switchScrollStrategyTab, updateScrollLevelInfo } from '@core/scroll-optimizer.js';
-import { initializeArtifacts, switchArtifactPreset, selectArtifactSlot, previewArtifact, equipPreviewedArtifact, cancelPreview, setArtifactStars, setArtifactPotential, clearArtifactSlot } from '@core/artifacts.js';
+import { initializeInnerAbilityAnalysis} from '@core/inner-ability.js';
+import { initializeArtifactPotential } from '@core/artifact-potential.js';
+import { initializeArtifacts } from '@core/artifacts.js';
 import {
-    initializeCubePotential,
-    switchPotentialType,
-    selectCubeSlot
+    initializeCubePotential
 } from '@core/cube/cube-potential.js';
-import { runCubeSimulation } from '@core/cube/cube-simulation.js';
 import {
     populateStageDropdown, selectContentType, updateStageDropdown
 } from '@core/base-stats/target-select.js';
 import { extractText, parseBaseStatText } from '@utils/ocr.js';
 import { loadTheme } from '@utils/theme.js';
-import { initializeHeroPowerPresets, loadHeroPowerPresets, switchPreset, handlePresetEquipped } from '@ui/presets-ui.js';
-import { calculateCurrencyUpgrades } from '@ui/weapons-ui.js';
-import { toggleSubDetails, toggleDetails } from '@ui/results-display.js';
-import { initializeWeapons, updateWeaponBonuses, setWeaponStars, previewStars, resetStarPreview, handleEquippedCheckboxChange, handleWeaponLevelChange } from '@ui/weapons-ui.js';
-import { initializeEquipmentSlots, loadEquipmentSlots, unequipItem, equipItem, addEquippedStat, removeEquippedStat, saveEquipmentSlots } from '@ui/equipment-ui.js';
-import { calculateEquipmentSlotDPS } from '@ui/results-display.js';
-import { openHelpSidebar, closeHelpSidebar, scrollToSection } from '@ui/help-sidebar.js';
+import { initializeHeroPowerPresets, loadHeroPowerPresets} from '@ui/presets-ui.js';
+import { initializeWeapons, updateWeaponBonuses} from '@ui/weapons-ui.js';
+import { initializeEquipmentSlots, loadEquipmentSlots } from '@ui/equipment-ui.js';
 import { displayResults } from '@ui/results-display.js';
 import { initializeCompanionsUI } from '@ui/companions-ui.js';
 import { updateMasteryBonuses } from './base-stats/mastery-bonus.js';
 import { getStatType, isDexMainStatClass, isIntMainStatClass, isLukMainStatClass, isStrMainStatClass, loadSelectedClass, loadSelectedJobTier, selectClass, selectJobTier } from './base-stats/class-select.js';
 import { updateSkillCoefficient } from './base-stats/base-stats.js';
+import '@utils/tabs.js';
 
 // Data extraction functions
 // getStats and getItemStats moved to state.js
@@ -693,43 +685,6 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Expose functions to window for HTML onclick handlers
-window.setWeaponStars = setWeaponStars;
-window.previewStars = previewStars;
-window.resetStarPreview = resetStarPreview;
-window.handleEquippedCheckboxChange = handleEquippedCheckboxChange;
-window.handleWeaponLevelChange = handleWeaponLevelChange;
-window.calculateCurrencyUpgrades = calculateCurrencyUpgrades;
-window.switchPreset = switchPreset;
-window.handlePresetEquipped = handlePresetEquipped;
-window.openHelpSidebar = openHelpSidebar;
-window.closeHelpSidebar = closeHelpSidebar;
-window.scrollToSection = scrollToSection;
-window.toggleStatChart = toggleStatChart;
-window.switchInnerAbilityTab = switchInnerAbilityTab;
-window.toggleLineBreakdown = toggleLineBreakdown;
-window.sortPresetTable = sortPresetTable;
-window.sortTheoreticalTable = sortTheoreticalTable;
-window.sortArtifactTable = sortArtifactTable;
-window.runScrollSimulation = runScrollSimulation;
-window.switchScrollStrategyTab = switchScrollStrategyTab;
-window.updateScrollLevelInfo = updateScrollLevelInfo;
-window.switchArtifactPreset = switchArtifactPreset;
-window.selectArtifactSlot = selectArtifactSlot;
-window.previewArtifact = previewArtifact;
-window.equipPreviewedArtifact = equipPreviewedArtifact;
-window.cancelPreview = cancelPreview;
-window.setArtifactStars = setArtifactStars;
-window.setArtifactPotential = setArtifactPotential;
-window.clearArtifactSlot = clearArtifactSlot;
-window.switchPotentialType = switchPotentialType;
-window.selectCubeSlot = selectCubeSlot;
-window.runCubeSimulation = runCubeSimulation;
-window.exportData = exportData;
-window.importData = importData;
-window.saveToLocalStorage = saveToLocalStorage;
-window.updateAnalysisTabs = updateAnalysisTabs;
-window.calculateStatEquivalency = calculateStatEquivalency;
-
 window.showSkillDescription = showSkillDescription;
 window.selectClass = selectClass;
 window.selectJobTier = selectJobTier;

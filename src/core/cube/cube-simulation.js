@@ -7,6 +7,8 @@ import { equipmentPotentialData, RARITY_UPGRADE_RATES, slotNames, slotSpecificPo
 import { potentialStatToDamageStat } from '@core/cube/cube-logic.js';
 import { calculateDamage } from '@core/calculations/damage-calculations.js';
 import { getStats } from '@core/state.js';
+
+window.runCubeSimulation = runCubeSimulation;
 let simCache = {
     baseStats: null,
     baseDPS: null,

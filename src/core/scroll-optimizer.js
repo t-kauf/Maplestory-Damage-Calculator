@@ -6,6 +6,10 @@ import { formatNumber } from '@utils/formatters.js';
 import { getStats } from '@core/main.js';
 import { getWeaponAttackBonus } from '@core/state.js';
 
+window.runScrollSimulation = runScrollSimulation;
+window.switchScrollStrategyTab = switchScrollStrategyTab;
+window.updateScrollLevelInfo = updateScrollLevelInfo;
+
 // Scroll definitions
 const SCROLLS_L65 = {
     'L65_70': { name: '70% Level 65', baseSuccess: 0.70, cost: 250, attack: 100, damageAmp: 0 },

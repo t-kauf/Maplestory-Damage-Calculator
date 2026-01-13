@@ -5,6 +5,11 @@ import { calculateDamage } from '@core/calculations/damage-calculations.js';
 import { formatNumber } from '@utils/formatters.js';
 import { getStats } from '@core/main.js';
 
+window.switchInnerAbilityTab = switchInnerAbilityTab;
+window.toggleLineBreakdown = toggleLineBreakdown;
+window.sortPresetTable = sortPresetTable;
+window.sortTheoreticalTable = sortTheoreticalTable;
+
 // Map inner ability stats to base stat properties
 export function mapInnerAbilityStat(statName, value, baseStats) {
     const modifiedStats = { ...baseStats };

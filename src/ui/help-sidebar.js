@@ -1,5 +1,9 @@
 // Help sidebar functionality
 
+window.openHelpSidebar = openHelpSidebar;
+window.closeHelpSidebar = closeHelpSidebar;
+window.scrollToSection = scrollToSection;
+
 const helpContent = {
     'skill-coeff': {
         title: 'Skill Coefficient',

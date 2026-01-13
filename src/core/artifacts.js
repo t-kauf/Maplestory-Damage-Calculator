@@ -4,6 +4,15 @@
 import { artifactsData } from '@data/artifacts-data.js';
 import { artifactPotentialData } from '@data/artifact-potential-data.js';
 
+window.switchArtifactPreset = switchArtifactPreset;
+window.selectArtifactSlot = selectArtifactSlot;
+window.previewArtifact = previewArtifact;
+window.equipPreviewedArtifact = equipPreviewedArtifact;
+window.cancelPreview = cancelPreview;
+window.setArtifactStars = setArtifactStars;
+window.setArtifactPotential = setArtifactPotential;
+window.clearArtifactSlot = clearArtifactSlot;
+
 // Global state
 let currentArtifactPreset = 1;
 let selectedArtifactSlot = null; // Which of the 3 slots (1, 2, or 3) is being edited

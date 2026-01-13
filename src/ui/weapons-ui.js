@@ -7,6 +7,13 @@ import { getStats, calculate } from '@core/main.js';
 import { getWeaponAttackBonus } from '@core/state.js';
 import { rarities, tiers, rarityColors, weaponBaseAttackEquipped } from '@core/constants.js';
 
+window.setWeaponStars = setWeaponStars;
+window.previewStars = previewStars;
+window.resetStarPreview = resetStarPreview;
+window.handleEquippedCheckboxChange = handleEquippedCheckboxChange;
+window.handleWeaponLevelChange = handleWeaponLevelChange;
+window.calculateCurrencyUpgrades = calculateCurrencyUpgrades;
+
 export function initializeWeapons() {
     const weaponsGrid = document.getElementById('weapons-grid');
     let html = '';

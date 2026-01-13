@@ -4,6 +4,8 @@ import { getWeaponAttackBonus, getSelectedJobTier } from '@core/state.js';
 import { calculateMainStatPercentGain } from '@core/calculations/stat-calculations.js';
 import { calculate3rdJobSkillCoefficient, calculate4thJobSkillCoefficient } from '@core/skill-coefficient.js';
 
+window.calculateStatEquivalency = calculateStatEquivalency;
+
 // Main damage calculation function
 export function calculateDamage(stats, monsterType) {
     // Step 1: Calculate Base Damage

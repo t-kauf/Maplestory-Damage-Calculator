@@ -6,6 +6,8 @@ import { formatNumber } from '@utils/formatters.js';
 import { getStats } from '@core/main.js';
 import { getSelectedClass } from '@core/state.js';
 
+window.sortArtifactTable = sortArtifactTable;
+
 // Map artifact potential stat to base stat properties
 export function mapArtifactStat(statName, value, baseStats) {
     const modifiedStats = { ...baseStats };

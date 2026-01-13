@@ -9,6 +9,11 @@ import { rarities, tiers, comparisonItemCount, equippedStatCount } from '@core/c
 import { getCompanionsState, setCompanionsState } from '@core/state.js';
 import { refreshCompanionsUI } from '@ui/companions-ui.js';
 
+window.saveToLocalStorage = saveToLocalStorage;
+window.updateAnalysisTabs = updateAnalysisTabs;
+window.exportData = exportData;
+window.importData = importData;
+
 // Flag to prevent saving during load
 let isLoading = false;
 

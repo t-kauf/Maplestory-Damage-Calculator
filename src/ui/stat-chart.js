@@ -3,6 +3,8 @@ import { calculateMainStatPercentGain } from '@core/calculations/stat-calculatio
 import { getStats, getSelectedClass } from '@core/state.js';
 import { getWeaponAttackBonus } from '@core/state.js';
 
+window.toggleStatChart = toggleStatChart;
+
 // Store chart instances
 const statWeightCharts = {};
 
