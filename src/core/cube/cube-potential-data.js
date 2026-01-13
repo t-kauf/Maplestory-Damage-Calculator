@@ -349,7 +349,7 @@ export const equipmentPotentialData = {
         line2: [
             { stat: "Critical Rate %", value: 6, weight: 1.9, prime: false },
             { stat: "Critical Rate %", value: 9, weight: 0.6, prime: true },
-            { stat: "Attack Speed %", value: 1, weight: 1.9, prime: false },
+            { stat: "Attack Speed %", value: 4, weight: 1.9, prime: false },
             { stat: "Attack Speed %", value: 5, weight: 0.6, prime: true },
             { stat: "Damage %", value: 12, weight: 3.04, prime: false },
             { stat: "Damage %", value: 18, weight: 0.96, prime: true },
