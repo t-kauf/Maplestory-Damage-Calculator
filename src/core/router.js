@@ -465,7 +465,7 @@ export function navigateToTab(pageName, tabName) {
 }
 
 // Update submenu item active states
-function updateSubmenuActiveStates(pageName, tabName) {
+export function updateSubmenuActiveStates(pageName, tabName) {
     // Remove active from ALL submenu items across all pages to prevent multiple selections
     document.querySelectorAll('.sidebar-submenu-item').forEach(item => {
         item.classList.remove('active');

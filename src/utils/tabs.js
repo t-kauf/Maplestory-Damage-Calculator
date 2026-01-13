@@ -1,7 +1,7 @@
 // Tab switching functionality
 
 import { renderArtifactPotential } from '@core/artifact-potential.js';
-import { resetSubTabsToDefault } from '@core/router.js';
+import { resetSubTabsToDefault, updateSubmenuActiveStates } from '@core/router.js';
 
 window.switchTab = switchTab;
 window.switchScrollingSubTab = switchScrollingSubTab;
@@ -50,6 +50,8 @@ export function switchTab(group, tabName) {
     const pageName = pageNameMap[group];
     if (pageName) {
         resetSubTabsToDefault(pageName, tabName);
+        // Update sidebar to reflect the newly selected tab
+        updateSubmenuActiveStates(pageName, tabName);
     }
 }
 
