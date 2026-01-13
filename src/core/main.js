@@ -41,6 +41,7 @@ import { updateMasteryBonuses } from './base-stats/mastery-bonus.js';
 import { getStatType, isDexMainStatClass, isIntMainStatClass, isLukMainStatClass, isStrMainStatClass, loadSelectedClass, loadSelectedJobTier, selectClass, selectJobTier } from './base-stats/class-select.js';
 import { updateSkillCoefficient } from './base-stats/base-stats.js';
 import '@utils/tabs.js';
+import '@utils/stat-chart.js';
 
 // Data extraction functions
 // getStats and getItemStats moved to state.js
