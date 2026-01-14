@@ -376,7 +376,7 @@ export function calculateStatEquivalency(sourceStat) {
     const baseBossDPS = calculateDamage(stats, 'boss').dps;
     const weaponAttackBonus = getWeaponAttackBonus();
 
-    // Map of stat IDs to their properties
+    // Map of stat IDs to their properties (ordered to match Stat Predictions tables)
     const statMapping = {
         'attack': {
             label: 'Attack',
@@ -396,27 +396,79 @@ export function calculateStatEquivalency(sourceStat) {
             },
             formatValue: (val) => formatNumber(val)
         },
-        'skill-level': {
-            label: '3rd Job Skill +',
-            getValue: () => parseFloat(document.getElementById('equiv-skill-level').value) || 0,
+        'skill-coeff': {
+            label: 'Skill Coefficient',
+            getValue: () => parseFloat(document.getElementById('equiv-skill-coeff').value) || 0,
+            applyToStats: (stats, value) => ({ ...stats, skillCoeff: stats.skillCoeff + value }),
+            formatValue: (val) => `${val.toFixed(2)}%`,
+            suffix: '%'
+        },
+        'skill-mastery': {
+            label: 'Skill Mastery',
+            getValue: () => parseFloat(document.getElementById('equiv-skill-mastery').value) || 0,
+            applyToStats: (stats, value) => ({ ...stats, skillMastery: stats.skillMastery + value }),
+            formatValue: (val) => `${val.toFixed(2)}%`,
+            suffix: '%'
+        },
+        'damage': {
+            label: 'Damage',
+            getValue: () => parseFloat(document.getElementById('equiv-damage').value) || 0,
+            applyToStats: (stats, value) => ({ ...stats, damage: stats.damage + value }),
+            formatValue: (val) => `${val.toFixed(2)}%`,
+            suffix: '%'
+        },
+        'final-damage': {
+            label: 'Final Damage',
+            getValue: () => parseFloat(document.getElementById('equiv-final-damage').value) || 0,
             applyToStats: (stats, value) => {
-                // Calculate proper skill coefficient using character level and job tier
-                const characterLevel = parseInt(document.getElementById('character-level')?.value) || 0;
-                const jobTier = getSelectedJobTier();
-                const baseSkillLevel = parseInt(document.getElementById(jobTier === '4th' ? 'skill-level-4th-base' : 'skill-level-3rd-base')?.value) || 0;
-
-                const currentCoeff = jobTier === '4th'
-                    ? calculate4thJobSkillCoefficient(characterLevel, baseSkillLevel)
-                    : calculate3rdJobSkillCoefficient(characterLevel, baseSkillLevel);
-
-                const newCoeff = jobTier === '4th'
-                    ? calculate4thJobSkillCoefficient(characterLevel, baseSkillLevel + value)
-                    : calculate3rdJobSkillCoefficient(characterLevel, baseSkillLevel + value);
-
-                const skillCoeffIncrease = newCoeff - currentCoeff;
-                return { ...stats, skillCoeff: stats.skillCoeff + skillCoeffIncrease };
+                const newValue = (((1 + stats.finalDamage / 100) * (1 + value / 100)) - 1) * 100;
+                return { ...stats, finalDamage: newValue };
             },
-            formatValue: (val) => `+${Math.round(val)}`
+            formatValue: (val) => `${val.toFixed(2)}%`,
+            suffix: '%',
+            isMultiplicative: true
+        },
+        'boss-damage': {
+            label: 'Boss Damage',
+            getValue: () => parseFloat(document.getElementById('equiv-boss-damage').value) || 0,
+            applyToStats: (stats, value) => ({ ...stats, bossDamage: stats.bossDamage + value }),
+            formatValue: (val) => `${val.toFixed(2)}%`,
+            suffix: '%'
+        },
+        'normal-damage': {
+            label: 'Monster Damage',
+            getValue: () => parseFloat(document.getElementById('equiv-normal-damage').value) || 0,
+            applyToStats: (stats, value) => ({ ...stats, normalDamage: stats.normalDamage + value }),
+            formatValue: (val) => `${val.toFixed(2)}%`,
+            suffix: '%'
+        },
+        'stat-damage': {
+            label: 'Main Stat %',
+            getValue: () => parseFloat(document.getElementById('equiv-stat-damage').value) || 0,
+            applyToStats: (stats, value) => ({ ...stats, statDamage: stats.statDamage + value }),
+            formatValue: (val) => `${val.toFixed(2)}%`,
+            suffix: '%'
+        },
+        'damage-amp': {
+            label: 'Damage Amplification',
+            getValue: () => parseFloat(document.getElementById('equiv-damage-amp').value) || 0,
+            applyToStats: (stats, value) => ({ ...stats, damageAmp: stats.damageAmp + value }),
+            formatValue: (val) => `${val.toFixed(2)}x`,
+            suffix: 'x'
+        },
+        'min-damage': {
+            label: 'Min Damage Multiplier',
+            getValue: () => parseFloat(document.getElementById('equiv-min-damage').value) || 0,
+            applyToStats: (stats, value) => ({ ...stats, minDamage: stats.minDamage + value }),
+            formatValue: (val) => `${val.toFixed(2)}%`,
+            suffix: '%'
+        },
+        'max-damage': {
+            label: 'Max Damage Multiplier',
+            getValue: () => parseFloat(document.getElementById('equiv-max-damage').value) || 0,
+            applyToStats: (stats, value) => ({ ...stats, maxDamage: stats.maxDamage + value }),
+            formatValue: (val) => `${val.toFixed(2)}%`,
+            suffix: '%'
         },
         'crit-rate': {
             label: 'Critical Rate',
@@ -444,53 +496,17 @@ export function calculateStatEquivalency(sourceStat) {
             suffix: '%',
             isDiminishing: true
         },
-        'damage': {
-            label: 'Damage',
-            getValue: () => parseFloat(document.getElementById('equiv-damage').value) || 0,
-            applyToStats: (stats, value) => ({ ...stats, damage: stats.damage + value }),
-            formatValue: (val) => `${val.toFixed(2)}%`,
-            suffix: '%'
-        },
-        'final-damage': {
-            label: 'Final Damage',
-            getValue: () => parseFloat(document.getElementById('equiv-final-damage').value) || 0,
-            applyToStats: (stats, value) => {
-                const newValue = (((1 + stats.finalDamage / 100) * (1 + value / 100)) - 1) * 100;
-                return { ...stats, finalDamage: newValue };
-            },
-            formatValue: (val) => `${val.toFixed(2)}%`,
-            suffix: '%',
-            isMultiplicative: true
-        },
-        'boss-damage': {
-            label: 'Boss Damage',
-            getValue: () => parseFloat(document.getElementById('equiv-boss-damage').value) || 0,
-            applyToStats: (stats, value) => ({ ...stats, bossDamage: stats.bossDamage + value }),
-            formatValue: (val) => `${val.toFixed(2)}%`,
-            suffix: '%'
-        },
-        'damage-amp': {
-            label: 'Damage Amplification',
-            getValue: () => parseFloat(document.getElementById('equiv-damage-amp').value) || 0,
-            applyToStats: (stats, value) => ({ ...stats, damageAmp: stats.damageAmp + value }),
-            formatValue: (val) => `${val.toFixed(2)}x`,
-            suffix: 'x'
-        },
-        'min-damage': {
-            label: 'Min Damage Multiplier',
-            getValue: () => parseFloat(document.getElementById('equiv-min-damage').value) || 0,
-            applyToStats: (stats, value) => ({ ...stats, minDamage: stats.minDamage + value }),
-            formatValue: (val) => `${val.toFixed(2)}%`,
-            suffix: '%'
-        },
-        'max-damage': {
-            label: 'Max Damage Multiplier',
-            getValue: () => parseFloat(document.getElementById('equiv-max-damage').value) || 0,
-            applyToStats: (stats, value) => ({ ...stats, maxDamage: stats.maxDamage + value }),
+        'def-pen': {
+            label: 'Defense Penetration',
+            getValue: () => parseFloat(document.getElementById('equiv-def-pen').value) || 0,
+            applyToStats: (stats, value) => ({ ...stats, defPen: stats.defPen + value }),
             formatValue: (val) => `${val.toFixed(2)}%`,
             suffix: '%'
         }
     };
+
+    // Determine target type based on source stat
+    const targetType = sourceStat === 'normal-damage' ? 'normal' : 'boss';
 
     // Get the source stat value and calculate target DPS gain
     const sourceValue = statMapping[sourceStat].getValue();
@@ -499,9 +515,10 @@ export function calculateStatEquivalency(sourceStat) {
         return;
     }
 
+    const baseDPS = calculateDamage(stats, targetType).dps;
     const modifiedStats = statMapping[sourceStat].applyToStats(stats, sourceValue);
-    const newDPS = calculateDamage(modifiedStats, 'boss').dps;
-    const targetDPSGain = ((newDPS - baseBossDPS) / baseBossDPS * 100);
+    const newDPS = calculateDamage(modifiedStats, targetType).dps;
+    const targetDPSGain = ((newDPS - baseDPS) / baseDPS * 100);
 
     // Build HTML for results
     let html = '<div style="background: linear-gradient(135deg, rgba(0, 122, 255, 0.08), rgba(88, 86, 214, 0.05)); border: 2px solid rgba(0, 122, 255, 0.2); border-radius: 16px; padding: 25px; box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);">';
@@ -510,7 +527,7 @@ export function calculateStatEquivalency(sourceStat) {
     html += `${statMapping[sourceStat].formatValue(sourceValue)} ${statMapping[sourceStat].label}`;
     html += '</div>';
     html += `<div style="font-size: 1.1em; color: var(--accent-success); font-weight: 600;">`;
-    html += `= ${targetDPSGain.toFixed(2)}% DPS Gain`;
+    html += `= ${targetDPSGain.toFixed(2)}% DPS Gain (${targetType === 'boss' ? 'Boss' : 'Monster'} Target)`;
     html += '</div>';
     html += '</div>';
 
@@ -521,13 +538,47 @@ export function calculateStatEquivalency(sourceStat) {
     html += '<th style="text-align: right; font-size: 1em;">DPS Gain</th>';
     html += '</tr></thead><tbody>';
 
+    // Define stat maximums for realistic capping
+    const statMaximums = {
+        'crit-rate': 100,  // Crit rate caps at 100%
+        'crit-damage': 500, // Realistic max for crit damage
+        'attack-speed': 130, // Attack speed has diminishing returns, realistic max
+        'boss-damage': null, // No realistic cap for boss damage when comparing monster dmg
+        'normal-damage': null, // No realistic cap for monster damage when comparing boss dmg
+        'damage': null, // No realistic cap
+        'final-damage': null, // No realistic cap
+        'stat-damage': null, // No realistic cap
+        'damage-amp': null, // No realistic cap
+        'min-damage': 100, // Min damage multiplier caps at 100%
+        'max-damage': 100, // Max damage multiplier caps at 100%
+        'skill-coeff': 1000, // Reasonable max
+        'skill-mastery': 100, // Reasonable max
+        'attack': 100000, // Very high but finite
+        'main-stat': 500000 // Very high but finite
+    };
+
     // Calculate equivalents for all other stats
     Object.entries(statMapping).forEach(([statId, statConfig]) => {
         if (statId === sourceStat) return; // Skip the source stat
 
+        // Get the max value for this stat (if capped)
+        let maxValue = statMaximums[statId];
+        if (maxValue === null) {
+            // Use default high values for uncapped stats
+            maxValue = statId === 'attack' ? 100000 : (statId === 'main-stat' ? 50000 : 1000);
+        }
+
+        // Special handling for crit rate - calculate room to cap
+        let isCritRateCapped = false;
+        if (statId === 'crit-rate') {
+            const currentCritRate = stats.critRate;
+            maxValue = Math.max(0, 100 - currentCritRate); // Can only increase up to 100%
+            isCritRateCapped = currentCritRate >= 100;
+        }
+
         // Binary search for equivalent value
         let low = 0;
-        let high = statId === 'attack' ? 100000 : (statId === 'main-stat' ? 50000 : 1000);
+        let high = maxValue;
         let iterations = 0;
         const maxIterations = 50;
         const tolerance = 0.01;
@@ -535,8 +586,8 @@ export function calculateStatEquivalency(sourceStat) {
         while (iterations < maxIterations && high - low > tolerance) {
             const mid = (low + high) / 2;
             const testStats = statConfig.applyToStats(stats, mid);
-            const testDPS = calculateDamage(testStats, 'boss').dps;
-            const actualGain = ((testDPS - baseBossDPS) / baseBossDPS * 100);
+            const testDPS = calculateDamage(testStats, targetType).dps;
+            const actualGain = ((testDPS - baseDPS) / baseDPS * 100);
 
             if (Math.abs(actualGain - targetDPSGain) < tolerance) {
                 break;
@@ -551,10 +602,15 @@ export function calculateStatEquivalency(sourceStat) {
 
         const equivalentValue = (low + high) / 2;
 
-        // Verify the equivalent value produces similar DPS gain
+        // Check if we hit the cap and still can't reach target gain
         const verifyStats = statConfig.applyToStats(stats, equivalentValue);
-        const verifyDPS = calculateDamage(verifyStats, 'boss').dps;
-        const verifyGain = ((verifyDPS - baseBossDPS) / baseBossDPS * 100);
+        const verifyDPS = calculateDamage(verifyStats, targetType).dps;
+        const verifyGain = ((verifyDPS - baseDPS) / baseDPS * 100);
+
+        // If we're at the cap and still below target gain, show as unable to match
+        // Use relative tolerance for small caps
+        const atCap = maxValue > 0 && (equivalentValue / maxValue) > 0.999; // Within 0.1% of max
+        const unableToMatch = atCap && verifyGain < targetDPSGain * 0.99; // Within 1% tolerance
 
         let icon = '';
 
@@ -566,8 +622,15 @@ export function calculateStatEquivalency(sourceStat) {
 
         html += '<tr>';
         html += `<td style="font-weight: 600;">${statConfig.label}${icon}</td>`;
-        html += `<td style="text-align: right; font-size: 1.05em; color: var(--accent-primary); font-weight: 600;">${statConfig.formatValue(equivalentValue)}</td>`;
-        html += `<td style="text-align: right;"><span class="gain-positive">+${verifyGain.toFixed(2)}%</span></td>`;
+
+        if (unableToMatch) {
+            // Show "-" when stat can't match the target gain
+            html += `<td style="text-align: right; font-size: 1.05em; color: var(--text-secondary); font-style: italic;">-</td>`;
+            html += `<td style="text-align: right; color: var(--text-secondary); font-style: italic;">Unable to match</td>`;
+        } else {
+            html += `<td style="text-align: right; font-size: 1.05em; color: var(--accent-primary); font-weight: 600;">${statConfig.formatValue(equivalentValue)}</td>`;
+            html += `<td style="text-align: right;"><span class="gain-positive">+${verifyGain.toFixed(2)}%</span></td>`;
+        }
         html += '</tr>';
     });
 
