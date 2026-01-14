@@ -1,4 +1,5 @@
 import { weaponBaseAttackEquipped } from '@core/constants.js';
+import { weaponUpgradeCosts } from './weapon-data.js';
 
 // Get weapon level multiplier based on level (from weapon-damage-stats.txt)
 function getWeaponLevelMultiplier(level) {
@@ -44,64 +45,11 @@ export function getMaxLevelForStars(stars) {
 }
 
 // Calculate upgrade cost for a weapon at a specific level
-export function getUpgradeCost(rarity, tier, level) {
-    if (level <= 0) return 0;
-
-    const tierNum = parseInt(tier.replace('t', ''));
-    const tierSteps = 4 - tierNum; // T4->0, T3->1, T2->2, T1->3
-
-    // Base costs for T4
-    const baseCosts = {
-        normal: 10,
-        rare: 40,
-        epic: 140,
-        unique: 490,
-        legendary: 1470,
-        mystic: 5880,
-        ancient: 23520
-    };
-
-    const baseCost = baseCosts[rarity];
-    if (!baseCost) return 0;
-
-    // Apply tier multiplier (1.2x for each tier above T4)
-    let tierAdjustedCost = baseCost * Math.pow(1.2, tierSteps);
-
-    if (rarity === "ancient" && (tier === "t3" || tier === "t2")) {
-        if (tier === "t3") {
-            tierAdjustedCost = 70000;
-        } else if (tier === "t2") {
-            tierAdjustedCost = 120000;
-        }
-    }
-
-    const basePowers = [1.01, 1.015, 1.02, 1.025];
-    const powers = [...basePowers];
-
-    // Ancient bonus + tier override
-    if (rarity === "ancient" && (tier === "t2" || tier === "t3")) {
-        tierAdjustedCost = tier === "t3" ? 70000 : 120000;
-        for (let i = 0; i < powers.length; i++) {
-            powers[i] += 0.005;
-        }
-    }
-
-    const [p1, p2, p3, p4] = powers;
-
-    let levelMultiplier =
-        level <= 50
-            ? Math.pow(p1, level - 1)
-            : level <= 100
-                ? Math.pow(p1, 49) * Math.pow(p2, level - 50)
-                : level <= 150
-                    ? Math.pow(p1, 49) * Math.pow(p2, 50) * Math.pow(p3, level - 100)
-                    : Math.pow(p1, 49) * Math.pow(p2, 50) * Math.pow(p3, 50) * Math.pow(p4, level - 150);
-
-    const finalCost = tierAdjustedCost * levelMultiplier;
-
-    // Round up to nearest 1 Weapon Enhancer
-    return Math.ceil(finalCost);
-}
+  export function getUpgradeCost(rarity, tier, level) {
+      const tierNum = parseInt(tier.replace('t', ''));
+      const cost = weaponUpgradeCosts[rarity]?.[tierNum]?.[level+1];
+      return cost || 0;
+  }
 
 // Calculate inventory attack gain from spending resources
 export function calculateUpgradeGain(rarity, tier, currentLevel, stars, resources, isEquipped = false) {
