@@ -30,4 +30,6 @@ ignore/
 
 scripts/
 
-tmpclaude**
+tmpclaude*
+
+*.apng
