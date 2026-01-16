@@ -1,0 +1,321 @@
+// Stat Comparison Service
+// Provides reusable functions for calculating stat differences and DPS comparisons
+// Used by: Item Comparison, Preset Switching, Preset DPS Comparison
+
+import { calculateDamage } from '@core/calculations/damage-calculations.js';
+import { getStats } from '@core/state.js';
+
+// Mapping from companion effect keys to stats object keys
+const EFFECT_KEY_TO_STAT_KEY = {
+    'MaxHpR': 'maxHpR',
+    'MaxHp': 'maxHp',
+    'AttackPower': 'damage',
+    'MaxDamageRatio': 'maxDamage',
+    'AttackPowerExcludeBoss': 'normalDamage',
+    'CriticalChance': 'critRate',
+    'AttackSpeed': 'attackSpeed',
+    'AttackPowerToBoss': 'bossDamage',
+    'MinDamageRatio': 'minDamage',
+    'MainStat': 'mainStat',
+    'Attack': 'attack'
+};
+
+/**
+ * Apply stat changes to base stats (remove old, add new)
+ * @param {Object} baseStats - The base stats object
+ * @param {Object} removeEffects - Effects to subtract (key-value pairs)
+ * @param {Object} addEffects - Effects to add (key-value pairs)
+ * @returns {Object} Modified stats copy
+ */
+export function applyStatDiff(baseStats, removeEffects = {}, addEffects = {}) {
+    const newStats = { ...baseStats };
+
+    // Helper to map effect key to stat key
+    const getStatKey = (effectKey) => EFFECT_KEY_TO_STAT_KEY[effectKey] || effectKey;
+
+    // Subtract removeEffects
+    Object.entries(removeEffects).forEach(([effectKey, value]) => {
+        const statKey = getStatKey(effectKey);
+        if (newStats[statKey] !== undefined && value !== 0) {
+            newStats[statKey] -= value;
+        }
+    });
+
+    // Add addEffects
+    Object.entries(addEffects).forEach(([effectKey, value]) => {
+        const statKey = getStatKey(effectKey);
+        if (newStats[statKey] !== undefined && value !== 0) {
+            newStats[statKey] += value;
+        }
+    });
+
+    return newStats;
+}
+
+/**
+ * Calculate DPS difference between two effect sets
+ * @param {Object} currentEffects - Currently equipped effects (to be removed)
+ * @param {Object} newEffects - New effects to apply
+ * @param {string} monsterType - 'boss' or 'normal'
+ * @returns {Object} DPS comparison results
+ */
+export function calculateDpsDifference(currentEffects, newEffects, monsterType = 'boss') {
+    // Get base stats (which already include current effects)
+    const baseStats = getStats('base');
+
+    // Calculate stats without current effects (clean baseline)
+    const statsWithoutCurrent = applyStatDiff(baseStats, currentEffects, {});
+
+    // Calculate stats with new effects
+    const statsWithNew = applyStatDiff(statsWithoutCurrent, {}, newEffects);
+
+    // Calculate DPS for baseline (no preset), current preset, and new preset
+    const baselineDps = calculateDamage(statsWithoutCurrent, monsterType).dps;
+    const currentPresetDps = calculateDamage(baseStats, monsterType).dps;
+    const newPresetDps = calculateDamage(statsWithNew, monsterType).dps;
+
+    // Calculate gains relative to baseline
+    const currentPresetGain = currentPresetDps - baselineDps;
+    const newPresetGain = newPresetDps - baselineDps;
+
+    // Calculate absolute percentage difference (in percentage points)
+    // This shows the direct difference between the two presets' gains over baseline
+    const dpsGain = baselineDps > 0 ? ((newPresetGain - currentPresetGain) / baselineDps) * 100 : 0;
+
+    return {
+        baselineDps,
+        currentPresetDps,
+        newPresetDps,
+        currentPresetGain,
+        newPresetGain,
+        dpsGain
+    };
+}
+
+/**
+ * Calculate DPS for both boss and normal targets
+ * @param {Object} currentEffects - Currently equipped effects
+ * @param {Object} newEffects - New effects to apply
+ * @returns {Object} Results for both target types
+ */
+export function calculateBothDpsDifferences(currentEffects, newEffects) {
+    const bossResults = calculateDpsDifference(currentEffects, newEffects, 'boss');
+    const normalResults = calculateDpsDifference(currentEffects, newEffects, 'normal');
+
+    return {
+        boss: bossResults,
+        normal: normalResults
+    };
+}
+
+/**
+ * Check if a preset has at least one slot filled
+ * @param {Object} preset - Preset object with main and subs
+ * @returns {boolean} True if at least one slot has a companion
+ */
+export function presetHasAnyCompanion(preset) {
+    if (!preset) return false;
+    if (preset.main) return true;
+    if (preset.subs && preset.subs.some(sub => sub)) return true;
+    return false;
+}
+
+/**
+ * Calculate the total value of a specific stat across all companions in a preset
+ * @param {Object} preset - Preset object
+ * @param {string} targetStat - The stat to sum (e.g., 'AttackPowerToBoss', 'AttackPowerExcludeBoss')
+ * @param {Function} getCompanionEffects - Function to get companion effects
+ * @param {Function} getCompanion - Function to get companion data
+ * @returns {number} Total value of the target stat
+ */
+export function calculatePresetStatValue(preset, targetStat, getCompanionEffects, getCompanion) {
+    if (!preset) return 0;
+
+    let total = 0;
+    const allSlots = [preset.main, ...preset.subs];
+
+    allSlots.forEach(companionKey => {
+        if (!companionKey) return;
+
+        const [className, rarity] = companionKey.split('-');
+        const companionData = getCompanion(companionKey);
+
+        if (!companionData.unlocked) return;
+
+        const level = companionData.level || 1;
+        const effects = getCompanionEffects(className, rarity, level);
+
+        if (effects && effects.equipEffect && effects.equipEffect[targetStat]) {
+            total += effects.equipEffect[targetStat];
+        }
+    });
+
+    return total;
+}
+
+/**
+ * Generate optimal preset for a specific target by calculating actual DPS
+ * @param {string} targetStat - The stat to maximize ('AttackPowerToBoss' or 'AttackPowerExcludeBoss')
+ * @param {Object} getCompanionEffects - Function to get companion effects
+ * @param {Object} getCompanion - Function to get companion data
+ * @param {number} maxLevel - Max companion level
+ * @param {string|null} lockedMainCompanion - Companion key to force as main, or null to optimize all slots
+ * @returns {Object} Optimal preset with main and subs filled
+ */
+export function generateOptimalPreset(targetStat, getCompanionEffects, getCompanion, getMaxCompanionLevel, lockedMainCompanion = null) {
+    const classes = ['Hero', 'DarkKnight', 'ArchMageIL', 'ArchMageFP', 'BowMaster', 'Marksman', 'NightLord', 'Shadower'];
+    const rarities = ['Legendary', 'Unique', 'Epic'];
+
+    // Determine monster type from target stat
+    const monsterType = targetStat === 'AttackPowerToBoss' ? 'boss' : 'normal';
+
+    // Collect all unlocked companions with their data
+    const unlockedCompanions = [];
+
+    rarities.forEach(rarity => {
+        classes.forEach(className => {
+            const companionKey = `${className}-${rarity}`;
+            const companionData = getCompanion(companionKey);
+
+            // Only consider unlocked companions
+            if (!companionData.unlocked) return;
+
+            const level = companionData.level || getMaxCompanionLevel();
+            const effects = getCompanionEffects(className, rarity, level);
+
+            if (!effects || !effects.equipEffect) return;
+
+            unlockedCompanions.push({
+                companionKey,
+                effects: effects.equipEffect
+            });
+        });
+    });
+
+    // If no unlocked companions, return empty preset
+    if (unlockedCompanions.length === 0) {
+        return { main: null, subs: [null, null, null, null, null, null] };
+    }
+
+    // Get base stats for DPS calculation
+    const baseStats = getStats('base');
+    let bestDps = 0;
+    let bestPreset = { main: null, subs: [null, null, null, null, null, null] };
+
+    // Helper function to generate combinations
+    function* generateCombinations(companions, size, start = 0) {
+        if (size === 0) {
+            yield [];
+            return;
+        }
+        for (let i = start; i < companions.length; i++) {
+            for (const rest of generateCombinations(companions, size - 1, i + 1)) {
+                yield [companions[i], ...rest];
+            }
+        }
+    }
+
+    // Handle locked main companion case
+    if (lockedMainCompanion) {
+        // Validate locked main is still unlocked
+        const lockedMainData = unlockedCompanions.find(c => c.companionKey === lockedMainCompanion);
+        if (!lockedMainData) {
+            // Locked main is no longer valid, return empty preset
+            return { main: null, subs: [null, null, null, null, null, null] };
+        }
+
+        // Filter out the locked main from sub candidates (can't duplicate)
+        const subCandidates = unlockedCompanions.filter(c => c.companionKey !== lockedMainCompanion);
+
+        // For performance, limit to reasonable number of combinations
+        const maxCombinationsToTest = 50000;
+        let combinationsTested = 0;
+
+        // Test each combination of 6 subs (main is locked)
+        for (const subCombination of generateCombinations(subCandidates, 6)) {
+            combinationsTested++;
+            if (combinationsTested > maxCombinationsToTest) {
+                console.warn(`Reached max combinations limit (${maxCombinationsToTest}), using best found so far`);
+                break;
+            }
+
+            // Calculate total effects for this preset
+            const totalEffects = {};
+
+            // Add locked main companion effects
+            Object.entries(lockedMainData.effects).forEach(([stat, value]) => {
+                totalEffects[stat] = (totalEffects[stat] || 0) + value;
+            });
+
+            // Add sub companion effects
+            subCombination.forEach(comp => {
+                Object.entries(comp.effects).forEach(([stat, value]) => {
+                    totalEffects[stat] = (totalEffects[stat] || 0) + value;
+                });
+            });
+
+            // Apply effects to base stats and calculate DPS
+            const statsWithEffects = applyStatDiff(baseStats, {}, totalEffects);
+            const dpsResult = calculateDamage(statsWithEffects, monsterType);
+            const dps = dpsResult.dps;
+
+            // Track best
+            if (dps > bestDps) {
+                bestDps = dps;
+                bestPreset = {
+                    main: lockedMainCompanion,
+                    subs: subCombination.map(c => c.companionKey)
+                };
+            }
+        }
+    } else {
+        // No locked main - test all 7 slots
+        // For performance, limit to reasonable number of combinations
+        const maxCombinationsToTest = 50000;
+        let combinationsTested = 0;
+
+        // Test each combination of 7 companions
+        for (const combination of generateCombinations(unlockedCompanions, 7)) {
+            combinationsTested++;
+            if (combinationsTested > maxCombinationsToTest) {
+                console.warn(`Reached max combinations limit (${maxCombinationsToTest}), using best found so far`);
+                break;
+            }
+
+            // First companion is main, rest are subs
+            const mainCompanion = combination[0];
+            const subCompanions = combination.slice(1);
+
+            // Calculate total effects for this preset
+            const totalEffects = {};
+
+            // Add main companion effects
+            Object.entries(mainCompanion.effects).forEach(([stat, value]) => {
+                totalEffects[stat] = (totalEffects[stat] || 0) + value;
+            });
+
+            // Add sub companion effects
+            subCompanions.forEach(comp => {
+                Object.entries(comp.effects).forEach(([stat, value]) => {
+                    totalEffects[stat] = (totalEffects[stat] || 0) + value;
+                });
+            });
+
+            // Apply effects to base stats and calculate DPS
+            const statsWithEffects = applyStatDiff(baseStats, {}, totalEffects);
+            const dpsResult = calculateDamage(statsWithEffects, monsterType);
+            const dps = dpsResult.dps;
+
+            // Track best
+            if (dps > bestDps) {
+                bestDps = dps;
+                bestPreset = {
+                    main: mainCompanion.companionKey,
+                    subs: subCompanions.map(c => c.companionKey)
+                };
+            }
+        }
+    }
+
+    return bestPreset;
+}

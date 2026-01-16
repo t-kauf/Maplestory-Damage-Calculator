@@ -53,7 +53,7 @@ export function renderArtifactsTab() {
 
 // Render left panel: preset selector + 3 equipped slots
 export function renderEquippedArtifacts() {
-    const container = document.getElementById('artifacts-equipped-panel');
+    const container = document.getElementById('artifacts-equipped-panelrtifacts-equipped-panel');
     if (!container) return;
 
     const preset = artifactPresets[currentArtifactPreset];

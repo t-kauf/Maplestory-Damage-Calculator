@@ -6,8 +6,9 @@ import { addComparisonItemStat, addComparisonItem } from '@ui/comparison-ui.js';
 import { addEquippedStat } from '@ui/equipment-ui.js';
 import { handleWeaponLevelChange, handleEquippedCheckboxChange, updateEquippedWeaponIndicator } from '@core/weapon-levels/weapons-ui.js';
 import { rarities, tiers, comparisonItemCount, equippedStatCount } from '@core/constants.js';
-import { getCompanionsState, setCompanionsState } from '@core/state.js';
+import { getCompanionsState, setCompanionsState, getPresets, setPresetsState, getEquippedPresetId, setEquippedPresetId, getContributedStats, setContributedStats, getShowPresetDpsComparison, setShowPresetDpsComparison, getLockedMainCompanion, setLockedMainCompanion } from '@core/state.js';
 import { refreshCompanionsUI } from '@ui/companions-ui.js';
+import { refreshPresetsUI } from '@ui/companions-presets-ui.js';
 
 window.saveToLocalStorage = saveToLocalStorage;
 window.updateAnalysisTabs = updateAnalysisTabs;
@@ -202,6 +203,18 @@ export function saveToLocalStorage() {
 
     // Save Companions
     data.companions = getCompanionsState();
+
+    // Save Companions Presets
+    data.companionsPresets = getPresets();
+
+    // Save Equipped Preset ID and Contributed Stats
+    data.equippedPresetId = getEquippedPresetId();
+    data.contributedStats = getContributedStats();
+    data.showPresetDpsComparison = getShowPresetDpsComparison();
+
+    // Save Locked Main Companions for optimal presets
+    data.lockedMainForOptimalBoss = getLockedMainCompanion('optimal-boss');
+    data.lockedMainForOptimalNormal = getLockedMainCompanion('optimal-normal');
 
     localStorage.setItem('damageCalculatorData', JSON.stringify(data));
 }
@@ -439,6 +452,38 @@ export function loadFromLocalStorage() {
             if (typeof refreshCompanionsUI === 'function') {
                 refreshCompanionsUI();
             }
+        }
+
+        // Load Companions Presets
+        if (data.companionsPresets) {
+            setPresetsState(data.companionsPresets);
+            // Refresh UI if companions tab is visible
+            if (typeof refreshPresetsUI === 'function') {
+                refreshPresetsUI();
+            }
+        }
+
+        // Load Equipped Preset ID
+        if (data.equippedPresetId) {
+            setEquippedPresetId(data.equippedPresetId);
+        }
+
+        // Load Contributed Stats
+        if (data.contributedStats) {
+            setContributedStats(data.contributedStats);
+        }
+
+        // Load Preset DPS Comparison toggle
+        if (data.showPresetDpsComparison !== undefined) {
+            setShowPresetDpsComparison(data.showPresetDpsComparison);
+        }
+
+        // Load Locked Main Companions for optimal presets
+        if (data.lockedMainForOptimalBoss !== undefined) {
+            setLockedMainCompanion('optimal-boss', data.lockedMainForOptimalBoss);
+        }
+        if (data.lockedMainForOptimalNormal !== undefined) {
+            setLockedMainCompanion('optimal-normal', data.lockedMainForOptimalNormal);
         }
 
         return true;

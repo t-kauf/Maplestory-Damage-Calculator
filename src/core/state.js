@@ -182,10 +182,196 @@ export function updateCompanion(companionKey, data) {
 
 /**
  * Get a specific companion's data
+ * Normal, Rare, and Epic rarities default to unlocked
  */
 export function getCompanion(companionKey) {
-    return companionsState[companionKey] || { unlocked: false, level: 1, equipped: false };
+    if (companionsState[companionKey]) {
+        return companionsState[companionKey];
+    }
+
+    // Default to unlocked for Normal, Rare, and Epic rarities
+    const rarity = companionKey.split('-')[1];
+    const defaultUnlocked = ['Normal', 'Rare', 'Epic'].includes(rarity);
+
+    return { unlocked: defaultUnlocked, level: 1, equipped: false };
 }
+
+// Presets state
+let presetsState = {};
+let selectedPreset = null;
+let selectedSlot = null; // { type: 'main' | 'sub', index: 0-5 }
+
+/**
+ * Initialize empty presets
+ */
+function initializePresets() {
+    if (Object.keys(presetsState).length === 0) {
+        for (let i = 1; i <= 10; i++) {
+            presetsState[`preset${i}`] = {
+                main: null,
+                subs: [null, null, null, null, null, null]
+            };
+        }
+    }
+}
+
+/**
+ * Get all presets
+ */
+export function getPresets() {
+    initializePresets();
+    return presetsState;
+}
+
+/**
+ * Get a specific preset
+ */
+export function getPreset(presetId) {
+    initializePresets();
+    return presetsState[presetId] || { main: null, subs: [null, null, null, null, null, null] };
+}
+
+/**
+ * Set presets state (used for loading saved data)
+ */
+export function setPresetsState(state) {
+    presetsState = state || {};
+    initializePresets();
+}
+
+/**
+ * Set a companion to a preset slot
+ */
+export function setPresetSlot(presetId, slotType, slotIndex, companionKey) {
+    initializePresets();
+    if (slotType === 'main') {
+        presetsState[presetId].main = companionKey;
+    } else if (slotType === 'sub') {
+        presetsState[presetId].subs[slotIndex] = companionKey;
+    }
+}
+
+/**
+ * Clear a preset slot
+ */
+export function clearPresetSlot(presetId, slotType, slotIndex) {
+    initializePresets();
+    if (slotType === 'main') {
+        presetsState[presetId].main = null;
+    } else if (slotType === 'sub') {
+        presetsState[presetId].subs[slotIndex] = null;
+    }
+}
+
+/**
+ * Get currently selected slot info
+ */
+export function getSelectedSlotInfo() {
+    if (selectedPreset && selectedSlot) {
+        return { presetId: selectedPreset, ...selectedSlot };
+    }
+    return null;
+}
+
+/**
+ * Set the selected slot
+ */
+export function setSelectedSlot(presetId, slotType, slotIndex) {
+    selectedPreset = presetId;
+    selectedSlot = { type: slotType, index: slotIndex };
+}
+
+/**
+ * Clear the selected slot
+ */
+export function clearSelectedSlot() {
+    selectedPreset = null;
+    selectedSlot = null;
+}
+
+// Contributed stats tracking
+let ContributedStats = {
+    Companion: {} // Will be populated with companion equip effects
+};
+
+// Equipped preset tracking
+let equippedPresetId = 'preset1'; // Default to preset #1
+
+/**
+ * Get ContributedStats dictionary
+ */
+export function getContributedStats() {
+    return ContributedStats;
+}
+
+/**
+ * Set ContributedStats (used for loading saved data)
+ */
+export function setContributedStats(stats) {
+    ContributedStats = stats || { Companion: {} };
+}
+
+/**
+ * Get currently equipped preset ID
+ */
+export function getEquippedPresetId() {
+    return equippedPresetId;
+}
+
+/**
+ * Set equipped preset ID
+ */
+export function setEquippedPresetId(presetId) {
+    equippedPresetId = presetId;
+}
+
+// Preset DPS comparison toggle state
+let showPresetDpsComparison = false;
+
+/**
+ * Get whether to show DPS comparison for presets
+ */
+export function getShowPresetDpsComparison() {
+    return showPresetDpsComparison;
+}
+
+/**
+ * Set whether to show DPS comparison for presets
+ */
+export function setShowPresetDpsComparison(show) {
+    showPresetDpsComparison = show;
+}
+
+// Locked main companion state for optimal presets
+let lockedMainForOptimalBoss = null;
+let lockedMainForOptimalNormal = null;
+
+/**
+ * Get locked main companion for optimal preset
+ * @param {string} optimalType - 'optimal-boss' or 'optimal-normal'
+ */
+export function getLockedMainCompanion(optimalType) {
+    if (optimalType === 'optimal-boss') {
+        return lockedMainForOptimalBoss;
+    } else if (optimalType === 'optimal-normal') {
+        return lockedMainForOptimalNormal;
+    }
+    return null;
+}
+
+/**
+ * Set locked main companion for optimal preset
+ * @param {string} optimalType - 'optimal-boss' or 'optimal-normal'
+ * @param {string|null} companionKey - Companion key or null to clear
+ */
+export function setLockedMainCompanion(optimalType, companionKey) {
+    if (optimalType === 'optimal-boss') {
+        lockedMainForOptimalBoss = companionKey;
+    } else if (optimalType === 'optimal-normal') {
+        lockedMainForOptimalNormal = companionKey;
+    }
+}
+
 export function getWeaponAttackBonus() {
     let totalInventory = 0;
     let equippedBonus = 0;

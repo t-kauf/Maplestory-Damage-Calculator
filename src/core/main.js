@@ -37,6 +37,7 @@ import { initializeWeapons, updateWeaponBonuses} from '@core/weapon-levels/weapo
 import { initializeEquipmentSlots, loadEquipmentSlots } from '@ui/equipment-ui.js';
 import { displayResults } from '@ui/results-display.js';
 import { initializeCompanionsUI } from '@ui/companions-ui.js';
+import { refreshPresetsUI } from '@ui/companions-presets-ui.js';
 import { updateMasteryBonuses } from './base-stats/mastery-bonus.js';
 import { getStatType, isDexMainStatClass, isIntMainStatClass, isLukMainStatClass, isStrMainStatClass, loadSelectedClass, loadSelectedJobTier, selectClass, selectJobTier } from './base-stats/class-select.js';
 import { updateSkillCoefficient } from './base-stats/base-stats.js';
@@ -237,6 +238,9 @@ export function calculate() {
     document.getElementById('results-container').innerHTML = resultsHTML || '<p style="text-align: center; color: #b3d9ff;">Add comparison items to see results</p>';
 
     calculateStatWeights('base', baseStats);
+
+    // Refresh preset DPS comparisons when base stats change
+    refreshPresetsUI();
 }
 
 // Donation notification functions
@@ -623,9 +627,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const extractedText = await extractText(imageURL, false);
         try {
             const parsedStats = parseBaseStatText(extractedText);
-            console.log('Parsed Stats:', parsedStats);
             for (const parsedStat of parsedStats) {
-                console.log(`Setting ${parsedStat[0]} to ${parsedStat[1]}`);
                 const inputElement = document.getElementById(parsedStat[0]);
                 if (inputElement) {
                     inputElement.value = parsedStat[1];
@@ -651,7 +653,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (parsedStats.length > 0) {
                 showToast(`Parsing successful! ${parsedStats.length} stats updated`, true);
             } else {
-                console.log("No supported stats were parsed from the extracted text.");
                 showToast("Parsing failed! Make sure you are ONLY screenshotting the stats rows from the Character page and nothing else", false);
             }
 

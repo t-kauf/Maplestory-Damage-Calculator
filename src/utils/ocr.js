@@ -109,7 +109,6 @@ export async function extractText(imageURL, debug = false) {
             tessedit_pageseg_mode: 6,
         })
         const { data: { text } } = await worker.recognize(preprocessedImageURL);
-        console.log(`Extracted text:\n${text}`);
 
         if (debug) {
             // Display the extracted text with a label
