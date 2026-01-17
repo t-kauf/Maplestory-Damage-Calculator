@@ -1,27 +1,32 @@
 // Stat Breakdown UI - Shows where base stats come from (equipment and companions)
-// REDESIGNED: Data-driven brutalism with intentional visual hierarchy
+// REDESIGNED: Premium fintech-meets-gaming-HUD aesthetic with glassmorphism & data visualization
 import { getContributedStats, onContributedStatsChange, getUnlockableStatConfigs, getUnlockableStat, updateUnlockableStat, updateUnlockableStatsContributions, getGuildBonusConfigs, getGuildBonus, updateGuildBonus, updateGuildBonusesContributions } from '@core/state.js';
 import { getWeaponAttackBonus } from '@core/state.js';
 import { saveToLocalStorage } from '@core/storage.js';
 
 // ============================================================================
-// CSS DESIGN SYSTEM - Injected once on initialization
+// CSS DESIGN SYSTEM - Premium Data-Driven Aesthetic
 // ============================================================================
 
 const STAT_BREAKDOWN_STYLES = `
     /* ========================================
-       STAT BREAKDOWN - DATA BRUTALISM DESIGN
+       STAT BREAKDOWN - PREMIUM ANALYTICS DASHBOARD
+       Fintech Terminal × Gaming HUD
        ======================================== */
 
-    /* Typography Override for Numbers */
-    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+    /* Premium Typography System */
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-    /* Root Variables for Contribution Types */
+    /* ========================================
+       DESIGN TOKENS - Premium Color & Spacing System
+       ======================================== */
+
     :root {
-        --sb-font-display: 'Inter', -apple-system, sans-serif;
-        --sb-font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+        /* Typography - Premium Pairing */
+        --sb-font-display: 'Space Grotesk', -apple-system, sans-serif;
+        --sb-font-mono: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
 
-        /* Contribution Color Palette - Refined, Not Muted */
+        /* Contribution Colors - Premium Palette */
         --sb-base: #64748b;
         --sb-equipment: #10b981;
         --sb-scrolling: #3b82f6;
@@ -31,61 +36,125 @@ const STAT_BREAKDOWN_STYLES = `
         --sb-main-stat: #ef4444;
         --sb-unlockable: #14b8a6;
         --sb-guild: #8b5cf6;
+        --sb-unaccounted: #f43f5e;
 
-        /* Surface Colors */
-        --sb-surface-primary: rgba(15, 23, 42, 0.4);
-        --sb-surface-secondary: rgba(30, 41, 59, 0.3);
-        --sb-surface-tertiary: rgba(51, 65, 85, 0.2);
+        /* Premium Gradients */
+        --sb-gradient-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        --sb-gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        --sb-gradient-accent: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        --sb-gradient-purple: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+        --sb-gradient-teal: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+
+        /* Glassmorphism Surfaces */
+        --sb-glass-bg: rgba(15, 23, 42, 0.6);
+        --sb-glass-border: rgba(255, 255, 255, 0.08);
+        --sb-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        --sb-glass-blur: blur(12px);
+
+        /* Surface Hierarchy */
+        --sb-surface-elevated: rgba(30, 41, 59, 0.7);
+        --sb-surface-base: rgba(15, 23, 42, 0.5);
+        --sb-surface-subtle: rgba(51, 65, 85, 0.3);
 
         /* Border System */
-        --sb-border-subtle: rgba(148, 163, 184, 0.1);
-        --sb-border-medium: rgba(148, 163, 184, 0.2);
-        --sb-border-strong: rgba(148, 163, 184, 0.3);
+        --sb-border-glass: rgba(255, 255, 255, 0.06);
+        --sb-border-hover: rgba(255, 255, 255, 0.12);
+        --sb-border-active: rgba(255, 255, 255, 0.18);
 
-        /* Spacing Scale */
+        /* Spacing Scale - Precise */
+        --sb-space-2xs: 2px;
         --sb-space-xs: 4px;
-        --sb-space-sm: 8px;
-        --sb-space-md: 12px;
-        --sb-space-lg: 16px;
-        --sb-space-xl: 24px;
+        --sb-space-sm: 6px;
+        --sb-space-md: 10px;
+        --sb-space-lg: 14px;
+        --sb-space-xl: 20px;
+        --sb-space-2xl: 28px;
 
-        /* Animation Timing */
-        --sb-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
-        --sb-duration: 200ms;
-    }
+        /* Animation Curves - Premium Feel */
+        --sb-ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+        --sb-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+        --sb-ease-out: cubic-bezier(0, 0, 0.2, 1);
+        --sb-duration-fast: 150ms;
+        --sb-duration-base: 250ms;
+        --sb-duration-slow: 400ms;
 
-    /* Container */
-    .stat-breakdown-wrapper {
-        font-family: var(--sb-font-display);
-        animation: fadeIn 0.3s var(--sb-ease-out);
+        /* Glow Effects */
+        --sb-glow-subtle: 0 0 20px rgba(99, 102, 241, 0.15);
+        --sb-glow-medium: 0 0 30px rgba(99, 102, 241, 0.25);
+        --sb-glow-strong: 0 0 40px rgba(99, 102, 241, 0.35);
     }
 
     /* ========================================
-       TAB SYSTEM - Editorial Magazine Style
+       ANIMATED MESH GRADIENT BACKGROUND
+       ======================================== */
+
+    .stat-breakdown-wrapper {
+        font-family: var(--sb-font-display);
+        position: relative;
+        background: linear-gradient(135deg,
+            rgba(99, 102, 241, 0.03) 0%,
+            rgba(168, 85, 247, 0.02) 50%,
+            rgba(20, 184, 166, 0.03) 100%);
+        border-radius: 16px;
+        padding: var(--sb-space-xl);
+        animation: fadeIn var(--sb-duration-base) var(--sb-ease-smooth);
+    }
+
+    .stat-breakdown-wrapper::before {
+        content: '';
+        position: absolute;
+        inset: -2px;
+        border-radius: 18px;
+        background: linear-gradient(135deg,
+            rgba(99, 102, 241, 0.1),
+            rgba(168, 85, 247, 0.08),
+            rgba(20, 184, 166, 0.1));
+        z-index: -1;
+        opacity: 0.5;
+        animation: gradientShift 8s ease-in-out infinite;
+    }
+
+    @keyframes gradientShift {
+        0%, 100% {
+            filter: hue-rotate(0deg);
+        }
+        50% {
+            filter: hue-rotate(15deg);
+        }
+    }
+
+    /* ========================================
+       PREMIUM TAB SYSTEM - Glassmorphic Navigation
        ======================================== */
 
     .stat-breakdown-tabs {
         display: flex;
-        gap: 2px;
+        gap: var(--sb-space-sm);
         padding: var(--sb-space-sm);
-        background: var(--sb-surface-tertiary);
+        background: var(--sb-glass-bg);
+        backdrop-filter: var(--sb-glass-blur);
+        -webkit-backdrop-filter: var(--sb-glass-blur);
+        border: 1px solid var(--sb-glass-border);
         border-radius: 12px;
-        margin-bottom: var(--sb-space-lg);
+        margin-bottom: var(--sb-space-xl);
+        box-shadow: var(--sb-glass-shadow),
+                    inset 0 1px 0 rgba(255, 255, 255, 0.05);
     }
 
     .stat-tab-button {
         flex: 1;
-        padding: 14px 20px;
+        padding: 12px 18px;
         background: transparent;
         border: none;
         border-radius: 8px;
         cursor: pointer;
         font-family: var(--sb-font-display);
         font-weight: 600;
-        font-size: 0.875rem;
-        letter-spacing: -0.01em;
+        font-size: 0.8125rem;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
         color: var(--text-secondary);
-        transition: all var(--sb-duration) var(--sb-ease-out);
+        transition: all var(--sb-duration-base) var(--sb-ease-smooth);
         position: relative;
         overflow: hidden;
     }
@@ -94,9 +163,25 @@ const STAT_BREAKDOWN_STYLES = `
         content: '';
         position: absolute;
         inset: 0;
-        background: currentColor;
+        background: linear-gradient(135deg,
+            rgba(255, 255, 255, 0.1),
+            rgba(255, 255, 255, 0.05));
         opacity: 0;
-        transition: opacity var(--sb-duration) var(--sb-ease-out);
+        transition: opacity var(--sb-duration-base) var(--sb-ease-smooth);
+        border-radius: 8px;
+    }
+
+    .stat-tab-button::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%) scaleX(0);
+        width: 60%;
+        height: 2px;
+        background: currentColor;
+        transition: transform var(--sb-duration-base) var(--sb-ease-spring);
+        border-radius: 2px 2px 0 0;
     }
 
     .stat-tab-button:hover {
@@ -105,40 +190,63 @@ const STAT_BREAKDOWN_STYLES = `
     }
 
     .stat-tab-button:hover::before {
-        opacity: 0.05;
+        opacity: 1;
     }
 
     .stat-tab-button.active {
-        background: var(--sb-surface-primary);
+        background: var(--sb-surface-elevated);
         color: var(--text-primary);
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1),
-                    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2),
+                    0 0 0 1px var(--sb-glass-border);
     }
 
-    /* Tab-specific active colors */
+    .stat-tab-button.active::after {
+        transform: translateX(-50%) scaleX(1);
+    }
+
+    /* Tab-specific glow effects */
     .stat-tab-button[data-tab="special-stats"].active {
-        color: #14b8a6;
+        background: linear-gradient(135deg,
+            rgba(20, 184, 166, 0.15),
+            rgba(20, 184, 166, 0.08));
+        border-color: rgba(20, 184, 166, 0.3);
+        color: #2dd4bf;
+        box-shadow: 0 0 20px rgba(20, 184, 166, 0.2),
+                    0 2px 8px rgba(0, 0, 0, 0.2);
     }
 
     .stat-tab-button[data-tab="guild-bonuses"].active {
-        color: #a855f7;
+        background: linear-gradient(135deg,
+            rgba(168, 85, 247, 0.15),
+            rgba(168, 85, 247, 0.08));
+        border-color: rgba(168, 85, 247, 0.3);
+        color: #c084fc;
+        box-shadow: 0 0 20px rgba(168, 85, 247, 0.2),
+                    0 2px 8px rgba(0, 0, 0, 0.2);
     }
 
     .stat-tab-button[data-tab="level-stats"].active {
-        color: #f97316;
+        background: linear-gradient(135deg,
+            rgba(249, 115, 22, 0.15),
+            rgba(249, 115, 22, 0.08));
+        border-color: rgba(249, 115, 22, 0.3);
+        color: #fb923c;
+        box-shadow: 0 0 20px rgba(249, 115, 22, 0.2),
+                    0 2px 8px rgba(0, 0, 0, 0.2);
     }
 
+    /* Tab content with staggered animation */
     .stat-tab-content {
         display: none;
     }
 
     .stat-tab-content.active {
         display: block;
-        animation: slideUp 0.25s var(--sb-ease-out);
+        animation: slideUp var(--sb-duration-base) var(--sb-ease-spring);
     }
 
     /* ========================================
-       SPECIAL STATS CARD - Precision Design
+       PREMIUM STAT CARDS - Glassmorphic Design
        ======================================== */
 
     .unlockable-stats-grid {
@@ -160,11 +268,13 @@ const STAT_BREAKDOWN_STYLES = `
     }
 
     .stat-card {
-        background: var(--sb-surface-secondary);
-        border: 1px solid var(--sb-border-subtle);
-        border-radius: 10px;
+        background: var(--sb-surface-base);
+        backdrop-filter: var(--sb-glass-blur);
+        -webkit-backdrop-filter: var(--sb-glass-blur);
+        border: 1px solid var(--sb-glass-border);
+        border-radius: 12px;
         padding: var(--sb-space-md);
-        transition: all var(--sb-duration) var(--sb-ease-out);
+        transition: all var(--sb-duration-base) var(--sb-ease-smooth);
         position: relative;
         overflow: hidden;
     }
@@ -175,10 +285,10 @@ const STAT_BREAKDOWN_STYLES = `
         top: 0;
         left: 0;
         right: 0;
-        height: 2px;
-        background: var(--sb-unlockable);
+        height: 3px;
+        background: var(--sb-gradient-teal);
         opacity: 0;
-        transition: opacity var(--sb-duration) var(--sb-ease-out);
+        transition: opacity var(--sb-duration-base) var(--sb-ease-smooth);
     }
 
     .stat-card.unlocked::before {
@@ -186,8 +296,15 @@ const STAT_BREAKDOWN_STYLES = `
     }
 
     .stat-card.locked {
-        opacity: 0.5;
-        filter: grayscale(0.3);
+        opacity: 0.4;
+        filter: grayscale(0.5);
+    }
+
+    .stat-card:hover {
+        transform: translateY(-2px);
+        border-color: var(--sb-border-hover);
+        box-shadow: var(--sb-glow-subtle),
+                    0 8px 24px rgba(0, 0, 0, 0.25);
     }
 
     .stat-card-header {
@@ -199,9 +316,10 @@ const STAT_BREAKDOWN_STYLES = `
 
     .stat-card-title {
         font-weight: 600;
-        font-size: 0.875rem;
+        font-size: 0.8125rem;
         color: var(--text-primary);
-        letter-spacing: -0.02em;
+        letter-spacing: 0.01em;
+        text-transform: uppercase;
     }
 
     .stat-card-value-row {
@@ -213,40 +331,47 @@ const STAT_BREAKDOWN_STYLES = `
     .stat-card-value {
         font-family: var(--sb-font-mono);
         font-weight: 700;
-        font-size: 1rem;
+        font-size: 1.125rem;
         font-variant-numeric: tabular-nums;
-        letter-spacing: -0.03em;
+        letter-spacing: -0.02em;
     }
 
     .stat-card-value.unlocked {
-        color: #14b8a6;
+        background: var(--sb-gradient-teal);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
 
     .stat-card-value.locked {
         color: var(--text-secondary);
     }
 
-    /* Lock Toggle Button - Not an emoji */
+    /* ========================================
+       PREMIUM LOCK TOGGLE - Iconic Design
+       ======================================== */
+
     .stat-lock-toggle {
-        width: 32px;
-        height: 32px;
+        width: 36px;
+        height: 36px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: transparent;
-        border: 1px solid var(--sb-border-medium);
-        border-radius: 6px;
+        background: var(--sb-surface-subtle);
+        border: 1px solid var(--sb-glass-border);
+        border-radius: 8px;
         cursor: pointer;
-        transition: all var(--sb-duration) var(--sb-ease-out);
+        transition: all var(--sb-duration-base) var(--sb-ease-smooth);
         color: var(--text-secondary);
         flex-shrink: 0;
     }
 
     .stat-lock-toggle:hover {
-        background: var(--sb-surface-tertiary);
-        border-color: var(--sb-border-strong);
+        background: var(--sb-surface-elevated);
+        border-color: var(--sb-border-hover);
         color: var(--text-primary);
-        transform: scale(1.05);
+        transform: scale(1.08);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
     }
 
     .stat-lock-toggle:active {
@@ -254,16 +379,19 @@ const STAT_BREAKDOWN_STYLES = `
     }
 
     .stat-lock-toggle svg {
-        width: 16px;
-        height: 16px;
+        width: 18px;
+        height: 18px;
         stroke-width: 2;
     }
 
-    /* Slider Section */
+    /* ========================================
+       PREMIUM SLIDER SECTION
+       ======================================== */
+
     .stat-slider-section {
         margin-top: var(--sb-space-md);
         padding-top: var(--sb-space-md);
-        border-top: 1px solid var(--sb-border-subtle);
+        border-top: 1px solid var(--sb-glass-border);
     }
 
     .stat-slider-header {
@@ -274,72 +402,81 @@ const STAT_BREAKDOWN_STYLES = `
     }
 
     .stat-slider-label {
-        font-size: 0.75rem;
-        font-weight: 500;
+        font-size: 0.6875rem;
+        font-weight: 600;
         color: var(--text-secondary);
         text-transform: uppercase;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.08em;
     }
 
     .stat-slider-value {
         font-family: var(--sb-font-mono);
-        font-size: 0.875rem;
+        font-size: 0.8125rem;
         font-weight: 600;
         color: var(--text-primary);
+        background: var(--sb-gradient-primary);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
 
-    /* Custom Range Slider */
+    /* Premium Range Slider */
     .stat-range-slider {
         -webkit-appearance: none;
         appearance: none;
         width: 100%;
-        height: 4px;
-        background: var(--sb-surface-tertiary);
-        border-radius: 2px;
+        height: 6px;
+        background: var(--sb-surface-subtle);
+        border-radius: 3px;
         outline: none;
         cursor: pointer;
+        position: relative;
     }
 
     .stat-range-slider::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
-        width: 16px;
-        height: 16px;
-        background: #14b8a6;
-        border: 2px solid white;
+        width: 18px;
+        height: 18px;
+        background: var(--sb-gradient-teal);
+        border: 3px solid rgba(15, 23, 42, 0.8);
         border-radius: 50%;
         cursor: pointer;
-        box-shadow: 0 2px 6px rgba(20, 184, 166, 0.4);
-        transition: all var(--sb-duration) var(--sb-ease-out);
+        box-shadow: 0 2px 10px rgba(20, 184, 166, 0.4),
+                    0 0 0 4px rgba(20, 184, 166, 0.1);
+        transition: all var(--sb-duration-fast) var(--sb-ease-spring);
     }
 
     .stat-range-slider::-webkit-slider-thumb:hover {
-        transform: scale(1.2);
-        box-shadow: 0 3px 10px rgba(20, 184, 166, 0.5);
+        transform: scale(1.15);
+        box-shadow: 0 3px 15px rgba(20, 184, 166, 0.5),
+                    0 0 0 6px rgba(20, 184, 166, 0.15);
     }
 
     .stat-range-slider::-webkit-slider-thumb:active {
-        transform: scale(1.1);
+        transform: scale(1.05);
     }
 
     .stat-range-slider::-moz-range-thumb {
-        width: 16px;
-        height: 16px;
-        background: #14b8a6;
-        border: 2px solid white;
+        width: 18px;
+        height: 18px;
+        background: var(--sb-gradient-teal);
+        border: 3px solid rgba(15, 23, 42, 0.8);
         border-radius: 50%;
         cursor: pointer;
-        box-shadow: 0 2px 6px rgba(20, 184, 166, 0.4);
-        transition: all var(--sb-duration) var(--sb-ease-out);
+        box-shadow: 0 2px 10px rgba(20, 184, 166, 0.4),
+                    0 0 0 4px rgba(20, 184, 166, 0.1);
+        transition: all var(--sb-duration-fast) var(--sb-ease-spring);
     }
 
     .stat-range-slider::-moz-range-thumb:hover {
-        transform: scale(1.2);
-        box-shadow: 0 3px 10px rgba(20, 184, 166, 0.5);
+        transform: scale(1.15);
+        box-shadow: 0 3px 15px rgba(20, 184, 166, 0.5),
+                    0 0 0 6px rgba(20, 184, 166, 0.15);
     }
 
     /* ========================================
-       GUILD BONUS CARDS - Purple Variant
+       GUILD BONUS CARDS - Purple Gradient Variant
        ======================================== */
 
     .guild-bonuses-grid {
@@ -355,40 +492,47 @@ const STAT_BREAKDOWN_STYLES = `
     }
 
     .guild-card .stat-card-value.unlocked {
-        color: #a855f7;
+        background: var(--sb-gradient-purple);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
     }
 
     .guild-card::before {
-        background: #a855f7;
+        background: var(--sb-gradient-purple);
     }
 
     .guild-card .stat-range-slider::-webkit-slider-thumb {
-        background: #a855f7;
-        box-shadow: 0 2px 6px rgba(168, 85, 247, 0.4);
+        background: var(--sb-gradient-purple);
+        box-shadow: 0 2px 10px rgba(168, 85, 247, 0.4),
+                    0 0 0 4px rgba(168, 85, 247, 0.1);
     }
 
     .guild-card .stat-range-slider::-webkit-slider-thumb:hover {
-        box-shadow: 0 3px 10px rgba(168, 85, 247, 0.5);
+        box-shadow: 0 3px 15px rgba(168, 85, 247, 0.5),
+                    0 0 0 6px rgba(168, 85, 247, 0.15);
     }
 
     .guild-card .stat-range-slider::-moz-range-thumb {
-        background: #a855f7;
-        box-shadow: 0 2px 6px rgba(168, 85, 247, 0.4);
+        background: var(--sb-gradient-purple);
+        box-shadow: 0 2px 10px rgba(168, 85, 247, 0.4),
+                    0 0 0 4px rgba(168, 85, 247, 0.1);
     }
 
     .guild-card .stat-range-slider::-moz-range-thumb:hover {
-        box-shadow: 0 3px 10px rgba(168, 85, 247, 0.5);
+        box-shadow: 0 3px 15px rgba(168, 85, 247, 0.5),
+                    0 0 0 6px rgba(168, 85, 247, 0.15);
     }
 
     /* ========================================
-       STAT BREAKDOWN GRID - Data Visualization
+       PREMIUM BREAKDOWN CARDS - Data Visualization
        ======================================== */
 
     .stat-breakdown-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
         gap: var(--sb-space-md);
-        margin-top: var(--sb-space-xl);
+        margin-top: var(--sb-space-2xl);
     }
 
     @media (max-width: 768px) {
@@ -398,79 +542,149 @@ const STAT_BREAKDOWN_STYLES = `
     }
 
     .breakdown-card {
-        background: var(--sb-surface-secondary);
-        border: 1px solid var(--sb-border-subtle);
-        border-radius: 10px;
+        background: var(--sb-surface-base);
+        backdrop-filter: var(--sb-glass-blur);
+        -webkit-backdrop-filter: var(--sb-glass-blur);
+        border: 1px solid var(--sb-glass-border);
+        border-radius: 12px;
         padding: var(--sb-space-md);
-        transition: all var(--sb-duration) var(--sb-ease-out);
+        transition: all var(--sb-duration-base) var(--sb-ease-smooth);
+        position: relative;
+        overflow: hidden;
+    }
+
+    .breakdown-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 1px;
+        background: linear-gradient(90deg,
+            transparent,
+            rgba(255, 255, 255, 0.1),
+            transparent);
+        opacity: 0;
+        transition: opacity var(--sb-duration-base) var(--sb-ease-smooth);
     }
 
     .breakdown-card:hover {
-        border-color: var(--sb-border-medium);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        border-color: var(--sb-border-hover);
+        transform: translateY(-2px);
+        box-shadow: var(--sb-glow-medium),
+                    0 12px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .breakdown-card:hover::before {
+        opacity: 1;
     }
 
     .breakdown-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: var(--sb-space-sm);
-        padding-bottom: var(--sb-space-sm);
-        border-bottom: 1px solid var(--sb-border-subtle);
+        margin-bottom: var(--sb-space-md);
+        padding-bottom: var(--sb-space-md);
+        border-bottom: 1px solid var(--sb-glass-border);
     }
 
     .breakdown-title {
-        font-weight: 600;
-        font-size: 0.875rem;
-        color: var(--accent-primary);
-        letter-spacing: -0.02em;
+        font-weight: 700;
+        font-size: 0.8125rem;
+        color: var(--text-primary);
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
     }
 
     .breakdown-total {
         font-family: var(--sb-font-mono);
         font-weight: 700;
-        font-size: 1rem;
-        color: var(--accent-primary);
+        font-size: 1.125rem;
+        background: var(--sb-gradient-primary);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
         font-variant-numeric: tabular-nums;
-        letter-spacing: -0.03em;
+        letter-spacing: -0.02em;
     }
 
-    /* Weapon Bonus Note */
+    /* Weapon Bonus Note - Premium Alert Style */
     .breakdown-weapon-note {
         font-size: 0.75rem;
-        color: #f59e0b;
-        margin-bottom: var(--sb-space-sm);
+        color: #fbbf24;
+        margin-bottom: var(--sb-space-md);
+        padding: var(--sb-space-sm) var(--sb-space-md);
+        background: linear-gradient(135deg,
+            rgba(251, 191, 36, 0.1),
+            rgba(245, 158, 11, 0.05));
+        border: 1px solid rgba(251, 191, 36, 0.2);
+        border-radius: 8px;
         font-family: var(--sb-font-mono);
         font-variant-numeric: tabular-nums;
+        display: flex;
+        align-items: center;
+        gap: var(--sb-space-sm);
     }
 
-    /* Contribution List */
+    .breakdown-weapon-note::before {
+        content: '⚡';
+        font-size: 0.875rem;
+    }
+
+    /* ========================================
+       PREMIUM CONTRIBUTION LIST - Visual Bars
+       ======================================== */
+
     .contribution-list {
         display: flex;
         flex-direction: column;
-        gap: var(--sb-space-xs);
+        gap: var(--sb-space-sm);
     }
 
     .contribution-item {
-        display: grid;
-        grid-template-columns: 1fr auto;
-        gap: var(--sb-space-sm);
-        padding: var(--sb-space-sm);
-        background: var(--sb-surface-tertiary);
-        border-left: 3px solid;
-        border-radius: 0 6px 6px 0;
-        transition: all var(--sb-duration) var(--sb-ease-out);
+        position: relative;
+        padding: var(--sb-space-md);
+        background: var(--sb-surface-subtle);
+        border: 1px solid var(--sb-glass-border);
+        border-radius: 10px;
+        transition: all var(--sb-duration-base) var(--sb-ease-smooth);
+        overflow: hidden;
+    }
+
+    .contribution-item::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 4px;
+        transition: width var(--sb-duration-base) var(--sb-ease-smooth);
     }
 
     .contribution-item:hover {
-        background: rgba(255, 255, 255, 0.05);
-        transform: translateX(2px);
+        background: var(--sb-surface-base);
+        transform: translateX(3px);
+        border-color: var(--sb-border-hover);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .contribution-item:hover::before {
+        width: 6px;
+    }
+
+    .contribution-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: var(--sb-space-md);
+        margin-bottom: var(--sb-space-xs);
     }
 
     .contribution-name {
-        font-size: 0.8rem;
+        font-size: 0.8125rem;
         color: var(--text-secondary);
         font-weight: 500;
+        letter-spacing: 0.01em;
     }
 
     .contribution-value {
@@ -481,33 +695,156 @@ const STAT_BREAKDOWN_STYLES = `
         font-variant-numeric: tabular-nums;
     }
 
-    /* Contribution Type Colors */
-    .contribution-item[data-type="base"] { border-left-color: var(--sb-base); }
-    .contribution-item[data-type="equipment"] { border-left-color: var(--sb-equipment); }
-    .contribution-item[data-type="scrolling"] { border-left-color: var(--sb-scrolling); }
-    .contribution-item[data-type="cube"] { border-left-color: var(--sb-cube); }
-    .contribution-item[data-type="companion"] { border-left-color: var(--sb-companion); }
-    .contribution-item[data-type="innerAbility"] { border-left-color: var(--sb-inner-ability); }
-    .contribution-item[data-type="mainStat"] { border-left-color: var(--sb-main-stat); }
-    .contribution-item[data-type="unlockable"] { border-left-color: var(--sb-unlockable); }
-    .contribution-item[data-type="guild"] { border-left-color: var(--sb-guild); }
-    .contribution-item[data-type="unaccounted"] {
-        border-left-color: #ef4444;
-        background: rgba(239, 68, 68, 0.1);
+    /* Visual Progress Bar */
+    .contribution-bar {
+        height: 4px;
+        background: var(--sb-surface-subtle);
+        border-radius: 2px;
+        overflow: hidden;
+        position: relative;
     }
 
-    /* Empty State */
-    .breakdown-empty {
-        text-align: center;
-        color: var(--text-secondary);
-        font-size: 0.875rem;
-        padding: var(--sb-space-xl);
-        font-style: italic;
-        opacity: 0.7;
+    .contribution-bar-fill {
+        height: 100%;
+        border-radius: 2px;
+        transition: width var(--sb-duration-slow) var(--sb-ease-smooth);
+        position: relative;
+    }
+
+    /* Contribution Percentage Badge */
+    .contribution-percent {
+        display: inline-block;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        background: var(--sb-surface-elevated);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-family: var(--sb-font-mono);
+        font-variant-numeric: tabular-nums;
+        margin-left: var(--sb-space-xs);
+    }
+
+    /* Contribution Type Colors */
+    .contribution-item[data-type="base"] {
+        border-color: rgba(100, 116, 139, 0.2);
+    }
+    .contribution-item[data-type="base"]::before {
+        background: var(--sb-base);
+    }
+    .contribution-item[data-type="base"] .contribution-bar-fill {
+        background: linear-gradient(90deg, var(--sb-base), rgba(100, 116, 139, 0.6));
+    }
+
+    .contribution-item[data-type="equipment"] {
+        border-color: rgba(16, 185, 129, 0.2);
+    }
+    .contribution-item[data-type="equipment"]::before {
+        background: var(--sb-equipment);
+    }
+    .contribution-item[data-type="equipment"] .contribution-bar-fill {
+        background: linear-gradient(90deg, var(--sb-equipment), rgba(16, 185, 129, 0.6));
+    }
+
+    .contribution-item[data-type="scrolling"] {
+        border-color: rgba(59, 130, 246, 0.2);
+    }
+    .contribution-item[data-type="scrolling"]::before {
+        background: var(--sb-scrolling);
+    }
+    .contribution-item[data-type="scrolling"] .contribution-bar-fill {
+        background: linear-gradient(90deg, var(--sb-scrolling), rgba(59, 130, 246, 0.6));
+    }
+
+    .contribution-item[data-type="cube"] {
+        border-color: rgba(245, 158, 11, 0.2);
+    }
+    .contribution-item[data-type="cube"]::before {
+        background: var(--sb-cube);
+    }
+    .contribution-item[data-type="cube"] .contribution-bar-fill {
+        background: linear-gradient(90deg, var(--sb-cube), rgba(245, 158, 11, 0.6));
+    }
+
+    .contribution-item[data-type="companion"] {
+        border-color: rgba(168, 85, 247, 0.2);
+    }
+    .contribution-item[data-type="companion"]::before {
+        background: var(--sb-companion);
+    }
+    .contribution-item[data-type="companion"] .contribution-bar-fill {
+        background: linear-gradient(90deg, var(--sb-companion), rgba(168, 85, 247, 0.6));
+    }
+
+    .contribution-item[data-type="innerAbility"] {
+        border-color: rgba(236, 72, 153, 0.2);
+    }
+    .contribution-item[data-type="innerAbility"]::before {
+        background: var(--sb-inner-ability);
+    }
+    .contribution-item[data-type="innerAbility"] .contribution-bar-fill {
+        background: linear-gradient(90deg, var(--sb-inner-ability), rgba(236, 72, 153, 0.6));
+    }
+
+    .contribution-item[data-type="mainStat"] {
+        border-color: rgba(239, 68, 68, 0.2);
+    }
+    .contribution-item[data-type="mainStat"]::before {
+        background: var(--sb-main-stat);
+    }
+    .contribution-item[data-type="mainStat"] .contribution-bar-fill {
+        background: linear-gradient(90deg, var(--sb-main-stat), rgba(239, 68, 68, 0.6));
+    }
+
+    .contribution-item[data-type="unlockable"] {
+        border-color: rgba(20, 184, 166, 0.2);
+    }
+    .contribution-item[data-type="unlockable"]::before {
+        background: var(--sb-unlockable);
+    }
+    .contribution-item[data-type="unlockable"] .contribution-bar-fill {
+        background: linear-gradient(90deg, var(--sb-unlockable), rgba(20, 184, 166, 0.6));
+    }
+
+    .contribution-item[data-type="guild"] {
+        border-color: rgba(139, 92, 246, 0.2);
+    }
+    .contribution-item[data-type="guild"]::before {
+        background: var(--sb-guild);
+    }
+    .contribution-item[data-type="guild"] .contribution-bar-fill {
+        background: linear-gradient(90deg, var(--sb-guild), rgba(139, 92, 246, 0.6));
+    }
+
+    .contribution-item[data-type="unaccounted"] {
+        border-color: rgba(244, 63, 94, 0.3);
+        background: linear-gradient(135deg,
+            rgba(244, 63, 94, 0.08),
+            rgba(244, 63, 94, 0.03));
+    }
+    .contribution-item[data-type="unaccounted"]::before {
+        background: var(--sb-unaccounted);
+    }
+    .contribution-item[data-type="unaccounted"] .contribution-bar-fill {
+        background: linear-gradient(90deg, var(--sb-unaccounted), rgba(244, 63, 94, 0.6));
     }
 
     /* ========================================
-       ANIMATIONS
+       EMPTY STATE - Premium Design
+       ======================================== */
+
+    .breakdown-empty {
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 0.8125rem;
+        padding: var(--sb-space-2xl);
+        font-style: italic;
+        opacity: 0.5;
+        font-weight: 500;
+    }
+
+    /* ========================================
+       STAGGERED ANIMATIONS - Premium Feel
        ======================================== */
 
     @keyframes fadeIn {
@@ -522,7 +859,7 @@ const STAT_BREAKDOWN_STYLES = `
     @keyframes slideUp {
         from {
             opacity: 0;
-            transform: translateY(8px);
+            transform: translateY(12px);
         }
         to {
             opacity: 1;
@@ -530,26 +867,97 @@ const STAT_BREAKDOWN_STYLES = `
         }
     }
 
-    /* Dark mode adjustments */
-    .dark .stat-breakdown-wrapper {
-        --sb-surface-primary: rgba(15, 23, 42, 0.6);
-        --sb-surface-secondary: rgba(30, 41, 59, 0.5);
-        --sb-surface-tertiary: rgba(51, 65, 85, 0.4);
-        --sb-border-subtle: rgba(148, 163, 184, 0.08);
-        --sb-border-medium: rgba(148, 163, 184, 0.15);
-        --sb-border-strong: rgba(148, 163, 184, 0.25);
+    @keyframes pulse-glow {
+        0%, 100% {
+            box-shadow: var(--sb-glow-subtle);
+        }
+        50% {
+            box-shadow: var(--sb-glow-strong);
+        }
     }
 
-    /* Focus states for accessibility */
+    /* Staggered card entrance */
+    .stat-card,
+    .breakdown-card {
+        animation: slideUp var(--sb-duration-base) var(--sb-ease-spring) backwards;
+    }
+
+    .stat-card:nth-child(1),
+    .breakdown-card:nth-child(1) { animation-delay: 0ms; }
+    .stat-card:nth-child(2),
+    .breakdown-card:nth-child(2) { animation-delay: 50ms; }
+    .stat-card:nth-child(3),
+    .breakdown-card:nth-child(3) { animation-delay: 100ms; }
+    .stat-card:nth-child(4),
+    .breakdown-card:nth-child(4) { animation-delay: 150ms; }
+    .stat-card:nth-child(5),
+    .breakdown-card:nth-child(5) { animation-delay: 200ms; }
+    .stat-card:nth-child(6),
+    .breakdown-card:nth-child(6) { animation-delay: 250ms; }
+    .stat-card:nth-child(n+7),
+    .breakdown-card:nth-child(n+7) { animation-delay: 300ms; }
+
+    /* ========================================
+       PREMIUM LEGEND - Contribution Type Guide
+       ======================================== */
+
+    .contribution-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--sb-space-sm);
+        padding: var(--sb-space-md);
+        background: var(--sb-surface-base);
+        border: 1px solid var(--sb-glass-border);
+        border-radius: 10px;
+        margin-top: var(--sb-space-xl);
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: var(--sb-space-xs);
+        font-size: 0.75rem;
+        color: var(--text-secondary);
+        font-weight: 500;
+    }
+
+    .legend-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+    }
+
+    .legend-item[data-type="base"] .legend-dot { background: var(--sb-base); }
+    .legend-item[data-type="equipment"] .legend-dot { background: var(--sb-equipment); }
+    .legend-item[data-type="scrolling"] .legend-dot { background: var(--sb-scrolling); }
+    .legend-item[data-type="cube"] .legend-dot { background: var(--sb-cube); }
+    .legend-item[data-type="companion"] .legend-dot { background: var(--sb-companion); }
+    .legend-item[data-type="innerAbility"] .legend-dot { background: var(--sb-inner-ability); }
+    .legend-item[data-type="mainStat"] .legend-dot { background: var(--sb-main-stat); }
+    .legend-item[data-type="unlockable"] .legend-dot { background: var(--sb-unlockable); }
+    .legend-item[data-type="guild"] .legend-dot { background: var(--sb-guild); }
+    .legend-item[data-type="unaccounted"] .legend-dot { background: var(--sb-unaccounted); }
+
+    /* Dark mode premium adjustments */
+    .dark .stat-breakdown-wrapper {
+        --sb-glass-bg: rgba(15, 23, 42, 0.75);
+        --sb-glass-border: rgba(255, 255, 255, 0.06);
+        --sb-surface-elevated: rgba(30, 41, 59, 0.8);
+        --sb-surface-base: rgba(15, 23, 42, 0.6);
+        --sb-surface-subtle: rgba(51, 65, 85, 0.4);
+    }
+
+    /* Focus states for accessibility - Premium Glow */
     .stat-tab-button:focus-visible,
     .stat-lock-toggle:focus-visible {
-        outline: 2px solid var(--accent-primary);
-        outline-offset: 2px;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5),
+                    var(--sb-glow-subtle);
     }
 
     .stat-range-slider:focus-visible {
-        outline: 2px solid var(--accent-primary);
-        outline-offset: 2px;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.5);
     }
 `;
 
@@ -902,19 +1310,41 @@ function renderStatSection(statKey, statDef, inputValue, displayValue, contribut
 
         contributions.forEach(contribution => {
             const type = contribution.type;
+            const percentage = displayValue > 0 ? ((contribution.value / displayValue) * 100).toFixed(1) : 0;
+            const barWidth = Math.min(percentage, 100);
+
             html += `
                 <div class="contribution-item" data-type="${type}">
-                    <span class="contribution-name">${contribution.name}</span>
-                    <span class="contribution-value">+${formatValue(contribution.value, statDef.isPercentage)}</span>
+                    <div class="contribution-content">
+                        <span class="contribution-name">${contribution.name}</span>
+                        <div style="display: flex; align-items: center; gap: var(--sb-space-xs);">
+                            <span class="contribution-value">+${formatValue(contribution.value, statDef.isPercentage)}</span>
+                            <span class="contribution-percent">${percentage}%</span>
+                        </div>
+                    </div>
+                    <div class="contribution-bar">
+                        <div class="contribution-bar-fill" style="width: ${barWidth}%"></div>
+                    </div>
                 </div>
             `;
         });
 
         if (unaccounted > 0.01) {
+            const unaccountedPercent = displayValue > 0 ? ((unaccounted / displayValue) * 100).toFixed(1) : 0;
+            const barWidth = Math.min(unaccountedPercent, 100);
+
             html += `
                 <div class="contribution-item" data-type="unaccounted">
-                    <span class="contribution-name">Unaccounted</span>
-                    <span class="contribution-value">${formatValue(unaccounted, statDef.isPercentage)}</span>
+                    <div class="contribution-content">
+                        <span class="contribution-name">Unaccounted</span>
+                        <div style="display: flex; align-items: center; gap: var(--sb-space-xs);">
+                            <span class="contribution-value">${formatValue(unaccounted, statDef.isPercentage)}</span>
+                            <span class="contribution-percent">${unaccountedPercent}%</span>
+                        </div>
+                    </div>
+                    <div class="contribution-bar">
+                        <div class="contribution-bar-fill" style="width: ${barWidth}%"></div>
+                    </div>
                 </div>
             `;
         }
@@ -925,6 +1355,38 @@ function renderStatSection(statKey, statDef, inputValue, displayValue, contribut
     }
 
     html += '</div>';
+    return html;
+}
+
+// ============================================================================
+// RENDER FUNCTIONS - Legend
+// ============================================================================
+
+function renderContributionLegend() {
+    const legendItems = [
+        { type: 'base', name: 'Base' },
+        { type: 'equipment', name: 'Equipment' },
+        { type: 'scrolling', name: 'Scrolling' },
+        { type: 'cube', name: 'Cube' },
+        { type: 'companion', name: 'Companion' },
+        { type: 'innerAbility', name: 'Inner Ability' },
+        { type: 'mainStat', name: 'Primary Stat' },
+        { type: 'unlockable', name: 'Special Stats' },
+        { type: 'guild', name: 'Guild Bonuses' },
+        { type: 'unaccounted', name: 'Unaccounted' }
+    ];
+
+    let html = '<div class="contribution-legend">';
+    legendItems.forEach(item => {
+        html += `
+            <div class="legend-item" data-type="${item.type}">
+                <div class="legend-dot"></div>
+                <span>${item.name}</span>
+            </div>
+        `;
+    });
+    html += '</div>';
+
     return html;
 }
 
@@ -989,6 +1451,7 @@ export function updateStatBreakdown() {
                 html += renderStatSection(statKey, statDef, inputValue, displayValue, contributions, weaponAttackBonus);
             });
             html += '</div>';
+            html += renderContributionLegend();
         }
 
         html += '</div>';
