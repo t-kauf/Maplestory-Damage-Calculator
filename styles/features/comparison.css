@@ -1,0 +1,832 @@
+/* ========================================
+   COMPARISON UI - Premium Data Aesthetic
+   Aligned with stat-breakdown design system
+   ======================================== */
+
+/* Typography Import */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+
+/* ========================================
+   DESIGN TOKENS
+   ======================================== */
+
+:root {
+    /* Typography */
+    --comp-font-display: 'Inter', -apple-system, sans-serif;
+    --comp-font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+
+    /* Contribution Color Palette (matches stat-breakdown) */
+    --comp-base: #64748b;
+    --comp-equipment: #10b981;
+    --comp-scrolling: #3b82f6;
+    --comp-cube: #f59e0b;
+    --comp-companion: #a855f7;
+    --comp-inner-ability: #ec4899;
+    --comp-main-stat: #ef4444;
+    --comp-unlockable: #14b8a6;
+    --comp-guild: #8b5cf6;
+
+    /* Surface Colors */
+    --comp-surface-primary: rgba(15, 23, 42, 0.4);
+    --comp-surface-secondary: rgba(30, 41, 59, 0.3);
+    --comp-surface-tertiary: rgba(51, 65, 85, 0.2);
+
+    /* Border System */
+    --comp-border-subtle: rgba(148, 163, 184, 0.1);
+    --comp-border-medium: rgba(148, 163, 184, 0.2);
+    --comp-border-strong: rgba(148, 163, 184, 0.3);
+
+    /* Spacing Scale */
+    --comp-space-xs: 4px;
+    --comp-space-sm: 8px;
+    --comp-space-md: 12px;
+    --comp-space-lg: 16px;
+    --comp-space-xl: 24px;
+
+    /* Animation Timing */
+    --comp-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+    --comp-duration: 200ms;
+}
+
+/* Dark Mode Adjustments */
+.dark {
+    --comp-surface-primary: rgba(15, 23, 42, 0.6);
+    --comp-surface-secondary: rgba(30, 41, 59, 0.5);
+    --comp-surface-tertiary: rgba(51, 65, 85, 0.4);
+    --comp-border-subtle: rgba(148, 163, 184, 0.08);
+    --comp-border-medium: rgba(148, 163, 184, 0.15);
+    --comp-border-strong: rgba(148, 163, 184, 0.25);
+}
+
+/* ========================================
+   SLOT SELECTOR - Pill Tab System
+   ======================================== */
+
+.comparison-slot-selector-wrapper {
+    background: var(--comp-surface-tertiary);
+    border: 1px solid var(--comp-border-subtle);
+    border-radius: 12px;
+    padding: var(--comp-space-sm);
+    margin-bottom: var(--comp-space-lg);
+}
+
+.comparison-slot-selector-inner {
+    display: flex;
+    align-items: center;
+    gap: var(--comp-space-md);
+    flex-wrap: wrap;
+}
+
+.comparison-slot-label {
+    font-family: var(--comp-font-display);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--text-secondary);
+}
+
+.comparison-slot-select {
+    font-family: var(--comp-font-display);
+    padding: 10px var(--comp-space-md);
+    border: 1px solid var(--comp-border-medium);
+    border-radius: 8px;
+    background: var(--comp-surface-secondary);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    min-width: 180px;
+    cursor: pointer;
+    transition: all var(--comp-duration) var(--comp-ease-out);
+}
+
+.comparison-slot-select:hover {
+    border-color: var(--comp-border-strong);
+    background: var(--comp-surface-primary);
+}
+
+.comparison-slot-select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.dark .comparison-slot-select:focus {
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+}
+
+/* ========================================
+   COLUMN LAYOUT
+   ======================================== */
+
+.comparison-columns-wrapper {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--comp-space-lg);
+    margin-bottom: var(--comp-space-lg);
+}
+
+@media (min-width: 1024px) {
+    .comparison-columns-wrapper {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--comp-space-xl);
+    }
+}
+
+.comparison-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--comp-space-md);
+}
+
+.comparison-column-header {
+    font-family: var(--comp-font-display);
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    margin: 0;
+    padding: 0;
+}
+
+.comparison-column-header--equipped {
+    color: var(--comp-equipment);
+}
+
+.comparison-column-header--comparison {
+    color: var(--accent-primary);
+}
+
+/* ========================================
+   CARDS - Premium Breakdown Style
+   ======================================== */
+
+.equipped-item-card,
+.comparison-card-inner {
+    background: var(--comp-surface-secondary);
+    border: 1px solid var(--comp-border-subtle);
+    border-radius: 10px;
+    padding: var(--comp-space-md);
+    transition: all var(--comp-duration) var(--comp-ease-out);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Top Accent Bar Pattern */
+.equipped-item-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--comp-equipment);
+    opacity: 0.8;
+}
+
+.comparison-card-inner::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: var(--accent-primary);
+    opacity: 0.8;
+}
+
+.equipped-item-card:hover,
+.comparison-card-inner:hover {
+    border-color: var(--comp-border-medium);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dark .equipped-item-card:hover,
+.dark .comparison-card-inner:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.equipped-card-header,
+.comparison-card-header {
+    margin-bottom: var(--comp-space-md);
+}
+
+.equipped-card-title-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--comp-space-md);
+}
+
+.equipped-card-title {
+    font-family: var(--comp-font-display);
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--comp-equipment);
+    letter-spacing: -0.02em;
+}
+
+.dark .equipped-card-title {
+    color: #34d399;
+}
+
+.equipped-card-subtitle {
+    font-size: 0.8rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* ========================================
+   INPUT GROUPS - Clean & Refined
+   ======================================== */
+
+.equipped-inputs-row,
+.comparison-inputs-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--comp-space-md);
+    margin-bottom: var(--comp-space-md);
+}
+
+@media (min-width: 640px) {
+    .equipped-inputs-row,
+    .comparison-inputs-row {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.equipped-input-group,
+.comparison-input-group {
+    margin-bottom: 0;
+}
+
+/* Labels */
+.equipped-label,
+.comparison-stat-label,
+.input-group label {
+    font-family: var(--comp-font-display);
+    font-size: 0.8rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--text-secondary);
+    display: block;
+    margin-bottom: 6px;
+}
+
+/* Inputs */
+.input-group input,
+.input-group select {
+    font-family: var(--comp-font-display);
+    padding: 10px var(--comp-space-md);
+    border: 1px solid var(--comp-border-medium);
+    border-radius: 8px;
+    background: var(--comp-surface-tertiary);
+    color: var(--text-primary);
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    transition: all var(--comp-duration) var(--comp-ease-out);
+}
+
+.dark .input-group input,
+.dark .input-group select {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.input-group input:focus,
+.input-group select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    background: var(--comp-surface-secondary);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.dark .input-group input:focus,
+.dark .input-group select:focus {
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+}
+
+/* ========================================
+   STATS CONTAINER
+   ======================================== */
+
+.equipped-stats-container,
+.comparison-stats-container {
+    margin-bottom: var(--comp-space-md);
+    min-height: 60px;
+}
+
+/* ========================================
+   STAT ROWS - Contribution Pattern
+   ======================================== */
+
+.comparison-stat-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: var(--comp-space-sm);
+    padding: var(--comp-space-sm);
+    background: var(--comp-surface-tertiary);
+    border-left: 3px solid var(--accent-primary);
+    border-radius: 0 6px 6px 0;
+    margin-bottom: var(--comp-space-sm);
+    align-items: end;
+    animation: slideInLeft 0.2s var(--comp-ease-out);
+    animation-delay: calc(var(--animation-order, 0) * 0.05s);
+    animation-fill-mode: both;
+    transition: all var(--comp-duration) var(--comp-ease-out);
+}
+
+.comparison-stat-row:hover {
+    background: rgba(255, 255, 255, 0.05);
+    transform: translateX(2px);
+}
+
+.dark .comparison-stat-row:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.comparison-stat-group {
+    flex: 1;
+    min-width: 0;
+}
+
+.comparison-stat-label {
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--accent-primary);
+    margin-bottom: 4px;
+}
+
+.dark .comparison-stat-label {
+    color: #60a5fa;
+}
+
+/* ========================================
+   BUTTONS - Refined & Interactive
+   ======================================== */
+
+.equipped-actions-row,
+.comparison-card-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--comp-space-sm);
+}
+
+@media (min-width: 640px) {
+    .equipped-actions-row,
+    .comparison-card-actions {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.equipped-action-btn,
+.comparison-action-btn {
+    font-family: var(--comp-font-display);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--comp-space-sm);
+    padding: 12px var(--comp-space-md);
+    border: none;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    transition: all var(--comp-duration) var(--comp-ease-out);
+    min-height: 48px;
+}
+
+.equipped-action-btn svg,
+.comparison-action-btn svg {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+}
+
+/* Add Button */
+.equipped-action-btn--add,
+.comparison-action-btn--add {
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    color: white;
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.3);
+}
+
+.equipped-action-btn--add:hover,
+.comparison-action-btn--add:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);
+}
+
+.dark .equipped-action-btn--add,
+.dark .comparison-action-btn--add {
+    background: linear-gradient(135deg, #16a34a, #15803d);
+}
+
+/* Remove Button */
+.equipped-action-btn--remove {
+    background: var(--comp-surface-tertiary);
+    color: #f97316;
+    border: 1px solid var(--comp-border-medium);
+}
+
+.equipped-action-btn--remove:hover {
+    background: rgba(249, 115, 22, 0.1);
+    color: #ea580c;
+    border-color: #f97316;
+    transform: translateY(-1px);
+}
+
+.dark .equipped-action-btn--remove {
+    color: #fb923c;
+}
+
+.dark .equipped-action-btn--remove:hover {
+    background: rgba(251, 146, 60, 0.1);
+    color: #f97316;
+}
+
+/* Equip Button */
+.comparison-action-btn--equip {
+    background: var(--accent-primary);
+    color: white;
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.3);
+}
+
+.comparison-action-btn--equip:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.dark .comparison-action-btn--equip {
+    background: #3b82f6;
+}
+
+.dark .comparison-action-btn--equip:hover {
+    background: #2563eb;
+}
+
+/* Stat Remove Button */
+.comparison-stat-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: transparent;
+    border: 1px solid var(--comp-border-medium);
+    border-radius: 6px;
+    color: #f97316;
+    cursor: pointer;
+    transition: all var(--comp-duration) var(--comp-ease-out);
+    flex-shrink: 0;
+}
+
+.comparison-stat-remove:hover {
+    background: rgba(249, 115, 22, 0.1);
+    border-color: #f97316;
+    color: #ea580c;
+    transform: scale(1.05);
+}
+
+.dark .comparison-stat-remove {
+    color: #fb923c;
+    border-color: var(--comp-border-medium);
+}
+
+.dark .comparison-stat-remove:hover {
+    background: rgba(251, 146, 60, 0.1);
+    color: #f97316;
+}
+
+/* ========================================
+   TABS - Pill System
+   ======================================== */
+
+.comparison-tabs-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2px;
+    padding: var(--comp-space-sm);
+    background: var(--comp-surface-tertiary);
+    border-radius: 12px;
+    margin-bottom: var(--comp-space-lg);
+    min-height: 48px;
+}
+
+.comparison-add-tab-btn {
+    font-family: var(--comp-font-display);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--comp-space-sm);
+    padding: 10px var(--comp-space-md);
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    font-size: 0.85rem;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    transition: all var(--comp-duration) var(--comp-ease-out);
+    min-height: 44px;
+}
+
+.comparison-add-tab-btn:hover {
+    background: var(--comp-surface-secondary);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+}
+
+.comparison-tab-button {
+    font-family: var(--comp-font-display);
+    display: flex;
+    align-items: center;
+    gap: var(--comp-space-sm);
+    padding: 10px var(--comp-space-md);
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-weight: 500;
+    font-size: 0.85rem;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    transition: all var(--comp-duration) var(--comp-ease-out);
+    min-height: 44px;
+}
+
+.comparison-tab-button:hover {
+    background: var(--comp-surface-secondary);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+}
+
+.comparison-tab-button.active {
+    background: var(--comp-surface-primary);
+    color: var(--accent-primary);
+    font-weight: 600;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1),
+                inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.comparison-tab-button .tab-item-name {
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.comparison-tab-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    background: transparent;
+    border: none;
+    border-radius: 4px;
+    color: #f97316;
+    cursor: pointer;
+    transition: all var(--comp-duration) var(--comp-ease-out);
+    flex-shrink: 0;
+}
+
+.comparison-tab-remove:hover {
+    background: rgba(249, 115, 22, 0.1);
+    color: #ea580c;
+    transform: scale(1.1);
+}
+
+.dark .comparison-tab-remove {
+    color: #fb923c;
+}
+
+.dark .comparison-tab-remove:hover {
+    background: rgba(251, 146, 60, 0.1);
+    color: #f97316;
+}
+
+/* ========================================
+   COMPARISON ITEMS CONTAINER
+   ======================================== */
+
+.comparison-items-container {
+    min-height: 200px;
+}
+
+.comparison-item-card {
+    animation: fadeIn 0.2s var(--comp-ease-out);
+}
+
+/* ========================================
+   EMPTY STATE
+   ======================================== */
+
+.comparison-empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--comp-space-xl);
+    text-align: center;
+    background: var(--comp-surface-tertiary);
+    border: 1px dashed var(--comp-border-medium);
+    border-radius: 10px;
+    animation: fadeIn 0.3s var(--comp-ease-out);
+}
+
+.comparison-empty-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--comp-surface-secondary);
+    border-radius: 50%;
+    color: var(--accent-primary);
+    margin-bottom: var(--comp-space-md);
+}
+
+.comparison-empty-text {
+    font-family: var(--comp-font-display);
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    margin: 0 0 var(--comp-space-sm) 0;
+}
+
+.comparison-empty-subtext {
+    font-family: var(--comp-font-display);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+/* ========================================
+   CALCULATE BUTTON
+   ======================================== */
+
+.comparison-calculate-btn {
+    font-family: var(--comp-font-display);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--comp-space-md);
+    width: 100%;
+    padding: 16px var(--comp-space-lg);
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-weight: 600;
+    font-size: 1rem;
+    letter-spacing: -0.02em;
+    cursor: pointer;
+    transition: all var(--comp-duration) var(--comp-ease-out);
+    margin-bottom: var(--comp-space-xl);
+    box-shadow: 0 4px 16px rgba(59, 130, 246, 0.3);
+    min-height: 56px;
+}
+
+.dark .comparison-calculate-btn {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+}
+
+.comparison-calculate-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+}
+
+.dark .comparison-calculate-btn:hover {
+    box-shadow: 0 8px 24px rgba(37, 99, 235, 0.5);
+}
+
+.comparison-calculate-btn:active {
+    transform: translateY(0);
+}
+
+.comparison-calculate-btn svg {
+    flex-shrink: 0;
+}
+
+/* ========================================
+   RESULTS SECTION
+   ======================================== */
+
+.comparison-results-section {
+    border-top: 1px solid var(--comp-border-subtle);
+    padding-top: var(--comp-space-xl);
+}
+
+.comparison-results-title {
+    font-family: var(--comp-font-display);
+    color: var(--accent-primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+    text-align: center;
+    margin: 0 0 var(--comp-space-lg) 0;
+    letter-spacing: -0.02em;
+}
+
+.comparison-results-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--comp-space-md);
+}
+
+@media (min-width: 768px) {
+    .comparison-results-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (min-width: 1024px) {
+    .comparison-results-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* ========================================
+   ANIMATIONS
+   ======================================== */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideInLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ========================================
+   ACCESSIBILITY - Focus States
+   ======================================== */
+
+.comparison-tab-button:focus-visible,
+.comparison-add-tab-btn:focus-visible,
+.comparison-action-btn:focus-visible,
+.equipped-action-btn:focus-visible,
+.comparison-calculate-btn:focus-visible,
+.comparison-slot-select:focus-visible,
+.comparison-stat-remove:focus-visible {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+
+/* ========================================
+   MOBILE OPTIMIZATIONS
+   ======================================== */
+
+@media (max-width: 767px) {
+    .comparison-slot-selector-inner {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--comp-space-sm);
+    }
+
+    .comparison-slot-select {
+        width: 100%;
+        min-width: unset;
+    }
+
+    .comparison-tabs-container {
+        gap: 2px;
+    }
+
+    .comparison-tab-button {
+        flex: 1;
+        min-width: 0;
+        padding: 8px 10px;
+        font-size: 0.8rem;
+    }
+
+    .comparison-tab-button .tab-item-name {
+        max-width: 80px;
+    }
+
+    .comparison-columns-wrapper {
+        gap: var(--comp-space-md);
+    }
+}
+
+/* ========================================
+   END COMPARISON UI - Premium Aesthetic
+   ======================================== */

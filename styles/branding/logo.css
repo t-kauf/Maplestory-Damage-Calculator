@@ -1,0 +1,46 @@
+/* ========================================
+   STAT HUB LOGO STYLING
+   ======================================== */
+
+/* Sidebar StatHub Logo */
+.stat-hub-logo {
+    font-weight: 700;
+    color: white;
+    font-family: Arial, sans-serif;
+}
+
+.stat-hub-highlight {
+    background: #ff9900;
+    color: black;
+    padding: 2px 4px;
+    border-radius: 4px;
+    margin-left: 2px;
+    font-weight: 700;
+}
+
+/* Large StatHub Logo for page title */
+.stat-hub-logo-large {
+    font-weight: 700;
+    font-size: 2rem;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.stat-hub-highlight-large {
+    background: #ff9900;
+    color: black;
+    padding: 4px 8px;
+    border-radius: 6px;
+    margin-left: 4px;
+    font-weight: 700;
+}
+
+/* Light theme adjustments */
+.stat-hub-logo-large {
+    color: #1f2937;
+}
+
+.dark .stat-hub-logo-large {
+    color: white;
+}

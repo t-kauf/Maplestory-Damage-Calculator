@@ -1,0 +1,37 @@
+/* ========================================
+   SKILL MASTURY STYLES
+   ======================================== */
+
+/* All mastery table styles are in components/tables.css */
+/* This file contains any additional skill-specific styles */
+
+/* Inner ability lines - stat and value on same row */
+.inner-ability-lines {
+    display: grid;
+    gap: 10px;
+}
+
+.inner-ability-line {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 10px;
+    align-items: end;
+}
+
+@media (max-width: 640px) {
+    .inner-ability-line {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Collapsible sections */
+.collapsible-section {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+}
+
+.collapsible-section.expanded {
+    max-height: 2000px;
+    transition: max-height 0.5s ease-in;
+}

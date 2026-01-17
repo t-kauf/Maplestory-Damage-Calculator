@@ -1,0 +1,288 @@
+/* ========================================
+   CARDS & PANELS
+   ======================================== */
+
+/* Damage boxes and panels */
+.damage-box {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    transition: all 0.3s ease;
+}
+
+.dark .damage-box {
+    background: #1f2937;
+    border-color: #374151;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.damage-box:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.dark .damage-box:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.damage-box h3 {
+    color: #10b981;
+    margin-bottom: 10px;
+    font-size: 1.2em;
+    font-weight: 600;
+}
+
+.dark .damage-box h3 {
+    color: #34d399;
+}
+
+/* Weapon cards */
+.weapon-card {
+    background: white;
+    border-radius: 12px;
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    position: relative;
+}
+
+.dark .weapon-card {
+    background: #1f2937;
+    border-color: #374151;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.weapon-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.dark .weapon-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.weapon-card.equipped {
+    border-color: #10b981;
+    box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(37, 99, 235, 0.05));
+}
+
+.dark .weapon-card.equipped {
+    border-color: #34d399;
+    box-shadow: 0 0 20px rgba(52, 211, 153, 0.3);
+}
+
+.weapon-header {
+    color: #2563eb;
+    font-size: 0.85em;
+    font-weight: 600;
+    margin-bottom: 8px;
+    text-align: center;
+}
+
+.dark .weapon-header {
+    color: #60a5fa;
+}
+
+/* Combo cards */
+.combo-card {
+    background: white;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.dark .combo-card {
+    background: #1f2937;
+    border-color: #374151;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.combo-card h4 {
+    color: #2563eb;
+    margin-bottom: 12px;
+    font-size: 1.1em;
+}
+
+.dark .combo-card h4 {
+    color: #60a5fa;
+}
+
+/* Total DPS Gain display */
+.combo-total {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(37, 99, 235, 0.1));
+    border: 2px solid #10b981;
+    border-radius: 12px;
+    padding: 20px;
+    margin-top: 20px;
+    text-align: center;
+    font-size: 1.2em;
+    font-weight: 700;
+    color: #10b981;
+    box-shadow: 0 4px 16px rgba(16, 185, 129, 0.2);
+    transition: all 0.3s ease;
+}
+
+.dark .combo-total {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.1), rgba(37, 99, 235, 0.08));
+    border-color: #34d399;
+    color: #34d399;
+    box-shadow: 0 4px 16px rgba(52, 211, 153, 0.2);
+}
+
+.combo-total:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.3);
+}
+
+.dark .combo-total:hover {
+    box-shadow: 0 6px 20px rgba(52, 211, 153, 0.3);
+}
+
+/* Expected damage boxes in results */
+.expected-damage {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(37, 99, 235, 0.15));
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 15px;
+    margin-top: 10px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.dark .expected-damage {
+    border-color: #374151;
+}
+
+.expected-damage:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.dark .expected-damage:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+}
+
+.expected-damage .label {
+    color: #10b981;
+    font-size: 0.9em;
+    margin-bottom: 5px;
+    font-weight: 600;
+}
+
+.dark .expected-damage .label {
+    color: #34d399;
+}
+
+.expected-damage .value {
+    font-size: 1.5em;
+    font-weight: 700;
+    color: #1f2937;
+}
+
+.dark .expected-damage .value {
+    color: #f3f4f6;
+}
+
+/* Result panels */
+.result-panel:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+/* Damage rows */
+.damage-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 10px 0;
+    border-bottom: 1px solid #e5e7eb;
+    transition: all 0.2s ease;
+}
+
+.dark .damage-row {
+    border-bottom-color: #374151;
+}
+
+.damage-row:hover {
+    padding-left: 8px;
+}
+
+.damage-row:last-child {
+    border-bottom: none;
+}
+
+.damage-label {
+    color: #6b7280;
+    font-size: 0.95em;
+}
+
+.dark .damage-label {
+    color: #9ca3af;
+}
+
+.damage-value {
+    font-weight: 600;
+    color: #1f2937;
+    font-size: 1.05em;
+}
+
+.dark .damage-value {
+    color: #f3f4f6;
+}
+
+/* Rarity badges */
+.rarity-badge {
+    display: inline-block;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    text-align: center;
+    line-height: 22px;
+    font-weight: 700;
+    font-size: 0.75em;
+    margin-right: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.rarity-legendary {
+    background: #33ce85;
+    color: #000;
+}
+
+.rarity-unique {
+    background: #ffd26d;
+    color: #000;
+}
+
+.rarity-epic {
+    background: #9966ff;
+    color: #fff;
+}
+
+.rarity-rare {
+    background: #6699ff;
+    color: #fff;
+}
+
+.rarity-normal {
+    background: #ffffff;
+    color: #000;
+}
+
+.dark .rarity-normal {
+    background: #4b5563;
+    color: #fff;
+}
+
+.rarity-mystic {
+    background: #ff3f42;
+    color: #fff;
+}
+
+.rarity-ancient {
+    background: #ff9500;
+    color: #fff;
+}

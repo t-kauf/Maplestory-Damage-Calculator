@@ -1,0 +1,113 @@
+/* ========================================
+   CUBE POTENTIAL STYLES
+   ======================================== */
+
+.cube-slot-btn {
+    padding: 8px 16px;
+    background: rgba(0, 122, 255, 0.05);
+    border: 3px solid rgba(0, 122, 255, 0.3);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.3s;
+    position: relative;
+}
+
+.cube-slot-btn:hover {
+    background: rgba(0, 122, 255, 0.15);
+    transform: translateY(-2px);
+    filter: brightness(1.1);
+}
+
+.cube-slot-btn.active {
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.2), rgba(88, 86, 214, 0.15));
+    color: var(--accent-primary);
+    font-weight: 700;
+    transform: scale(1.05);
+}
+
+.dark .cube-slot-btn {
+    background: rgba(0, 122, 255, 0.08);
+}
+
+.dark .cube-slot-btn:hover {
+    background: rgba(0, 122, 255, 0.18);
+}
+
+.dark .cube-slot-btn.active {
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.25), rgba(88, 86, 214, 0.2));
+}
+
+.cube-rarity-select {
+    padding: 8px 16px;
+    background: rgba(88, 86, 214, 0.1);
+    border: 2px solid rgba(88, 86, 214, 0.3);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.3s;
+    min-width: 140px;
+}
+
+.cube-rarity-select:hover {
+    background: rgba(88, 86, 214, 0.2);
+    border-color: rgba(88, 86, 214, 0.5);
+}
+
+.cube-rarity-select:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 4px rgba(88, 86, 214, 0.2);
+}
+
+.cube-potential-type-btn {
+    background: rgba(0, 122, 255, 0.1);
+    border: 2px solid rgba(0, 122, 255, 0.3);
+    color: var(--text-primary);
+}
+
+.cube-potential-type-btn:hover {
+    background: rgba(0, 122, 255, 0.2);
+}
+
+.cube-potential-type-btn.active {
+    background: var(--accent-primary);
+    border-color: var(--accent-primary);
+    color: white;
+}
+
+/* Fix dropdown text colors in dark mode */
+.dark select option {
+    background-color: #374151;
+    color: #f3f4f6;
+}
+
+.dark .cube-rarity-select {
+    background-color: rgba(88, 86, 214, 0.15);
+    border-color: rgba(88, 86, 214, 0.4);
+    color: #f3f4f6;
+}
+
+.dark .cube-rarity-select option {
+    background-color: #374151;
+    color: #f3f4f6;
+}
+
+/* Ensure all select dropdowns in cube potential have visible text */
+#analysis-cube-potential select {
+    color: var(--text-primary);
+}
+
+.dark #analysis-cube-potential select {
+    background-color: #374151;
+    color: #f3f4f6;
+}
+
+.dark #analysis-cube-potential select option {
+    background-color: #374151;
+    color: #f3f4f6;
+}
