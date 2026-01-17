@@ -1,7 +1,7 @@
 // Cache for simulation performance
 import { rarities } from '@core/constants.js';
-import { cubeSlotData, currentCubeSlot, currentPotentialType, rankingsCache, rankingsInProgress } from '@core/cube/cube-potential.js';
-import { getSelectedClass } from '@core/state.js';
+import { currentCubeSlot, currentPotentialType, rankingsCache, rankingsInProgress } from '@core/cube/cube-potential.js';
+import { getSelectedClass, getCubeSlotData } from '@core/state.js';
 import { displayRankings, displaySimulationResults, updateClassWarning } from '@core/cube/cube-ui.js';
 import { equipmentPotentialData, RARITY_UPGRADE_RATES, slotNames, slotSpecificPotentials } from '@core/cube/cube-potential-data.js';
 import { potentialStatToDamageStat } from '@core/cube/cube-logic.js';
@@ -335,6 +335,7 @@ export async function calculateRankingsForRarity(rarity, slotId = currentCubeSlo
 
 // Calculate rankings for current slot's rarity
 export async function calculateRankings() {
+    const cubeSlotData = getCubeSlotData();
     const slotId = currentCubeSlot;
     const rarity = cubeSlotData[currentCubeSlot][currentPotentialType].rarity;
     await calculateRankingsForRarity(rarity, slotId);

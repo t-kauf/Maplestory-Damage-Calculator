@@ -5,7 +5,8 @@ import { calculate, getItemStats } from '@core/main.js';
 import { updateSkillCoefficient } from '@core/base-stats/base-stats.js';
 import { getSelectedClass } from '@core/state.js';
 import { removeComparisonItem, addComparisonItem, addComparisonItemStat } from '@ui/comparison-ui.js';
-import { comparisonItemCount, equippedStatCount, setEquippedStatCount, availableStats, allItemStatProperties } from '@core/constants.js';
+import { equippedStatCount, setEquippedStatCount, availableStats, allItemStatProperties } from '@core/constants.js';
+import { equipItemFromComparison, getCurrentSlot } from '@ui/comparison/slot-comparison.js';
 
 window.unequipItem = unequipItem;
 window.equipItem = equipItem;
@@ -67,11 +68,17 @@ export function unequipItem() {
 
     // Move to comparison items
     addComparisonItem();
-    document.getElementById(`item-${comparisonItemCount}-name`).value = equippedItem.name || 'Unequipped Item';
+    const currentSlot = getCurrentSlot();
+    // Get the count of items for this slot (the one just added)
+    // Note: addComparisonItem() uses 1-based IDs (itemId = count + 1),
+    // so after creation, the new tab's ID equals the total length
+    const newItemId = document.querySelectorAll(`[id^="comparison-tab-${currentSlot}-"]`).length;
+
+    document.getElementById(`item-${currentSlot}-${newItemId}-name`).value = equippedItem.name || 'Unequipped Item';
 
     // Get base attack from the attack field (not from stat lines)
     const baseAttack = parseFloat(document.getElementById('equipped-attack')?.value) || 0;
-    document.getElementById(`item-${comparisonItemCount}-attack`).value = baseAttack;
+    document.getElementById(`item-${currentSlot}-${newItemId}-attack`).value = baseAttack;
 
     // Copy stat lines from equipped to comparison item (preserving the exact structure)
     for (let i = 1; i <= 10; i++) {
@@ -79,11 +86,11 @@ export function unequipItem() {
         const valueElem = document.getElementById(`equipped-stat-${i}-value`);
 
         if (typeElem && valueElem && typeElem.value && valueElem.value) {
-            addComparisonItemStat(comparisonItemCount);
-            const container = document.getElementById(`item-${comparisonItemCount}-stats-container`);
+            addComparisonItemStat(newItemId);
+            const container = document.getElementById(`item-${currentSlot}-${newItemId}-stats-container`);
             const statCount = container.children.length;
-            document.getElementById(`item-${comparisonItemCount}-stat-${statCount}-type`).value = typeElem.value;
-            document.getElementById(`item-${comparisonItemCount}-stat-${statCount}-value`).value = valueElem.value;
+            document.getElementById(`item-${currentSlot}-${newItemId}-stat-${statCount}-type`).value = typeElem.value;
+            document.getElementById(`item-${currentSlot}-${newItemId}-stat-${statCount}-value`).value = valueElem.value;
         }
     }
 
@@ -103,86 +110,8 @@ export function unequipItem() {
 }
 
 export function equipItem(itemId) {
-    // Check if there's already an equipped item
-    const currentEquipped = getItemStats('equipped');
-    const hasStats = allItemStatProperties.some(prop => currentEquipped[prop] !== 0);
-
-    if (hasStats) {
-        if (!confirm('This will replace your currently equipped item. Continue?')) {
-            return;
-        }
-        // Unequip current item first
-        unequipItem();
-    }
-
-    // Get comparison item data
-    const comparisonItem = getItemStats(`item-${itemId}`);
-
-    // Add comparison item stats to base stats (only from stat lines, not base attack)
-    const statDamageBase = document.getElementById('stat-damage-base');
-    let statDamageChange = comparisonItem.mainStat / 100;
-    // For Dark Knight: defense converts to main stat
-    const currentClass = getSelectedClass();
-    if (currentClass === 'dark-knight') {
-        statDamageChange += (comparisonItem.defense * 0.127) / 100;
-    }
-    statDamageBase.value = (parseFloat(statDamageBase.value) + statDamageChange).toFixed(1);
-
-    const critRateBase = document.getElementById('crit-rate-base');
-    critRateBase.value = (parseFloat(critRateBase.value) + comparisonItem.critRate).toFixed(1);
-
-    const critDamageBase = document.getElementById('crit-damage-base');
-    critDamageBase.value = (parseFloat(critDamageBase.value) + comparisonItem.critDamage).toFixed(1);
-
-    // Add skill levels to all job tier inputs
-    ['1st', '2nd', '3rd', '4th'].forEach((tier, index) => {
-        const skillKey = ['skillLevel1st', 'skillLevel2nd', 'skillLevel3rd', 'skillLevel4th'][index];
-        const skillLevelInput = document.getElementById(`skill-level-${tier}-base`);
-        if (skillLevelInput && comparisonItem[skillKey]) {
-            skillLevelInput.value = parseInt(skillLevelInput.value || 0) + comparisonItem[skillKey];
-        }
-    });
-    updateSkillCoefficient();
-
-    const normalDamageBase = document.getElementById('normal-damage-base');
-    normalDamageBase.value = (parseFloat(normalDamageBase.value) + comparisonItem.normalDamage).toFixed(1);
-
-    const bossDamageBase = document.getElementById('boss-damage-base');
-    bossDamageBase.value = (parseFloat(bossDamageBase.value) + comparisonItem.bossDamage).toFixed(1);
-
-    const damageBase = document.getElementById('damage-base');
-    damageBase.value = (parseFloat(damageBase.value) + comparisonItem.damage).toFixed(1);
-
-    const minDamageBase = document.getElementById('min-damage-base');
-    minDamageBase.value = (parseFloat(minDamageBase.value) + comparisonItem.minDamage).toFixed(1);
-
-    const maxDamageBase = document.getElementById('max-damage-base');
-    maxDamageBase.value = (parseFloat(maxDamageBase.value) + comparisonItem.maxDamage).toFixed(1);
-
-    // Move to equipped item
-    document.getElementById('equipped-name').value = comparisonItem.name || 'Equipped Item';
-
-    // Get base attack from the attack field (not from stat lines)
-    const baseAttack = parseFloat(document.getElementById(`item-${itemId}-attack`)?.value) || 0;
-    document.getElementById('equipped-attack').value = baseAttack;
-
-    // Copy stat lines from comparison item to equipped (preserving the exact structure)
-    for (let i = 1; i <= 10; i++) {
-        const typeElem = document.getElementById(`item-${itemId}-stat-${i}-type`);
-        const valueElem = document.getElementById(`item-${itemId}-stat-${i}-value`);
-
-        if (typeElem && valueElem && typeElem.value && valueElem.value) {
-            addEquippedStat();
-            document.getElementById(`equipped-stat-${equippedStatCount}-type`).value = typeElem.value;
-            document.getElementById(`equipped-stat-${equippedStatCount}-value`).value = valueElem.value;
-        }
-    }
-
-    // Remove comparison item
-    removeComparisonItem(itemId);
-
-    saveToLocalStorage();
-    calculate();
+    // Use the new slot-aware equip function
+    equipItemFromComparison(itemId);
 }
 
 export function addEquippedStat() {
@@ -299,6 +228,11 @@ export function saveEquipmentSlots() {
     });
 
     localStorage.setItem('equipmentSlots', JSON.stringify(slots));
+
+    // Notify stat contributors to update stat breakdown
+    if (window.notifyStatContributors) {
+        window.notifyStatContributors();
+    }
 }
 
 export function loadEquipmentSlots() {

@@ -128,7 +128,7 @@ export function findEquivalentPercentage(stats, statKey, targetDPSGain, baseDPS,
 export function calculateStatWeights(setup, stats) {
     const baseBossDPS = calculateDamage(stats, 'boss').dps;
     const baseNormalDPS = calculateDamage(stats, 'normal').dps;
-    const weaponAttackBonus = getWeaponAttackBonus();
+    const weaponAttackBonus = getWeaponAttackBonus().totalAttack;
 
     // Get main stat % and related values for proper main stat % calculations
     const mainStatPct = parseFloat(document.getElementById('main-stat-pct-base')?.value) || 0;
@@ -374,7 +374,7 @@ export function calculateStatEquivalency(sourceStat) {
     };
 
     const baseBossDPS = calculateDamage(stats, 'boss').dps;
-    const weaponAttackBonus = getWeaponAttackBonus();
+    const weaponAttackBonus = getWeaponAttackBonus().totalAttack;
 
     // Map of stat IDs to their properties (ordered to match Stat Predictions tables)
     const statMapping = {

@@ -6,6 +6,9 @@
     "start": "python -m http.server 8000 || python3 -m http.server 8000 || npx http-server -p 8000",
     "test": "node tests/run-all-tests.js",
     "test:weapon-priority": "node tests/weapon-priority.test.js",
+    "test:ui": "playwright test equipment-comparison-ui.spec.js",
+    "test:ui:headed": "playwright test equipment-comparison-ui.spec.js --headed",
+    "test:ui:debug": "playwright test equipment-comparison-ui.spec.js --debug",
     "lint": "eslint *.js",
     "lint:fix": "eslint *.js --fix"
   },
@@ -16,6 +19,7 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@playwright/test": "^1.57.0",
     "eslint": "^8.57.0"
   }
 }

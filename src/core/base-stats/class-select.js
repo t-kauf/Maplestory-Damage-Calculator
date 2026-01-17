@@ -12,7 +12,8 @@ export function loadSelectedJobTier() {
     try {
         const savedTier = localStorage.getItem('selectedJobTier');
         if (savedTier) {
-            selectJobTier(savedTier);
+            // Pass skipSave=true to prevent saving during initialization
+            selectJobTier(savedTier, true);
         }
     } catch (error) {
         console.error('Error loading selected job tier:', error);
@@ -21,13 +22,71 @@ export function loadSelectedJobTier() {
     try {
         const savedClass = localStorage.getItem('selectedClass');
         if (savedClass) {
-            selectClass(savedClass);
+            // First, always set the state even if DOM isn't ready
+            setSelectedClass(savedClass);
+
+            // Then try to update the UI if the element exists
+            const classElement = document.getElementById(`class-${savedClass}`);
+            if (classElement) {
+                // Remove selected class from all class selectors
+                document.querySelectorAll('.class-selector').forEach(el => {
+                    el.classList.remove('selected');
+                });
+                classElement.classList.add('selected');
+
+                // Update UI elements that depend on class
+                const defenseInputGroup = document.getElementById('defense-input-group');
+                if (defenseInputGroup) {
+                    defenseInputGroup.style.display = savedClass === 'dark-knight' ? 'flex' : 'none';
+                }
+
+                // Show/hide main stats based on class
+                const strRow = document.getElementById('str-row');
+                const dexRow = document.getElementById('dex-row');
+                const intRow = document.getElementById('int-row');
+                const lukRow = document.getElementById('luk-row');
+
+                // Hide all first
+                if (strRow) strRow.style.display = 'none';
+                if (dexRow) dexRow.style.display = 'none';
+                if (intRow) intRow.style.display = 'none';
+                if (lukRow) lukRow.style.display = 'none';
+
+                // Show relevant stats based on class
+                if (savedClass === 'hero' || savedClass === 'dark-knight') {
+                    if (strRow) strRow.style.display = 'flex';
+                    if (dexRow) dexRow.style.display = 'flex';
+                } else if (savedClass === 'bowmaster' || savedClass === 'marksman') {
+                    if (dexRow) dexRow.style.display = 'flex';
+                    if (strRow) strRow.style.display = 'flex';
+                } else if (savedClass === 'arch-mage-il' || savedClass === 'arch-mage-fp') {
+                    if (intRow) intRow.style.display = 'flex';
+                    if (lukRow) lukRow.style.display = 'flex';
+                } else if (savedClass === 'night-lord' || savedClass === 'shadower') {
+                    if (lukRow) lukRow.style.display = 'flex';
+                    if (dexRow) dexRow.style.display = 'flex';
+                }
+
+                // Sync stats if available
+                if (typeof syncMainStatsToHidden === 'function') {
+                    syncMainStatsToHidden();
+                }
+
+                // Update class warning if available
+                if (typeof updateClassWarning === 'function') {
+                    updateClassWarning();
+                }
+            } else {
+                console.warn(`Class element 'class-${savedClass}' not found in DOM, but state was set`);
+            }
+        } else {
+            console.log('No saved class found in localStorage');
         }
     } catch (error) {
         console.error('Error loading selected class:', error);
     }
 }
-export function selectJobTier(tier) {
+export function selectJobTier(tier, skipSave = false) {
     document.querySelectorAll('.job-tier-btn').forEach(el => {
         el.classList.remove('active');
     });
@@ -55,20 +114,26 @@ export function selectJobTier(tier) {
         updateSkillCoefficient();
 
         // Update mastery bonuses for the new tier
-        updateMasteryBonuses();
+        updateMasteryBonuses(skipSave);
 
-        try {
-            localStorage.setItem('selectedJobTier', tier);
-        } catch (error) {
-            console.error('Error saving selected job tier:', error);
+        // Only save to localStorage during user interactions, not during initialization
+        if (!skipSave) {
+            try {
+                localStorage.setItem('selectedJobTier', tier);
+            } catch (error) {
+                console.error('Error saving selected job tier:', error);
+            }
+
+            saveToLocalStorage();
+            updateAnalysisTabs();
         }
-
-        saveToLocalStorage();
-        updateAnalysisTabs();
     }
 }
 
 export function selectClass(className) {
+    // Always set the state first, regardless of DOM state
+    setSelectedClass(className);
+
     document.querySelectorAll('.class-selector').forEach(el => {
         el.classList.remove('selected');
     });
@@ -76,7 +141,6 @@ export function selectClass(className) {
     const classElement = document.getElementById(`class-${className}`);
     if (classElement) {
         classElement.classList.add('selected');
-        setSelectedClass(className);
 
         const defenseInputGroup = document.getElementById('defense-input-group');
         if (defenseInputGroup) {
@@ -120,15 +184,20 @@ export function selectClass(className) {
 
         // Sync new stat inputs with hidden primary/secondary fields
         syncMainStatsToHidden();
+    }
 
-        try {
-            localStorage.setItem('selectedClass', className);
-        } catch (error) {
-            console.error('Error saving selected class:', error);
-        }
+    // Always save to localStorage, even if DOM element wasn't found
+    try {
+        localStorage.setItem('selectedClass', className);
+    } catch (error) {
+        console.error('Error saving selected class:', error);
+    }
 
-        // Update class warning in cube potential tab
+    // Update class warning in cube potential tab (if available)
+    try {
         updateClassWarning();
+    } catch (error) {
+        // updateClassWarning might not be available yet during initialization
     }
 }
 // Helper functions to determine class main stat types

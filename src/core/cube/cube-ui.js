@@ -1,10 +1,11 @@
 import { slotNames, rankingsPerPage, slotSpecificPotentials, equipmentPotentialData } from '@core/cube/cube-potential-data.js';
 import { calculateDamage } from '@core/calculations/damage-calculations.js';
 import { getStats } from '@core/main.js';
-import { getSelectedClass } from '@core/state.js';
-import { lineExistsInRarity, potentialStatToDamageStat, getRarityColor, getPercentileForGain, saveCubePotentialData, calculateSlotSetGain } from '@core/cube/cube-logic.js';
+import { getSelectedClass, getCubeSlotData } from '@core/state.js';
+import { lineExistsInRarity, potentialStatToDamageStat, getRarityColor, getPercentileForGain, calculateSlotSetGain } from '@core/cube/cube-logic.js';
 import { calculateRankingsForRarity, calculateRankings } from '@core/cube/cube-simulation.js';
-import { cubeSlotData, currentCubeSlot, currentPotentialType, rankingsCache, rankingsInProgress, calculateComparisonOrchestrator, selectCubeSlot } from '@core/cube/cube-potential.js';
+import { currentCubeSlot, currentPotentialType, rankingsCache, rankingsInProgress, calculateComparisonOrchestrator, selectCubeSlot } from '@core/cube/cube-potential.js';
+import { saveToLocalStorage } from '@core/storage.js';
 
 // Global state for summary sorting
 let summarySortColumn = 'regular'; // 'regular' or 'bonus'
@@ -87,6 +88,8 @@ export function setupCubeSlotSelector() {
     const slotSelector = document.getElementById('cube-slot-selector');
     if (!slotSelector) return;
 
+    const cubeSlotData = getCubeSlotData();
+
     slotSelector.innerHTML = '';
 
     slotNames.forEach(slot => {
@@ -119,6 +122,8 @@ export function setupCubeSlotSelector() {
 
 // Update slot button colors (call this when rarity changes)
 export function updateSlotButtonColors() {
+    const cubeSlotData = getCubeSlotData();
+
     slotNames.forEach(slot => {
         const slotBtn = document.querySelector(`.cube-slot-btn[data-slot="${slot.id}"]`);
         if (!slotBtn) return;
@@ -153,12 +158,14 @@ export function setupRaritySelector() {
         raritySelector.appendChild(option);
     });
 
+    const cubeSlotData = getCubeSlotData();
     raritySelector.value = cubeSlotData[currentCubeSlot][currentPotentialType].rarity;
     raritySelector.onchange = (e) => {
+        const cubeSlotData = getCubeSlotData();
         cubeSlotData[currentCubeSlot][currentPotentialType].rarity = e.target.value;
         updateSlotButtonColors(); // Update slot button border colors
         updateCubePotentialUI(); // This will clear invalid lines
-        saveCubePotentialData(cubeSlotData); // Save after clearing invalid lines
+        saveToLocalStorage(); // Save after clearing invalid lines
 
         // If rankings tab is visible, update rankings display
         const rankingsContent = document.getElementById('cube-rankings-content');
@@ -250,6 +257,7 @@ export async function setupCubeTabs() {
 
 // Update UI for current slot
 export function updateCubePotentialUI() {
+    const cubeSlotData = getCubeSlotData();
     const slotData = cubeSlotData[currentCubeSlot][currentPotentialType];
     const rarity = slotData.rarity;
 
@@ -332,6 +340,7 @@ export function updatePotentialLineDropdowns(setName, rarity) {
 
         // Add change listener
         cleanStatSelect.addEventListener('change', (e) => {
+            const cubeSlotData = getCubeSlotData();
             const selectedOption = e.target.selectedOptions[0];
             if (selectedOption && selectedOption.dataset.value) {
                 // Save to slot data
@@ -342,7 +351,7 @@ export function updatePotentialLineDropdowns(setName, rarity) {
                     prime: prime === 'true'
                 };
 
-                saveCubePotentialData(cubeSlotData);
+                saveToLocalStorage();
                 calculateComparisonOrchestrator();
             } else {
                 cubeSlotData[currentCubeSlot][currentPotentialType][setName][`line${lineNum}`] = {
@@ -350,7 +359,7 @@ export function updatePotentialLineDropdowns(setName, rarity) {
                     value: 0,
                     prime: false
                 };
-                saveCubePotentialData(cubeSlotData);
+                saveToLocalStorage();
                 calculateComparisonOrchestrator();
             }
         });
@@ -389,6 +398,8 @@ export function restorePotentialLineValues(setName, setData) {
 export function displayComparisonResults(setAGain, setBGain, setBAbsoluteGain, deltaGain, setAStats, setBStats) {
     const resultsDiv = document.getElementById('cube-comparison-results');
     if (!resultsDiv) return;
+
+    const cubeSlotData = getCubeSlotData();
 
     // Get ranking comparison for Set A and Set B
     const slotId = currentCubeSlot;
@@ -516,6 +527,8 @@ export function getLoadingPlaceholder() {
 export async function loadRankingsInBackground(slotId, rarity) {
     // Calculate rankings (wait for completion)
     await calculateRankingsForRarity(rarity, slotId);
+
+    const cubeSlotData = getCubeSlotData();
 
     // After rankings are calculated, refresh the comparison display if still on same slot/rarity
     if (slotId === currentCubeSlot && rarity === cubeSlotData[currentCubeSlot][currentPotentialType].rarity) {
@@ -719,6 +732,7 @@ export function getRankingComparison(dpsGain, rarity) {
 
 // Display rankings or calculate them if not ready
 export function displayOrCalculateRankings() {
+    const cubeSlotData = getCubeSlotData();
     const slotId = currentCubeSlot;
     const rarity = cubeSlotData[currentCubeSlot][currentPotentialType].rarity;
     const key = `${slotId}-${rarity}`;
@@ -775,6 +789,8 @@ export function updateClassWarning() {
 // Load all rankings needed for summary
 export async function loadAllRankingsForSummary() {
     if (!getSelectedClass()) return;
+
+    const cubeSlotData = getCubeSlotData();
 
     // Collect all unique slot+rarity combinations that need ranking
     const rankingsToLoad = [];
@@ -851,6 +867,7 @@ export async function loadAllRankingsForSummary() {
 }
 
 export function changeRankingsPage(newPage) {
+    const cubeSlotData = getCubeSlotData();
     const slotId = currentCubeSlot;
     const rarity = cubeSlotData[currentCubeSlot][currentPotentialType].rarity;
     const rankings = rankingsCache[slotId]?.[rarity];
@@ -1212,6 +1229,7 @@ export function displayAllSlotsSummary() {
         return;
     }
 
+    const cubeSlotData = getCubeSlotData();
     const currentStats = getStats('base');
 
     // Calculate DPS gain for each slot + potential type

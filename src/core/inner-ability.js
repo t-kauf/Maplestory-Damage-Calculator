@@ -9,6 +9,8 @@ window.switchInnerAbilityTab = switchInnerAbilityTab;
 window.toggleLineBreakdown = toggleLineBreakdown;
 window.sortPresetTable = sortPresetTable;
 window.sortTheoreticalTable = sortTheoreticalTable;
+window.getAllPresets = getAllPresets;
+window.applyInnerAbilityLines = applyInnerAbilityLines;
 
 // Map inner ability stats to base stat properties
 export function mapInnerAbilityStat(statName, value, baseStats) {

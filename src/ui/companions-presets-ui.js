@@ -1,4 +1,4 @@
-import { getPresets, getPreset, setPresetSlot, clearPresetSlot, getSelectedSlotInfo, setSelectedSlot, clearSelectedSlot, getCompanion, getEquippedPresetId, setEquippedPresetId, getContributedStats, setContributedStats, getShowPresetDpsComparison, setShowPresetDpsComparison, getLockedMainCompanion, setLockedMainCompanion } from '@core/state.js';
+import { getPresets, getPreset, setPresetSlot, clearPresetSlot, getSelectedSlotInfo, setSelectedSlot, clearSelectedSlot, getCompanion, getEquippedPresetId, setEquippedPresetId, updateCompanionEquippedContributions, getShowPresetDpsComparison, setShowPresetDpsComparison, getLockedMainCompanion, setLockedMainCompanion } from '@core/state.js';
 import { saveToLocalStorage } from '@core/storage.js';
 import { getCompanionEffects, getMaxCompanionLevel } from '@core/companions/index.js';
 import { addStat, subtractStat, Stat } from '@core/stat-inputs-service.js';
@@ -956,12 +956,14 @@ export function refreshPresetsUI() {
 
 /**
  * Update ContributedStats with current preset's effects
+ * This is called when the equipped preset changes
  */
 export function updateContributedStatsForPreset(presetId) {
+    // Get the preset effects
     const effects = getPresetEquipEffects(presetId);
-    const stats = getContributedStats();
-    stats.Companion = effects;
-    setContributedStats(stats);
+
+    // Use the centralized update function which will notify all listeners
+    updateCompanionEquippedContributions(effects);
 }
 
 /**

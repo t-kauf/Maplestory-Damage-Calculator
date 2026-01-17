@@ -324,7 +324,7 @@ export function toggleDetails(id) {
 export function calculateEquipmentSlotDPS() {
     const baseStats = getStats('base');
     const slotNames = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck', 'eye-accessory'];
-    const weaponAttackBonus = getWeaponAttackBonus();
+    const weaponAttackBonus = getWeaponAttackBonus().totalAttack;
 
     // Calculate baseline DPS (with all slots)
     const baselineDPS = calculateDamage(baseStats, 'boss').dps;

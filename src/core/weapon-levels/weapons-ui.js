@@ -728,7 +728,7 @@ export function calculateCurrencyUpgrades() {
 
     // Calculate new DPS with new weapon attack bonus
     const newStats = { ...baseStats };
-    const currentWeaponBonus = getWeaponAttackBonus();
+    const currentWeaponBonus = getWeaponAttackBonus().totalAttack;
 
     // Apply the weapon attack bonus difference to attack
     // Weapon attack bonus is a % that multiplies base attack

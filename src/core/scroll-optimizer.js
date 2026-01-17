@@ -750,7 +750,7 @@ export function calculateScrollDamageGain(avgAttack, avgDamageAmp) {
     const baseDPS = calculateDamage(baseStats, 'boss').dps;
 
     // Apply scroll bonuses to stats
-    const weaponAttackBonus = getWeaponAttackBonus();
+    const weaponAttackBonus = getWeaponAttackBonus().totalAttack;
     const effectiveAttackIncrease = avgAttack * (1 + weaponAttackBonus / 100);
 
     const modifiedStats = { ...baseStats };

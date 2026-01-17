@@ -5,10 +5,14 @@ import { clearCubeRankingsCache } from '@core/cube/cube-potential.js';
 import { addComparisonItemStat, addComparisonItem } from '@ui/comparison-ui.js';
 import { addEquippedStat } from '@ui/equipment-ui.js';
 import { handleWeaponLevelChange, handleEquippedCheckboxChange, updateEquippedWeaponIndicator } from '@core/weapon-levels/weapons-ui.js';
-import { rarities, tiers, comparisonItemCount, equippedStatCount } from '@core/constants.js';
-import { getCompanionsState, setCompanionsState, getPresets, setPresetsState, getEquippedPresetId, setEquippedPresetId, getContributedStats, setContributedStats, getShowPresetDpsComparison, setShowPresetDpsComparison, getLockedMainCompanion, setLockedMainCompanion } from '@core/state.js';
+import { rarities, tiers, equippedStatCount } from '@core/constants.js';
+import { getCompanionsState, setCompanionsState, getPresets, setPresetsState, getEquippedPresetId, setEquippedPresetId, getContributedStats, setContributedStats, getShowPresetDpsComparison, setShowPresetDpsComparison, getLockedMainCompanion, setLockedMainCompanion, updateAllContributions, updateCompanionEquippedContributions, getUnlockableStatsState, setUnlockableStatsState, getGuildBonusesState, setGuildBonusesState, getCubeSlotData, setCubeSlotData } from '@core/state.js';
 import { refreshCompanionsUI } from '@ui/companions-ui.js';
 import { refreshPresetsUI } from '@ui/companions-presets-ui.js';
+import { getCurrentSlot } from '@ui/comparison/slot-comparison.js';
+
+// Equipment slots that have comparison items
+const EQUIPMENT_SLOTS = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck', 'eye-accessory'];
 
 window.saveToLocalStorage = saveToLocalStorage;
 window.updateAnalysisTabs = updateAnalysisTabs;
@@ -39,8 +43,6 @@ export function saveToLocalStorage() {
     const data = {
         baseSetup: {},
         equippedItem: {},
-        comparisonItems: [],
-        comparisonItemCount: comparisonItemCount,
         weapons: {},
         contentType: null,
         subcategory: null,
@@ -93,33 +95,6 @@ export function saveToLocalStorage() {
                 type: typeElem.value,
                 value: valueElem.value
             });
-        }
-    }
-
-    // Save Comparison Items
-    for (let i = 1; i <= comparisonItemCount; i++) {
-        const element = document.getElementById(`comparison-item-${i}`);
-        if (element) {
-            const item = {
-                id: i,
-                name: document.getElementById(`item-${i}-name`)?.value || '',
-                attack: document.getElementById(`item-${i}-attack`)?.value || '0',
-                stats: []
-            };
-
-            for (let j = 1; j <= 10; j++) {
-                const typeElem = document.getElementById(`item-${i}-stat-${j}-type`);
-                const valueElem = document.getElementById(`item-${i}-stat-${j}-value`);
-
-                if (typeElem && valueElem) {
-                    item.stats.push({
-                        type: typeElem.value,
-                        value: valueElem.value
-                    });
-                }
-            }
-
-            data.comparisonItems.push(item);
         }
     }
 
@@ -216,7 +191,16 @@ export function saveToLocalStorage() {
     data.lockedMainForOptimalBoss = getLockedMainCompanion('optimal-boss');
     data.lockedMainForOptimalNormal = getLockedMainCompanion('optimal-normal');
 
+    // Save Special Stats
+    data.unlockableStats = getUnlockableStatsState();
+
+    // Save Guild Bonuses
+    data.guildBonuses = getGuildBonusesState();
+
     localStorage.setItem('damageCalculatorData', JSON.stringify(data));
+
+    // Save Cube Potential Data to separate localStorage key
+    localStorage.setItem('cubePotentialData', JSON.stringify(getCubeSlotData()));
 }
 
 // Get saved content type data (used by main.js to restore content type after initialization)
@@ -268,6 +252,17 @@ export function loadFromLocalStorage() {
             }
         }
 
+         // Load Cube Potential Data from separate localStorage key
+        const cubePotentialData = localStorage.getItem('cubePotentialData');
+        if (cubePotentialData) {
+            try {
+                const parsedCubeData = JSON.parse(cubePotentialData);
+                setCubeSlotData(parsedCubeData);
+            } catch (e) {
+                console.error('Error loading cube potential data:', e);
+            }
+        }
+
         // Load Equipped Item
         if (data.equippedItem) {
             document.getElementById('equipped-name').value = data.equippedItem.name || '';
@@ -283,29 +278,6 @@ export function loadFromLocalStorage() {
                     if (valueElem) valueElem.value = stat.value;
                 });
             }
-        }
-
-        // Load Comparison Items
-        if (data.comparisonItems && data.comparisonItems.length > 0) {
-            data.comparisonItems.forEach(item => {
-                addComparisonItem();
-                document.getElementById(`item-${comparisonItemCount}-name`).value = item.name || '';
-                document.getElementById(`item-${comparisonItemCount}-attack`).value = item.attack || '0';
-
-                if (item.stats && item.stats.length > 0) {
-                    item.stats.forEach(stat => {
-                        addComparisonItemStat(comparisonItemCount);
-                        const container = document.getElementById(`item-${comparisonItemCount}-stats-container`);
-                        const statCount = container.children.length;
-
-                        const typeElem = document.getElementById(`item-${comparisonItemCount}-stat-${statCount}-type`);
-                        const valueElem = document.getElementById(`item-${comparisonItemCount}-stat-${statCount}-value`);
-
-                        if (typeElem) typeElem.value = stat.type;
-                        if (valueElem) valueElem.value = stat.value;
-                    });
-                }
-            });
         }
 
         // Load Weapons
@@ -441,7 +413,7 @@ export function loadFromLocalStorage() {
 
             // Update the mastery bonus totals and hidden inputs
             if (typeof window.updateMasteryBonuses === 'function') {
-                window.updateMasteryBonuses();
+               // window.updateMasteryBonuses();
             }
         }
 
@@ -486,6 +458,20 @@ export function loadFromLocalStorage() {
             setLockedMainCompanion('optimal-normal', data.lockedMainForOptimalNormal);
         }
 
+        console.log(data.unlockableStats);
+        // Load Special Stats
+        if (data.unlockableStats) {
+            setUnlockableStatsState(data.unlockableStats);
+        }
+
+        // Load Guild Bonuses
+        if (data.guildBonuses) {
+            setGuildBonusesState(data.guildBonuses);
+        }       
+
+        // Note: We don't call updateAllContributions() here because cube potential and companions
+        // modules haven't initialized yet. This will be called after all modules are ready.
+
         return true;
     } catch (e) {
         console.error('Error loading from localStorage:', e);
@@ -512,6 +498,22 @@ export function updateAnalysisTabs() {
 
     // Recalculate all comparisons
     calculate();
+}
+
+/**
+ * Called after all modules have initialized to recalculate contributions
+ * This ensures ContributedStats is populated with data from localStorage
+ */
+export function finalizeContributedStatsAfterInit() {
+    // Recalculate all auto-calculated contributions (cube, scrolling, inventory, etc.)
+    updateAllContributions();
+
+    // Update companion equipped contributions for the current preset
+    const currentPresetId = getEquippedPresetId();
+    if (currentPresetId && typeof window.getPresetEquipEffects === 'function') {
+        const presetEffects = window.getPresetEquipEffects(currentPresetId);
+        updateCompanionEquippedContributions(presetEffects);
+    }
 }
 
 // Export all local storage data to clipboard

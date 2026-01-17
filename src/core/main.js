@@ -11,9 +11,10 @@ import {
 } from '@core/state.js';
 import { calculateDamage } from '@core/calculations/damage-calculations.js';
 import { showToast } from '@utils/notifications.js';
+import { formatDPS } from '@utils/formatters.js';
 import { calculateStatWeights } from '@core/calculations/damage-calculations.js';
-import { loadFromLocalStorage, attachSaveListeners, saveToLocalStorage, getSavedContentTypeData } from '@core/storage.js';
-import { comparisonItemCount, allItemStatProperties } from '@core/constants.js';
+import { loadFromLocalStorage, attachSaveListeners, saveToLocalStorage, getSavedContentTypeData, finalizeContributedStatsAfterInit } from '@core/storage.js';
+import { allItemStatProperties } from '@core/constants.js';
 import {
     calculate3rdJobSkillCoefficient,
     calculate4thJobSkillCoefficient,
@@ -35,9 +36,12 @@ import { loadTheme } from '@utils/theme.js';
 import { initializeHeroPowerPresets, loadHeroPowerPresets} from '@ui/presets-ui.js';
 import { initializeWeapons, updateWeaponBonuses} from '@core/weapon-levels/weapons-ui.js';
 import { initializeEquipmentSlots, loadEquipmentSlots } from '@ui/equipment-ui.js';
+import { initializeEquipmentTab, migrateLegacyData } from '@ui/equipment/equipment-tab.js';
+import { initializeSlotComparison, getCurrentSlot } from '@ui/comparison/slot-comparison.js';
 import { displayResults } from '@ui/results-display.js';
 import { initializeCompanionsUI } from '@ui/companions-ui.js';
 import { refreshPresetsUI } from '@ui/companions-presets-ui.js';
+import { initializeStatBreakdown, updateStatBreakdown } from '@ui/stat-breakdown-ui.js';
 import { updateMasteryBonuses } from './base-stats/mastery-bonus.js';
 import { getStatType, isDexMainStatClass, isIntMainStatClass, isLukMainStatClass, isStrMainStatClass, loadSelectedClass, loadSelectedJobTier, selectClass, selectJobTier } from './base-stats/class-select.js';
 import { updateSkillCoefficient } from './base-stats/base-stats.js';
@@ -54,7 +58,7 @@ export { getStats, getItemStats };
 export function applyItemToStats(baseStats, equippedItem, comparisonItem) {
     const newStats = { ...baseStats };
     const weaponAttackBonus = getWeaponAttackBonus();
-    const weaponMultiplier = 1 + (weaponAttackBonus / 100);
+    const weaponMultiplier = 1 + (weaponAttackBonus.totalAttack / 100);
 
     // Special handling for mainStat and defense (Dark Knight conversion)
     let mainStatChange = 0;
@@ -220,19 +224,30 @@ export function calculate() {
 
     resultsHTML += displayResults(equippedItem.name || 'Currently Equipped', baseStats, 'equipped', true, null);
 
+    // Get comparison items for the current slot
+    const currentSlot = getCurrentSlot();
     const comparisonItems = [];
-    for (let i = 1; i <= comparisonItemCount; i++) {
-        const element = document.getElementById(`comparison-item-${i}`);
-        if (element) {
-            const item = getItemStats(`item-${i}`);
-            item.id = i;
-            comparisonItems.push(item);
-        }
+
+    // Find all comparison item tabs for the current slot
+    const tabsContainer = document.getElementById('comparison-tabs-container');
+    if (tabsContainer) {
+        const slotTabs = tabsContainer.querySelectorAll(`[id^="comparison-tab-${currentSlot}-"]`);
+        slotTabs.forEach(tab => {
+            // Extract itemId from tab ID (format: comparison-tab-{slot}-{itemId})
+            const tabIdParts = tab.id.replace('comparison-tab-', '').split('-');
+            const itemId = tabIdParts[tabIdParts.length - 1];
+
+            const item = getItemStats(`item-${currentSlot}-${itemId}`);
+            if (item) {
+                item.id = itemId;
+                comparisonItems.push(item);
+            }
+        });
     }
 
     comparisonItems.forEach(item => {
         const itemStats = applyItemToStats(baseStats, equippedItem, item);
-        resultsHTML += displayResults(item.name || `Item ${item.id}`, itemStats, `item-${item.id}`, false, equippedDamageValues);
+        resultsHTML += displayResults(item.name || `Item ${item.id}`, itemStats, `item-${currentSlot}-${item.id}`, false, equippedDamageValues);
     });
 
     document.getElementById('results-container').innerHTML = resultsHTML || '<p style="text-align: center; color: #b3d9ff;">Add comparison items to see results</p>';
@@ -241,6 +256,12 @@ export function calculate() {
 
     // Refresh preset DPS comparisons when base stats change
     refreshPresetsUI();
+
+    // Update sidebar DPS summary
+    const sidebarDpsElement = document.getElementById('sidebar-dps-value');
+    if (sidebarDpsElement) {
+        sidebarDpsElement.textContent = formatDPS(equippedBossResults.dps);
+    }
 }
 
 // Donation notification functions
@@ -533,6 +554,7 @@ export function showSkillDescription(skillKey, category, jobTier) {
 window.onload = function () {
     initializeRouter(); // Initialize routing system first
     loadTheme();
+    loadSelectedClass();
     initializeHeroPowerPresets();
     initializeWeapons();
     populateStageDropdown(); // This sets contentType to 'none' without saving
@@ -569,9 +591,20 @@ window.onload = function () {
     initializeArtifactPotential();
     initializeEquipmentSlots();
     loadEquipmentSlots();
+    initializeEquipmentTab();
+    initializeSlotComparison();
+    migrateLegacyData();
     initializeArtifacts();
     initializeCubePotential();
     initializeCompanionsUI();
+
+    // After all modules are initialized, finalize ContributedStats with data from localStorage
+    // This must happen after cube potential and companions initialize so their data is available
+    if (loaded) {
+        finalizeContributedStatsAfterInit();
+    }
+
+    initializeStatBreakdown();
     attachSaveListeners();
     if (loaded) {
         updateWeaponBonuses();
@@ -579,7 +612,7 @@ window.onload = function () {
         calculate();
     }
     showDonateNotificationIfNeeded();
-    loadSelectedClass();
+
     loadSelectedJobTier();
     updateSkillCoefficient();
 

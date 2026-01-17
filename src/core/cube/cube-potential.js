@@ -2,9 +2,12 @@
 // Coordinates between UI and business logic components
 
 import { slotNames } from '@core/cube/cube-potential-data.js';
-import { getSelectedClass } from '@core/state.js';
-import { loadCubePotentialData, calculateComparison, getRarityColor } from '@core/cube/cube-logic.js';
+import { getSelectedClass, updateCubePotentialContributions, getCubeSlotData, initializeCubeSlotData } from '@core/state.js';
+import { calculateComparison, getRarityColor, potentialStatToDamageStat } from '@core/cube/cube-logic.js';
 import { setupCubeSlotSelector, updateSlotButtonColors, setupCubeTabs, updateCubePotentialUI, displayComparisonResults, displayOrCalculateRankings, updateClassWarning, displayAllSlotsSummary, loadRankingsInBackground } from '@core/cube/cube-ui.js';
+
+// Expose potentialStatToDamageStat globally for stat breakdown access
+window.potentialStatToDamageStat = potentialStatToDamageStat;
 
 window.switchPotentialType = switchPotentialType;
 window.selectCubeSlot = selectCubeSlot;
@@ -12,46 +15,21 @@ window.selectCubeSlot = selectCubeSlot;
 // Global state - shared with UI and logic modules
 export let currentCubeSlot = 'helm';
 export let currentPotentialType = 'regular'; // 'regular' or 'bonus'
-export let cubeSlotData = {}; // Stores data for all slots
 export let rankingsCache = {}; // Cache rankings by slot and rarity: rankingsCache[slotId][rarity]
 export let rankingsInProgress = {}; // Track which slot+rarity combinations are currently calculating
 
 // Initialize cube potential system
 export async function initializeCubePotential() {
-    // Initialize all slots with default data (both regular and bonus potential)
-    slotNames.forEach(slot => {
-        cubeSlotData[slot.id] = {
-            regular: {
-                rarity: 'normal',
-                setA: {
-                    line1: { stat: '', value: 0 },
-                    line2: { stat: '', value: 0 },
-                    line3: { stat: '', value: 0 }
-                },
-                setB: {
-                    line1: { stat: '', value: 0 },
-                    line2: { stat: '', value: 0 },
-                    line3: { stat: '', value: 0 }
-                }
-            },
-            bonus: {
-                rarity: 'normal',
-                setA: {
-                    line1: { stat: '', value: 0 },
-                    line2: { stat: '', value: 0 },
-                    line3: { stat: '', value: 0 }
-                },
-                setB: {
-                    line1: { stat: '', value: 0 },
-                    line2: { stat: '', value: 0 },
-                    line3: { stat: '', value: 0 }
-                }
-            }
-        };
-    });
+    // Initialize cube slot data with defaults and handle migration from old format
+    // Data has already been loaded from localStorage by storage.js into state
+    initializeCubeSlotData(slotNames);
 
-    // Load saved data from localStorage
-    loadCubePotentialData(cubeSlotData, slotNames);
+    // Expose cubeSlotData globally for stat breakdown access
+    window.cubeSlotData = getCubeSlotData();
+
+    // Update cube potential contributions in ContributedStats
+    // This ensures cube potential is included in stat breakdown after loading from local storage
+    updateCubePotentialContributions();
 
     // Set up slot selector (colors are applied during setup)
     setupCubeSlotSelector();
@@ -107,6 +85,7 @@ export function switchPotentialType(type) {
     // Update rarity selector
     const raritySelector = document.getElementById('cube-rarity-selector');
     if (raritySelector) {
+        const cubeSlotData = getCubeSlotData();
         raritySelector.value = cubeSlotData[currentCubeSlot][currentPotentialType].rarity;
     }
 
@@ -129,6 +108,8 @@ export function switchPotentialType(type) {
 // Select a cube slot
 export function selectCubeSlot(slotId) {
     currentCubeSlot = slotId;
+
+    const cubeSlotData = getCubeSlotData();
 
     // Update active state on buttons
     document.querySelectorAll('.cube-slot-btn').forEach(btn => {
@@ -175,6 +156,8 @@ export function calculateComparisonOrchestrator() {
         updateClassWarning();
         return;
     }
+
+    const cubeSlotData = getCubeSlotData();
 
     // Use the business logic function to calculate the comparison
     const results = calculateComparison(cubeSlotData, currentCubeSlot, currentPotentialType, rankingsCache);

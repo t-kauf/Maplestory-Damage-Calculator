@@ -3,7 +3,7 @@
 
 import { classMainStatMap, slotSpecificPotentials, equipmentPotentialData } from '@core/cube/cube-potential-data.js';
 import { calculateDamage } from '@core/calculations/damage-calculations.js';
-import { getStats } from '@core/state.js';
+import { getStats, updateCubePotentialContributions } from '@core/state.js';
 import { calculateMainStatPercentGain } from '@core/calculations/stat-calculations.js';
 import { getSelectedClass } from '@core/state.js';
 
@@ -157,50 +157,6 @@ export function calculateSlotSetGain(slotId, rarity, setData, currentStats) {
     return { gain, stats: setStats, baselineStats };
 }
 
-// Save cube potential data to localStorage
-export function saveCubePotentialData(cubeSlotData) {
-    try {
-        localStorage.setItem('cubePotentialData', JSON.stringify(cubeSlotData));
-    } catch (error) {
-        console.error('Error saving cube potential data:', error);
-    }
-}
-
-// Load cube potential data from localStorage
-export function loadCubePotentialData(cubeSlotData, slotNames) {
-    try {
-        const saved = localStorage.getItem('cubePotentialData');
-        if (saved) {
-            const savedData = JSON.parse(saved);
-
-            // Merge saved data with default structure
-            // This ensures new slots get defaults and old slots keep their saved values
-            slotNames.forEach(slot => {
-                if (savedData[slot.id]) {
-                    // Check if it's old format (no regular/bonus split) or new format
-                    if (savedData[slot.id].regular || savedData[slot.id].bonus) {
-                        // New format with regular and bonus potential
-                        cubeSlotData[slot.id] = {
-                            regular: savedData[slot.id].regular || cubeSlotData[slot.id].regular,
-                            bonus: savedData[slot.id].bonus || cubeSlotData[slot.id].bonus
-                        };
-                    } else {
-                        // Old format - migrate to regular potential only
-                        cubeSlotData[slot.id].regular = {
-                            rarity: savedData[slot.id].rarity || 'normal',
-                            setA: savedData[slot.id].setA || cubeSlotData[slot.id].regular.setA,
-                            setB: savedData[slot.id].setB || cubeSlotData[slot.id].regular.setB
-                        };
-                        // Keep bonus as default (initialized)
-                    }
-                }
-                // If not in saved data, keep the default that was initialized
-            });
-        }
-    } catch (error) {
-        console.error('Error loading cube potential data:', error);
-    }
-}
 
 // Calculate comparison between Set A and Set B
 export function calculateComparison(cubeSlotData, currentCubeSlot, currentPotentialType, rankingsCache) {

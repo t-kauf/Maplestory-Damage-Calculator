@@ -33,7 +33,7 @@ export function toggleStatChart(setup, statKey, statLabel, isFlat = false) {
 export function generateStatChartData(setup, statKey, statLabel, isFlat) {
     const stats = getStats(setup);
     const baseBossDPS = calculateDamage(stats, 'boss').dps;
-    const weaponAttackBonus = getWeaponAttackBonus();
+    const weaponAttackBonus = getWeaponAttackBonus().totalAttack;
 
     const multiplicativeStats = {
         'finalDamage': true

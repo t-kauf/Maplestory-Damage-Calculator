@@ -4,7 +4,7 @@ This directory contains regression tests for the Maplestory Damage Calculator to
 
 ## Running Tests
 
-### Run all tests
+### Run all unit tests
 ```bash
 node tests/run-all-tests.js
 ```
@@ -14,12 +14,25 @@ node tests/run-all-tests.js
 node tests/weapon-priority.test.js
 ```
 
+### Run UI tests (browser-based)
+```bash
+# Run UI tests in headless mode
+npm run test:ui
+
+# Run UI tests with visible browser
+npm run test:ui:headed
+
+# Run UI tests in debug mode (with inspector)
+npm run test:ui:debug
+```
+
 ## Test Structure
 
 - **`test-runner.js`** - Simple test framework with assertion helpers
 - **`test-helpers.js`** - Calculation functions extracted for testing (mirrors calculations.js)
 - **`*.test.js`** - Individual test suites for specific features
 - **`run-all-tests.js`** - Master runner that executes all test suites
+- **`*.spec.js`** - Playwright UI tests for browser interactions
 
 ## Writing New Tests
 
@@ -116,12 +129,24 @@ node tests/run-all-tests.js
 
 ## Current Test Coverage
 
+### Unit Tests
 - **weapon-priority.test.js** - Weapon upgrade priority algorithm
   - Weapon attack calculations
   - Upgrade cost calculations
   - Single-level efficiency calculations
   - Priority algorithm correctness
   - Display/priority alignment
+
+### UI Tests (Playwright)
+- **equipment-comparison-ui.spec.js** - Equipment slot comparison UI
+  - Adding and removing comparison items
+  - Switching between equipment slots
+  - Adding and removing stat lines
+  - Persisting data across page refreshes
+  - Maintaining separate items per slot
+  - Max stat limit enforcement (6 stats)
+  - Tab name updates when item name changes
+  - Slot switching with no items
 
 ## Tips
 

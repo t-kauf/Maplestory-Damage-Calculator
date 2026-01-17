@@ -1,6 +1,6 @@
 import { saveToLocalStorage, updateAnalysisTabs } from '@core/storage.js';
 import { getSelectedJobTier } from '@core/state.js';
-export function updateMasteryBonuses() {
+export function updateMasteryBonuses(skipSave = false) {
     // Get current job tier
     const currentTier = getSelectedJobTier();
 
@@ -80,7 +80,9 @@ export function updateMasteryBonuses() {
         skillMasteryBossInput.value = bossTotal;
     }
 
-    // Save to localStorage and recalculate
-    saveToLocalStorage();
-    updateAnalysisTabs();
+    // Save to localStorage and recalculate (unless we're just loading initial values)
+    if (!skipSave) {
+        saveToLocalStorage();
+        updateAnalysisTabs();
+    }
 }

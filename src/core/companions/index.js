@@ -1,5 +1,8 @@
 import { COMPANION_DATA } from './companion-data.js';
 
+// Expose getCompanionEffects globally for use in state.js
+window.getCompanionEffects = null; // Will be set after function definition
+
 /**
  * Get companion effects for a given class, rarity, and level
  * @param {string} className - The companion class (e.g., 'Hero', 'BowMaster', 'NightLord')
@@ -118,3 +121,6 @@ export function calculateTotalCompanionEffects(companions) {
 
 // Export the raw data as well
 export { COMPANION_DATA };
+
+// Expose getCompanionEffects globally after module loads
+window.getCompanionEffects = getCompanionEffects;

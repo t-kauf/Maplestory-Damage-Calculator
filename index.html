@@ -86,6 +86,7 @@
             </button>
             <div class="sidebar-submenu" id="submenu-setup">
                 <button class="sidebar-submenu-item" onclick="navigateToTab('setup', 'base-stats')">Base Stats</button>
+                <button class="sidebar-submenu-item" onclick="navigateToTab('setup', 'equipment')">Equipment</button>
                 <button class="sidebar-submenu-item" onclick="navigateToTab('setup', 'weapon-levels')">Weapon Levels</button>
                 <button class="sidebar-submenu-item" onclick="navigateToTab('setup', 'companions')">Companions</button>
             </div>
@@ -102,6 +103,7 @@
                 <button class="sidebar-submenu-item" onclick="navigateToTab('optimization', 'artifact-potential')">Artifact Potential</button>
                 <button class="sidebar-submenu-item" onclick="navigateToTab('optimization', 'scroll-optimizer')">Scrolling</button>
                 <button class="sidebar-submenu-item" onclick="navigateToTab('optimization', 'cube-potential')">Cube Potential</button>
+                <button class="sidebar-submenu-item" onclick="navigateToTab('optimization', 'stat-breakdown')">Stat Breakdown</button>
             </div>
 
             <!-- StatHub Section -->
@@ -117,6 +119,10 @@
         </nav>
 
         <div class="sidebar-footer">
+            <div class="sidebar-dps-summary">
+                <span class="sidebar-dps-label">Current DPS</span>
+                <span id="sidebar-dps-value" class="sidebar-dps-value">-</span>
+            </div>
             <button onclick="toggleTheme()" id="theme-toggle-sidebar" class="sidebar-footer-btn">
                 <span id="theme-icon-sidebar">🌙</span>
                 <span>Toggle Theme</span>
@@ -166,9 +172,10 @@
             <div class="text-2xl mb-2 text-center text-blue-600 dark:text-blue-400 font-semibold">Loadout</div>
             <div class="flex flex-wrap gap-2.5 mb-3 border-b-2 border-gray-200/50 dark:border-gray-700/50 pb-0">
                 <button class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'base-stats')">Base Stats</button>
+                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'equipment')">Equipment</button>
                 <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'weapon-levels')">Weapon Levels</button>
                 <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'companions')">Companions</button>
-                <!-- <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'artifacts')">Artifacts</button> -->
+                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'artifacts')">Artifacts</button>
             </div>
 
             <!-- Base Stats Tab -->
@@ -215,14 +222,14 @@
 
                     <!-- Character Level and Job Tier -->
                     <div style="margin-bottom: 8px; padding: 8px; background: var(--background); border: 1px solid var(--border-color); border-radius: 8px;">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" style="align-items: end;">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3" style="align-items: end;">
                             <div class="input-group">
                                 <label>Character Level</label>
                                 <input type="number" id="character-level" value="0" min="0" max="200" onchange="updateSkillCoefficient(); saveToLocalStorage()">
                             </div>
                             <div class="input-group">
                                 <label>Job Tier</label>
-                                <div style="display: flex; gap: 10px;">
+                                <div style="display: flex; gap: 8px;">
                                     <button id="job-tier-3rd" class="job-tier-btn active" onclick="selectJobTier('3rd')">
                                         3rd Job
                                     </button>
@@ -231,10 +238,10 @@
                                     </button>
                                 </div>
                             </div>
-                            <div class="input-group" style="display: none;">
-                                <label>Skill Coefficient (%)</label>
-                                <input type="text" id="skill-coefficient" value="0.00" readonly style="background: var(--background); cursor: not-allowed; opacity: 0.7;">
-                            </div>
+                            <section class="paste-image-section" id="base-stats-paste-image-section" style="max-width: none; margin: 0; display: flex; justify-content: center; align-items: center; position: relative;">
+                                <div class="paste-icon" style="font-size: 0.85rem; padding: 8px 12px;"><strong>Auto-fill Stats</strong> 📋</div>
+                                <span class="info-icon" role="img" aria-label="Info" onclick="openHelpSidebar('stats-autofill')" style="position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 0.75rem; width: 18px; height: 18px;">?</span>
+                            </section>
                         </div>
                     </div>
 
@@ -247,11 +254,6 @@
 
                     <!-- Character Stats Sub-tab -->
                     <div id="base-stats-character-stats" class="base-stats-subtab active">
-                    <section class="paste-image-section" id="base-stats-paste-image-section" style="display: flex; justify-content: center; align-items: center; position: relative; margin-bottom: 12px;">
-                        <div class="paste-icon"><strong>Auto-fill Stats</strong> 📋</div>
-                        <span class="info-icon" role="img" aria-label="Info" onclick="openHelpSidebar('stats-autofill')" style="position: absolute; right: 10px;">?</span>
-                    </section>
-
                     <!-- Two-column container: Stats on left, Target Content on right -->
                     <div class="stats-two-column-container">
                         <!-- Left Column: Stats List -->
@@ -469,16 +471,6 @@
                                         </tr>
                                     </tbody>
                                 </table>
-                                <div class="mastery-totals-container">
-                                    <div class="mastery-total-box">
-                                        <div class="mastery-total-label">Total (All Monsters)</div>
-                                        <div class="mastery-total-value all-monsters" id="mastery-3rd-all-total">0%</div>
-                                    </div>
-                                    <div class="mastery-total-box boss-total">
-                                        <div class="mastery-total-label">Total (Boss Only)</div>
-                                        <div class="mastery-total-value boss-only" id="mastery-3rd-boss-total">0%</div>
-                                    </div>
-                                </div>
                             </div>
 
                             <!-- 4th Job Mastery Table -->
@@ -558,16 +550,6 @@
                                         </tr>
                                     </tbody>
                                 </table>
-                                <div class="mastery-totals-container">
-                                    <div class="mastery-total-box">
-                                        <div class="mastery-total-label">Total (All Monsters)</div>
-                                        <div class="mastery-total-value all-monsters" id="mastery-4th-all-total">0%</div>
-                                    </div>
-                                    <div class="mastery-total-box boss-total">
-                                        <div class="mastery-total-label">Total (Boss Only)</div>
-                                        <div class="mastery-total-value boss-only" id="mastery-4th-boss-total">0%</div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
 
@@ -613,196 +595,6 @@
                     </div>
                     <!-- End Character Stats Sub-tab -->
 
-                    <!-- Skill Mastery Sub-tab -->
-                    <div id="base-stats-skill-mastery" class="base-stats-subtab" style="display: none;">
-                        <div class="input-group" style="grid-column: 1 / -1;">
-                            <label>Skill Mastery Bonus <span class="info-icon" role="img" aria-label="Info"
-                                    onclick="openHelpSidebar('skill-mastery')">?</span></label>
-
-                            <!-- 3rd Job Mastery Table -->
-                            <div id="mastery-table-3rd" style="background: var(--background); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-top: 8px;">
-                                <table class="mastery-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Level</th>
-                                            <th>All Monsters</th>
-                                            <th>Boss Only</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>64</td>
-                                            <td>
-                                                <input type="checkbox" id="mastery-3rd-all-64" onchange="updateMasteryBonuses()">
-                                                <label for="mastery-3rd-all-64">10%</label>
-                                            </td>
-                                            <td>—</td>
-                                        </tr>
-                                        <tr>
-                                            <td>68</td>
-                                            <td>
-                                                <input type="checkbox" id="mastery-3rd-all-68" onchange="updateMasteryBonuses()">
-                                                <label for="mastery-3rd-all-68">11%</label>
-                                            </td>
-                                            <td>—</td>
-                                        </tr>
-                                        <tr>
-                                            <td>72</td>
-                                            <td>—</td>
-                                            <td>
-                                                <input type="checkbox" id="mastery-3rd-boss-72" onchange="updateMasteryBonuses()">
-                                                <label for="mastery-3rd-boss-72">10%</label>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>76</td>
-                                            <td>
-                                                <input type="checkbox" id="mastery-3rd-all-76" onchange="updateMasteryBonuses()">
-                                                <label for="mastery-3rd-all-76">12%</label>
-                                            </td>
-                                            <td>—</td>
-                                        </tr>
-                                        <tr>
-                                            <td>80</td>
-                                            <td>
-                                                <input type="checkbox" id="mastery-3rd-all-80" onchange="updateMasteryBonuses()">
-                                                <label for="mastery-3rd-all-80">13%</label>
-                                            </td>
-                                            <td>—</td>
-                                        </tr>
-                                        <tr>
-                                            <td>84</td>
-                                            <td>—</td>
-                                            <td>
-                                                <input type="checkbox" id="mastery-3rd-boss-84" onchange="updateMasteryBonuses()">
-                                                <label for="mastery-3rd-boss-84">10%</label>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>88</td>
-                                            <td>
-                                                <input type="checkbox" id="mastery-3rd-all-88" onchange="updateMasteryBonuses()">
-                                                <label for="mastery-3rd-all-88">14%</label>
-                                            </td>
-                                            <td>—</td>
-                                        </tr>
-                                        <tr>
-                                            <td>92</td>
-                                            <td>
-                                                <input type="checkbox" id="mastery-3rd-all-92" onchange="updateMasteryBonuses()">
-                                                <label for="mastery-3rd-all-92">15%</label>
-                                            </td>
-                                            <td>—</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                                <div class="mastery-totals-container">
-                                    <div class="mastery-total-box">
-                                        <div class="mastery-total-label">Total (All Monsters)</div>
-                                        <div class="mastery-total-value all-monsters" id="mastery-3rd-all-total">0%</div>
-                                    </div>
-                                    <div class="mastery-total-box boss-total">
-                                        <div class="mastery-total-label">Total (Boss Only)</div>
-                                        <div class="mastery-total-value boss-only" id="mastery-3rd-boss-total">0%</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- 4th Job Mastery Table -->
-                            <div id="mastery-table-4th" style="background: var(--background); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px; margin-top: 8px; display: none;">
-                                <table class="mastery-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Level</th>
-                                            <th>All Monsters</th>
-                                            <th>Boss Only</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>102</td>
-                                            <td>
-                                                <input type="checkbox" id="mastery-4th-all-102" onchange="updateMasteryBonuses()">
-                                                <label for="mastery-4th-all-102">10%</label>
-                                            </td>
-                                            <td>—</td>
-                                        </tr>
-                                        <tr>
-                                            <td>106</td>
-                                            <td>
-                                                <input type="checkbox" id="mastery-4th-all-106" onchange="updateMasteryBonuses()">
-                                                <label for="mastery-4th-all-106">11%</label>
-                                            </td>
-                                            <td>—</td>
-                                        </tr>
-                                        <tr>
-                                            <td>111</td>
-                                            <td>—</td>
-                                            <td>
-                                                <input type="checkbox" id="mastery-4th-boss-111" onchange="updateMasteryBonuses()">
-                                                <label for="mastery-4th-boss-111">10%</label>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>116</td>
-                                            <td>
-                                                <input type="checkbox" id="mastery-4th-all-116" onchange="updateMasteryBonuses()">
-                                                <label for="mastery-4th-all-116">12%</label>
-                                            </td>
-                                            <td>—</td>
-                                        </tr>
-                                        <tr>
-                                            <td>120</td>
-                                            <td>
-                                                <input type="checkbox" id="mastery-4th-all-120" onchange="updateMasteryBonuses()">
-                                                <label for="mastery-4th-all-120">13%</label>
-                                            </td>
-                                            <td>—</td>
-                                        </tr>
-                                        <tr>
-                                            <td>124</td>
-                                            <td>—</td>
-                                            <td>
-                                                <input type="checkbox" id="mastery-4th-boss-124" onchange="updateMasteryBonuses()">
-                                                <label for="mastery-4th-boss-124">10%</label>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>128</td>
-                                            <td>
-                                                <input type="checkbox" id="mastery-4th-all-128" onchange="updateMasteryBonuses()">
-                                                <label for="mastery-4th-all-128">14%</label>
-                                            </td>
-                                            <td>—</td>
-                                        </tr>
-                                        <tr>
-                                            <td>132</td>
-                                            <td>
-                                                <input type="checkbox" id="mastery-4th-all-132" onchange="updateMasteryBonuses()">
-                                                <label for="mastery-4th-all-132">15%</label>
-                                            </td>
-                                            <td>—</td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                                <div class="mastery-totals-container">
-                                    <div class="mastery-total-box">
-                                        <div class="mastery-total-label">Total (All Monsters)</div>
-                                        <div class="mastery-total-value all-monsters" id="mastery-4th-all-total">0%</div>
-                                    </div>
-                                    <div class="mastery-total-box boss-total">
-                                        <div class="mastery-total-label">Total (Boss Only)</div>
-                                        <div class="mastery-total-value boss-only" id="mastery-4th-boss-total">0%</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <input type="hidden" id="skill-mastery-base" value="0">
-                            <input type="hidden" id="skill-mastery-boss-base" value="0">
-                        </div>
-                    </div>
-                    <!-- End Skill Mastery Sub-tab -->
-
                     <!-- Skill Details Sub-tab -->
                     <div id="base-stats-skill-details" class="base-stats-subtab" style="display: none;">
                         <div style="background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.05)); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px var(--shadow);">
@@ -847,6 +639,22 @@
                     </div>
                     <!-- End Skill Details Sub-tab -->
 
+                </div>
+            </div>
+
+            <!-- Equipment Tab -->
+            <div id="setup-equipment" class="tab-content">
+                <!-- Summary Section -->
+                <div id="equipment-summary" style="background: linear-gradient(135deg, rgba(52, 199, 89, 0.1), rgba(0, 122, 255, 0.05)); border: 2px solid var(--accent-primary); border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 16px var(--shadow);">
+                    <h3 style="color: var(--accent-primary); margin: 0 0 10px 0; font-size: 1em; font-weight: 700;">Total Equipment Stats</h3>
+                    <div id="equipment-summary-content" style="display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 0.9em; align-items: center; min-height: 24px;">
+                        <span style="color: var(--text-secondary);">No equipment configured</span>
+                    </div>
+                </div>
+
+                <!-- Equipment Slots Grid -->
+                <div id="equipment-slots-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px;">
+                    <!-- Equipment slots populated by JavaScript -->
                 </div>
             </div>
 
@@ -1005,15 +813,38 @@
         <div id="character-optimization-card" class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-2xl p-3 shadow-lg mb-3">
             <div class="text-2xl mb-2 text-center text-blue-600 dark:text-blue-400 font-semibold">Gear Lab 🧪</div>
             <div class="flex flex-wrap gap-2.5 mb-3 border-b-2 border-gray-200/50 dark:border-gray-700/50 pb-0">
-                <button class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('analysis', 'item-comparison')">Item Comparison</button>
+                <button class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('analysis', 'item-comparison'); checkPendingSlotNavigation();">Item Comparison</button>
                 <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('analysis', 'inner-ability')">Inner Ability</button>
                 <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('analysis', 'artifact-potential')">Artifact Potential</button>
                 <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('analysis', 'scroll-optimizer')">Scrolling</button>
                 <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('analysis', 'cube-potential')">Cube Potential</button>
+                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('analysis', 'stat-breakdown'); updateStatBreakdown();">Stat Breakdown</button>
             </div>
 
             <!-- Item Comparison Tab -->
             <div id="analysis-item-comparison" class="tab-content active">
+                <!-- Slot Selector -->
+                <div style="background: var(--background); border: 1px solid var(--accent-primary); border-radius: 12px; padding: 15px; margin-bottom: 16px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <label style="font-size: 0.9em; font-weight: 600; color: var(--accent-primary);">Equipment Slot:</label>
+                            <select id="comparison-slot-selector" onchange="switchComparisonSlot(this.value)" style="padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border-color); background: var(--background); color: var(--text-primary); font-size: 0.9em; min-width: 150px;">
+                                <option value="head">Head</option>
+                                <option value="cape">Cape</option>
+                                <option value="chest">Chest</option>
+                                <option value="shoulders">Shoulders</option>
+                                <option value="legs">Legs</option>
+                                <option value="belt">Belt</option>
+                                <option value="gloves">Gloves</option>
+                                <option value="boots">Boots</option>
+                                <option value="ring">Ring</option>
+                                <option value="neck">Neck</option>
+                                <option value="eye-accessory">Eye Accessory</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-3">
                     <!-- Equipped Item -->
                     <div>
@@ -1373,6 +1204,22 @@
 
                     <!-- Results -->
                     <div id="cube-simulation-results"></div>
+                </div>
+            </div>
+
+            <!-- Stat Breakdown Tab -->
+            <div id="analysis-stat-breakdown" class="tab-content">
+                <div style="margin-bottom: 20px;">
+                    <h3 style="color: var(--accent-primary); margin-bottom: 10px; font-size: 1.2em; font-weight: 600;">
+                        📊 Stat Breakdown
+                    </h3>
+                    <p style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.6;">
+                        See where your base stats come from. This shows contributions from equipment and companions for each stat input from the base stats tab.
+                    </p>
+                </div>
+
+                <div id="stat-breakdown-content">
+                    <!-- Stat breakdown sections will be rendered here -->
                 </div>
             </div>
         </div>
