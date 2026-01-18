@@ -88,7 +88,7 @@ function getStatKey(statType) {
 }
 
 /**
- * Update the summary display
+ * Update the summary display with premium styling
  */
 function updateSummaryDisplay(totals) {
     const summaryElement = document.getElementById('equipment-summary-content');
@@ -96,74 +96,43 @@ function updateSummaryDisplay(totals) {
 
     const parts = [];
 
-    if (totals.attack > 0) {
-        parts.push(`<span style="color: var(--accent-success); font-weight: 600;">+${totals.attack}</span> Attack`);
-    }
+    // Define stat display configuration with color coding
+    const statConfigs = [
+        { key: 'attack', label: 'Attack', isPercent: false },
+        { key: 'mainStat', label: 'Main Stat', isPercent: false },
+        { key: 'defense', label: 'Defense', isPercent: false },
+        { key: 'critRate', label: 'Crit Rate', isPercent: true },
+        { key: 'critDamage', label: 'Crit Dmg', isPercent: true },
+        { key: 'bossDamage', label: 'Boss Dmg', isPercent: true },
+        { key: 'damage', label: 'Damage', isPercent: true },
+        { key: 'normalDamage', label: 'Normal Dmg', isPercent: true },
+        { key: 'finalDamage', label: 'Final Dmg', isPercent: true },
+        { key: 'minDamage', label: 'Min Dmg', isPercent: true },
+        { key: 'maxDamage', label: 'Max Dmg', isPercent: true },
+        { key: 'skillLevel1st', label: '1st Job', isPercent: false },
+        { key: 'skillLevel2nd', label: '2nd Job', isPercent: false },
+        { key: 'skillLevel3rd', label: '3rd Job', isPercent: false },
+        { key: 'skillLevel4th', label: '4th Job', isPercent: false },
+        { key: 'skillLevelAll', label: 'All Jobs', isPercent: false }
+    ];
 
-    if (totals.mainStat > 0) {
-        parts.push(`<span style="color: var(--accent-success); font-weight: 600;">+${totals.mainStat}</span> Main Stat`);
-    }
-
-    if (totals.defense > 0) {
-        parts.push(`<span style="color: var(--accent-success); font-weight: 600;">+${totals.defense}</span> Defense`);
-    }
-
-    if (totals.critRate > 0) {
-        parts.push(`<span style="color: var(--accent-success); font-weight: 600;">+${totals.critRate}%</span> Crit Rate`);
-    }
-
-    if (totals.critDamage > 0) {
-        parts.push(`<span style="color: var(--accent-success); font-weight: 600;">+${totals.critDamage}%</span> Crit Damage`);
-    }
-
-    if (totals.bossDamage > 0) {
-        parts.push(`<span style="color: var(--accent-success); font-weight: 600;">+${totals.bossDamage}%</span> Boss Damage`);
-    }
-
-    if (totals.damage > 0) {
-        parts.push(`<span style="color: var(--accent-success); font-weight: 600;">+${totals.damage}%</span> Damage`);
-    }
-
-    if (totals.normalDamage > 0) {
-        parts.push(`<span style="color: var(--accent-success); font-weight: 600;">+${totals.normalDamage}%</span> Normal Damage`);
-    }
-
-    if (totals.finalDamage > 0) {
-        parts.push(`<span style="color: var(--accent-success); font-weight: 600;">+${totals.finalDamage}%</span> Final Damage`);
-    }
-
-    if (totals.minDamage > 0) {
-        parts.push(`<span style="color: var(--accent-success); font-weight: 600;">+${totals.minDamage}%</span> Min Damage`);
-    }
-
-    if (totals.maxDamage > 0) {
-        parts.push(`<span style="color: var(--accent-success); font-weight: 600;">+${totals.maxDamage}%</span> Max Damage`);
-    }
-
-    if (totals.skillLevel1st > 0) {
-        parts.push(`<span style="color: var(--accent-success); font-weight: 600;">+${totals.skillLevel1st}</span> 1st Job Skill`);
-    }
-
-    if (totals.skillLevel2nd > 0) {
-        parts.push(`<span style="color: var(--accent-success); font-weight: 600;">+${totals.skillLevel2nd}</span> 2nd Job Skill`);
-    }
-
-    if (totals.skillLevel3rd > 0) {
-        parts.push(`<span style="color: var(--accent-success); font-weight: 600;">+${totals.skillLevel3rd}</span> 3rd Job Skill`);
-    }
-
-    if (totals.skillLevel4th > 0) {
-        parts.push(`<span style="color: var(--accent-success); font-weight: 600;">+${totals.skillLevel4th}</span> 4th Job Skill`);
-    }
-
-    if (totals.skillLevelAll > 0) {
-        parts.push(`<span style="color: var(--accent-success); font-weight: 600;">+${totals.skillLevelAll}</span> All Job Skills`);
-    }
+    statConfigs.forEach(config => {
+        const value = totals[config.key];
+        if (value > 0) {
+            const formattedValue = config.isPercent ? `${value}%` : value;
+            parts.push(`
+                <span class="equipment-summary-stat">
+                    <span class="equipment-summary-stat-value">+${formattedValue}</span>
+                    ${config.label}
+                </span>
+            `);
+        }
+    });
 
     if (parts.length === 0) {
-        summaryElement.innerHTML = '<span style="color: var(--text-secondary);">No equipment stats</span>';
+        summaryElement.innerHTML = '<span class="equipment-summary-empty">No equipment configured</span>';
     } else {
-        summaryElement.innerHTML = parts.join('<span style="color: var(--text-secondary); margin: 0 6px;">•</span>');
+        summaryElement.innerHTML = parts.join('<span class="equipment-summary-divider">•</span>');
     }
 
     // Store totals for potential future use

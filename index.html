@@ -647,15 +647,15 @@
             <!-- Equipment Tab -->
             <div id="setup-equipment" class="setup-tab-content optimization-tab-content">
                 <!-- Summary Section -->
-                <div id="equipment-summary" style="background: linear-gradient(135deg, rgba(52, 199, 89, 0.1), rgba(0, 122, 255, 0.05)); border: 2px solid var(--accent-primary); border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 16px var(--shadow);">
-                    <h3 style="color: var(--accent-primary); margin: 0 0 10px 0; font-size: 1em; font-weight: 700;">Total Equipment Stats</h3>
-                    <div id="equipment-summary-content" style="display: flex; flex-wrap: wrap; gap: 6px 10px; font-size: 0.9em; align-items: center; min-height: 24px;">
-                        <span style="color: var(--text-secondary);">No equipment configured</span>
+                <div id="equipment-summary" class="equipment-summary-wrapper">
+                    <h3 class="equipment-summary-title">Total Equipment Stats</h3>
+                    <div id="equipment-summary-content" class="equipment-summary-content">
+                        <span class="equipment-summary-empty">No equipment configured</span>
                     </div>
                 </div>
 
                 <!-- Equipment Slots Grid -->
-                <div id="equipment-slots-container" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px;">
+                <div id="equipment-slots-container" class="equipment-slots-grid">
                     <!-- Equipment slots populated by JavaScript -->
                 </div>
             </div>

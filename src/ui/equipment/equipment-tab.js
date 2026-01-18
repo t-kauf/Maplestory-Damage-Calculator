@@ -216,7 +216,7 @@ function addStatLineToSlot(slotId) {
 
     const statDiv = document.createElement('div');
     statDiv.id = `equipment-${slotId}-stat-${statId}`;
-    statDiv.style.cssText = 'display: grid; grid-template-columns: 1fr 60px 24px; gap: 4px; margin-bottom: 4px; align-items: end;';
+    statDiv.className = 'equipment-stat-line';
 
     // Build options from available stats
     let optionsHTML = '';
@@ -225,15 +225,15 @@ function addStatLineToSlot(slotId) {
     });
 
     statDiv.innerHTML = `
-        <div class="input-group" style="min-width: 0;">
-            <select id="equipment-${slotId}-stat-${statId}-type" onchange="saveSlotData('${slotId}'); notifyStatContributors();" style="font-size: 0.75em; padding: 4px;">
+        <div class="equipment-input-group equipment-stat-type-select">
+            <select id="equipment-${slotId}-stat-${statId}-type" onchange="saveSlotData('${slotId}'); notifyStatContributors();" class="equipment-input-field equipment-select-field">
                 ${optionsHTML}
             </select>
         </div>
-        <div class="input-group" style="min-width: 0;">
-            <input type="number" step="0.1" id="equipment-${slotId}-stat-${statId}-value" value="0" onchange="saveSlotData('${slotId}'); notifyStatContributors();" style="font-size: 0.75em; padding: 4px; width: 100%; box-sizing: border-box;">
+        <div class="equipment-input-group">
+            <input type="number" step="0.1" id="equipment-${slotId}-stat-${statId}-value" value="0" onchange="saveSlotData('${slotId}'); notifyStatContributors();" class="equipment-input-field equipment-stat-value-input">
         </div>
-        <button onclick="removeStatLineFromSlot('${slotId}', ${statId})" class="bg-orange-500 hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700 text-white rounded cursor-pointer text-xs font-semibold transition-all" style="height: 28px; width: 24px; padding: 0; display: flex; align-items: center; justify-content: center;">✕</button>
+        <button onclick="removeStatLineFromSlot('${slotId}', ${statId})" class="equipment-btn-delete equipment-stat-delete-btn" title="Remove stat line">✕</button>
     `;
 
     statsContainer.appendChild(statDiv);

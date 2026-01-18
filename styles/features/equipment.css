@@ -1,0 +1,460 @@
+/* ========================================
+   EQUIPMENT TAB STYLES
+   Premium Inventory UI Language
+   ======================================== */
+
+/* === Equipment Summary Section === */
+.equipment-summary-wrapper {
+    background: linear-gradient(135deg, rgba(52, 199, 89, 0.08), rgba(0, 122, 255, 0.06));
+    border: 2px solid var(--cube-border-medium);
+    border-radius: 16px;
+    padding: var(--cube-space-lg);
+    margin-bottom: var(--cube-space-xl);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    position: relative;
+    overflow: hidden;
+}
+
+.equipment-summary-wrapper::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent-primary), var(--accent-success));
+    opacity: 0.8;
+}
+
+.equipment-summary-title {
+    font-family: var(--cube-font-display);
+    font-weight: 700;
+    font-size: 1.1em;
+    letter-spacing: -0.02em;
+    color: var(--accent-primary);
+    margin: 0 0 var(--cube-space-md) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--cube-space-sm);
+}
+
+.equipment-summary-title::before {
+    content: '📊';
+    font-size: 1.2em;
+    filter: grayscale(0.2);
+}
+
+.equipment-summary-content {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--cube-space-xs) var(--cube-space-md);
+    font-size: 0.9em;
+    align-items: center;
+    min-height: 32px;
+    font-family: var(--cube-font-display);
+}
+
+.equipment-summary-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: var(--cube-surface-tertiary);
+    border-radius: 6px;
+    font-weight: 500;
+    transition: all var(--cube-duration) var(--cube-ease-out);
+}
+
+.equipment-summary-stat:hover {
+    transform: translateY(-1px);
+    background: var(--cube-surface-secondary);
+}
+
+.equipment-summary-stat-value {
+    font-family: var(--cube-font-mono);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.03em;
+    color: var(--accent-success);
+}
+
+.equipment-summary-empty {
+    color: var(--text-secondary);
+    font-style: italic;
+    font-size: 0.95em;
+}
+
+.equipment-summary-divider {
+    color: var(--text-secondary);
+    opacity: 0.4;
+    font-size: 0.8em;
+}
+
+/* === Equipment Slots Grid === */
+.equipment-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--cube-space-md);
+}
+
+/* === Equipment Slot Card === */
+.equipment-slot-card {
+    background: linear-gradient(145deg, rgba(0, 122, 255, 0.06), rgba(88, 86, 214, 0.03));
+    border: 1px solid var(--cube-border-medium);
+    border-radius: 14px;
+    padding: var(--cube-space-lg);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+    min-width: 0;
+    transition: all var(--cube-duration) var(--cube-ease-out);
+    position: relative;
+    overflow: hidden;
+}
+
+.equipment-slot-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent-primary), transparent);
+    opacity: 0;
+    transition: opacity var(--cube-duration) var(--cube-ease-out);
+}
+
+.equipment-slot-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+    border-color: var(--cube-border-strong);
+}
+
+.equipment-slot-card:hover::before {
+    opacity: 0.8;
+}
+
+/* === Slot Header === */
+.equipment-slot-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--cube-space-md);
+    padding-bottom: var(--cube-space-sm);
+    border-bottom: 1px solid var(--cube-border-subtle);
+}
+
+.equipment-slot-name {
+    font-family: var(--cube-font-display);
+    font-weight: 700;
+    font-size: 1.05em;
+    letter-spacing: -0.02em;
+    color: var(--accent-primary);
+    text-transform: capitalize;
+}
+
+.equipment-slot-actions {
+    display: flex;
+    gap: var(--cube-space-xs);
+}
+
+/* === Equipment Action Buttons === */
+.equipment-action-btn {
+    padding: var(--cube-space-xs) var(--cube-space-sm);
+    font-family: var(--cube-font-display);
+    font-weight: 600;
+    font-size: 0.75em;
+    letter-spacing: -0.01em;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all var(--cube-duration) var(--cube-ease-out);
+    border: none;
+    color: white;
+}
+
+.equipment-btn-clear {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    box-shadow: 0 2px 8px rgba(249, 115, 22, 0.25);
+}
+
+.equipment-btn-clear:hover {
+    background: linear-gradient(135deg, #fb923c, #f97316);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(249, 115, 22, 0.35);
+}
+
+.equipment-btn-add {
+    background: linear-gradient(135deg, #10b981, #059669);
+    box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+}
+
+.equipment-btn-add:hover {
+    background: linear-gradient(135deg, #34d399, #10b981);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+}
+
+.equipment-btn-delete {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    color: white;
+    font-size: 0.9em;
+    transition: all var(--cube-duration) var(--cube-ease-out);
+}
+
+.equipment-btn-delete:hover {
+    background: linear-gradient(135deg, #f87171, #ef4444);
+    transform: scale(1.05);
+    box-shadow: 0 3px 8px rgba(239, 68, 68, 0.35);
+}
+
+/* === Equipment Input Fields === */
+.equipment-inputs-grid {
+    display: grid;
+    gap: var(--cube-space-sm);
+    margin-bottom: var(--cube-space-md);
+}
+
+.equipment-input-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.equipment-input-label {
+    font-family: var(--cube-font-display);
+    font-weight: 600;
+    font-size: 0.75em;
+    letter-spacing: -0.01em;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+    text-transform: uppercase;
+}
+
+.equipment-input-field {
+    width: 100%;
+    font-family: var(--cube-font-mono);
+    font-variant-numeric: tabular-nums;
+    font-size: 0.85em;
+    font-weight: 500;
+    padding: var(--cube-space-sm) var(--cube-space-sm);
+    border: 1px solid var(--cube-border-medium);
+    border-radius: 8px;
+    background: var(--cube-surface-tertiary);
+    color: var(--text-primary);
+    box-sizing: border-box;
+    transition: all var(--cube-duration) var(--cube-ease-out);
+}
+
+.equipment-input-field:hover {
+    border-color: var(--cube-border-strong);
+}
+
+.equipment-input-field:focus {
+    outline: none;
+    border-color: var(--accent-primary);
+    background: var(--cube-surface-secondary);
+    box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
+}
+
+.equipment-select-field {
+    font-family: var(--cube-font-display);
+    font-size: 0.8em;
+    font-weight: 500;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 12px;
+    padding-right: 28px;
+    cursor: pointer;
+}
+
+.equipment-select-field:hover {
+    cursor: pointer;
+}
+
+/* === Stat Lines Section === */
+.equipment-stats-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cube-space-sm);
+}
+
+.equipment-stats-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.equipment-stats-label {
+    font-family: var(--cube-font-display);
+    font-weight: 600;
+    font-size: 0.8em;
+    letter-spacing: -0.01em;
+    color: var(--text-primary);
+}
+
+.equipment-stats-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--cube-space-xs);
+}
+
+/* === Stat Line Row === */
+.equipment-stat-line {
+    display: grid;
+    grid-template-columns: 1fr 70px 28px;
+    gap: var(--cube-space-xs);
+    align-items: end;
+    padding: var(--cube-space-xs);
+    border-radius: 8px;
+    background: var(--cube-surface-tertiary);
+    transition: all var(--cube-duration) var(--cube-ease-out);
+}
+
+.equipment-stat-line:hover {
+    background: var(--cube-surface-secondary);
+    transform: translateX(2px);
+}
+
+.equipment-stat-type-select {
+    min-width: 0;
+}
+
+.equipment-stat-value-input {
+    font-family: var(--cube-font-mono);
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+    text-align: center;
+}
+
+.equipment-stat-delete-btn {
+    height: 28px;
+    width: 28px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* === Empty State === */
+.equipment-stats-empty {
+    padding: var(--cube-space-md);
+    text-align: center;
+    color: var(--text-secondary);
+    font-size: 0.85em;
+    font-style: italic;
+    border: 1px dashed var(--cube-border-subtle);
+    border-radius: 8px;
+    background: var(--cube-surface-tertiary);
+}
+
+/* === Responsive Design === */
+@media (max-width: 640px) {
+    .equipment-slots-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .equipment-summary-content {
+        font-size: 0.85em;
+    }
+
+    .equipment-slot-card {
+        padding: var(--cube-space-md);
+    }
+}
+
+/* === Animations === */
+@keyframes equipment-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.equipment-slot-card {
+    animation: equipment-fade-in 0.3s var(--cube-ease-out);
+}
+
+.equipment-stat-line {
+    animation: equipment-fade-in 0.2s var(--cube-ease-out);
+}
+
+/* === Dark Mode Support === */
+.dark .equipment-summary-wrapper {
+    background: linear-gradient(135deg, rgba(52, 199, 89, 0.06), rgba(0, 122, 255, 0.04));
+    border-color: var(--cube-border-medium);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.dark .equipment-slot-card {
+    background: linear-gradient(145deg, rgba(0, 122, 255, 0.04), rgba(88, 86, 214, 0.02));
+    border-color: var(--cube-border-subtle);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.dark .equipment-slot-card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+}
+
+.dark .equipment-input-field {
+    background: var(--cube-surface-tertiary);
+    border-color: var(--cube-border-subtle);
+    color: var(--text-primary);
+}
+
+.dark .equipment-input-field:focus {
+    background: var(--cube-surface-secondary);
+    box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+}
+
+.dark .equipment-stat-line {
+    background: var(--cube-surface-tertiary);
+}
+
+.dark .equipment-stat-line:hover {
+    background: var(--cube-surface-secondary);
+}
+
+.dark .equipment-stats-empty {
+    background: var(--cube-surface-tertiary);
+    border-color: var(--cube-border-subtle);
+}
+
+/* === Accessibility Focus States === */
+.equipment-action-btn:focus-visible,
+.equipment-input-field:focus-visible,
+.equipment-slot-card:focus-within {
+    outline: 2px solid var(--accent-primary);
+    outline-offset: 2px;
+}
+
+.equipment-btn-delete:focus-visible {
+    outline: 2px solid #ef4444;
+    outline-offset: 2px;
+}
+
+/* === Touch Target Optimization === */
+@media (hover: none) and (pointer: coarse) {
+    .equipment-action-btn {
+        min-height: 44px;
+        min-width: 44px;
+    }
+
+    .equipment-btn-delete {
+        height: 36px;
+        width: 36px;
+    }
+
+    .equipment-stat-line {
+        grid-template-columns: 1fr 80px 36px;
+    }
+}
