@@ -83,10 +83,10 @@
                 <span class="submenu-arrow">▼</span>
             </button>
             <div class="sidebar-submenu" id="submenu-setup">
-                <button class="sidebar-submenu-item" onclick="navigateToTab('setup', 'base-stats')">Base Stats</button>
-                <button class="sidebar-submenu-item" onclick="navigateToTab('setup', 'equipment')">Equipment</button>
-                <button class="sidebar-submenu-item" onclick="navigateToTab('setup', 'weapon-levels')">Weapon Levels</button>
-                <button class="sidebar-submenu-item" onclick="navigateToTab('setup', 'companions')">Companions</button>
+                <button class="sidebar-submenu-item" data-tab="base-stats" onclick="navigateToTab('setup', 'base-stats')">Base Stats</button>
+                <button class="sidebar-submenu-item" data-tab="equipment" onclick="navigateToTab('setup', 'equipment')">Equipment</button>
+                <button class="sidebar-submenu-item" data-tab="weapon-levels" onclick="navigateToTab('setup', 'weapon-levels')">Weapon Levels</button>
+                <button class="sidebar-submenu-item" data-tab="companions" onclick="navigateToTab('setup', 'companions')">Companions</button>
             </div>
 
             <!-- Gear Lab Section -->
@@ -96,12 +96,12 @@
                 <span class="submenu-arrow">▼</span>
             </button>
             <div class="sidebar-submenu" id="submenu-optimization">
-                <button class="sidebar-submenu-item" onclick="navigateToTab('optimization', 'item-comparison')">Item Comparison</button>
-                <button class="sidebar-submenu-item" onclick="navigateToTab('optimization', 'inner-ability')">Inner Ability</button>
-                <button class="sidebar-submenu-item" onclick="navigateToTab('optimization', 'artifact-potential')">Artifact Potential</button>
-                <button class="sidebar-submenu-item" onclick="navigateToTab('optimization', 'scroll-optimizer')">Scrolling</button>
-                <button class="sidebar-submenu-item" onclick="navigateToTab('optimization', 'cube-potential')">Cube Potential</button>
-                <button style="display: none;" class="sidebar-submenu-item" onclick="navigateToTab('optimization', 'stat-breakdown')">Stat Breakdown</button>
+                <button class="sidebar-submenu-item" data-tab="item-comparison" onclick="navigateToTab('optimization', 'item-comparison')">Item Comparison</button>
+                <button class="sidebar-submenu-item" data-tab="inner-ability" onclick="navigateToTab('optimization', 'inner-ability')">Inner Ability</button>
+                <button class="sidebar-submenu-item" data-tab="artifact-potential" onclick="navigateToTab('optimization', 'artifact-potential')">Artifact Potential</button>
+                <button class="sidebar-submenu-item" data-tab="scroll-optimizer" onclick="navigateToTab('optimization', 'scroll-optimizer')">Scrolling</button>
+                <button class="sidebar-submenu-item" data-tab="cube-potential" onclick="navigateToTab('optimization', 'cube-potential')">Cube Potential</button>
+                <button style="display: none;" class="sidebar-submenu-item" data-tab="stat-breakdown" onclick="navigateToTab('optimization', 'stat-breakdown')">Stat Breakdown</button>
             </div>
 
             <!-- StatHub Section -->
@@ -111,8 +111,8 @@
                 <span class="submenu-arrow">▼</span>
             </button>
             <div class="sidebar-submenu" id="submenu-predictions">
-                <button class="sidebar-submenu-item" onclick="navigateToTab('predictions', 'stat-tables')">Stat Predictions</button>
-                <button class="sidebar-submenu-item" onclick="navigateToTab('predictions', 'equivalency')">Stat Equivalency</button>
+                <button class="sidebar-submenu-item" data-tab="stat-tables" onclick="navigateToTab('predictions', 'stat-tables')">Stat Predictions</button>
+                <button class="sidebar-submenu-item" data-tab="equivalency" onclick="navigateToTab('predictions', 'equivalency')">Stat Equivalency</button>
             </div>
         </nav>
 
@@ -121,22 +121,24 @@
                 <span class="sidebar-dps-label">Current DPS</span>
                 <span id="sidebar-dps-value" class="sidebar-dps-value">-</span>
             </div>
+            <div class="sidebar-footer-actions">
+                <button onclick="exportData()" class="sidebar-footer-btn">
+                    <span>📋</span>
+                    <span>Copy</span>
+                </button>
+                <button onclick="importData()" class="sidebar-footer-btn">
+                    <span>📥</span>
+                    <span>Paste</span>
+                </button>
+            </div>
             <button onclick="toggleTheme()" id="theme-toggle-sidebar" class="sidebar-footer-btn" style="display: none !important;">
                 <span id="theme-icon-sidebar">🌙</span>
                 <span>Toggle Theme</span>
             </button>
             <a href="https://paypal.me/freakehms" target="_blank" rel="noopener noreferrer" class="sidebar-footer-btn donate-btn">
                 <span>💝</span>
-                <span>Donate</span>
+                <span>Support Development</span>
             </a>
-            <button onclick="exportData()" class="sidebar-footer-btn">
-                <span>📋</span>
-                <span>Copy Data</span>
-            </button>
-            <button onclick="importData()" class="sidebar-footer-btn">
-                <span>📥</span>
-                <span>Paste Data</span>
-            </button>
         </div>
     </aside>
 
@@ -1222,7 +1224,7 @@
         <div id="stat-damage-predictions-card" class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-2xl p-3 shadow-lg mb-3">
             <div class="optimization-page-header">
                 <h1 class="optimization-page-title">
-                    <span class="stat-hub-logo-large">Stat Hub</span>
+                    Stat Hub
                 </h1>
             </div>
 
