@@ -139,7 +139,12 @@ window.loadSlotItems = function(slotId) {
 
     const storageKey = `comparisonItems.${slotId}`;
     const saved = localStorage.getItem(storageKey);
-    if (!saved) return;
+    if (!saved) {
+        showEmptyComparisonState();
+        return;
+    }
+
+    hideEmptyComparisonState();
 
     const items = JSON.parse(saved);
     items.forEach((itemData, index) => {
@@ -328,6 +333,8 @@ export function addComparisonItem() {
     const guid = generateGuid();
     const tabsContainer = document.getElementById('comparison-tabs-container');
 
+    hideEmptyComparisonState();
+
     const tabButton = createComparisonTab(currentSlot, itemId, guid, `Item ${itemId}`);
 
     const addButton = tabsContainer.querySelector('button[onclick="addComparisonItem()"]');
@@ -391,6 +398,15 @@ function showEmptyComparisonState() {
             <p class="comparison-empty-subtext">Add items to compare with your equipped gear</p>
         `;
         container.appendChild(emptyState);
+    }
+}
+
+// Remove empty state when items are added
+function hideEmptyComparisonState() {
+    const container = document.getElementById('comparison-items-container');
+    if (container) {
+        const emptyStates = container.querySelectorAll('.comparison-empty-state');
+        emptyStates.forEach(state => state.remove());
     }
 }
 

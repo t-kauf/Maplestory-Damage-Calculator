@@ -23,6 +23,7 @@ import {
     calculateJobSkillPassiveGains
 } from '@core/skill-coefficient.js';
 import { initializeInnerAbilityAnalysis} from '@core/inner-ability.js';
+import { initializeScrollingAnalysis } from '@core/scrolling.js';
 import { initializeArtifactPotential } from '@core/artifact-potential.js';
 import { initializeArtifacts } from '@core/artifacts.js';
 import {
@@ -35,7 +36,6 @@ import { extractText, parseBaseStatText } from '@utils/ocr.js';
 import { loadTheme } from '@utils/theme.js';
 import { initializeHeroPowerPresets, loadHeroPowerPresets} from '@ui/presets-ui.js';
 import { initializeWeapons, updateWeaponBonuses} from '@core/weapon-levels/weapons-ui.js';
-import { initializeEquipmentSlots, loadEquipmentSlots } from '@ui/equipment-ui.js';
 import { initializeEquipmentTab, migrateLegacyData } from '@ui/equipment/equipment-tab.js';
 import { initializeSlotComparison, getCurrentSlot } from '@ui/comparison/slot-comparison.js';
 import { displayResults } from '@ui/results-display.js';
@@ -588,9 +588,8 @@ window.onload = function () {
 
     loadHeroPowerPresets();
     initializeInnerAbilityAnalysis();
+    initializeScrollingAnalysis();
     initializeArtifactPotential();
-    initializeEquipmentSlots();
-    loadEquipmentSlots();
     initializeEquipmentTab();
     initializeSlotComparison();
     migrateLegacyData();
@@ -615,37 +614,7 @@ window.onload = function () {
 
     loadSelectedJobTier();
     updateSkillCoefficient();
-
-    // Force initialize all default active tabs to ensure CSS applies correctly
-    // This fixes issues where Tailwind CDN loads after custom CSS
-    initializeDefaultTabStates();
 };
-
-// Initialize default tab active states on page load
-function initializeDefaultTabStates() {
-    // Use requestAnimationFrame to ensure DOM is ready and Tailwind has loaded
-    requestAnimationFrame(() => {
-        // Find all tab button containers
-        const tabContainers = [
-            document.querySelector('#analysis-inner-ability .flex.flex-wrap'),
-            document.querySelector('#analysis-scroll-optimizer .flex.flex-wrap'),
-            document.querySelector('#analysis-cube-potential #tab-container-main'),
-            document.querySelector('#analysis-cube-potential #tab-container-cube-tab'),
-            document.querySelector('#cube-main-selected-content .flex.flex-wrap:has(#cube-tab-comparison)')
-        ].filter(Boolean);
-
-        tabContainers.forEach(container => {
-            const buttons = container.querySelectorAll('.tab-button');
-            if (buttons.length > 0) {
-                // Ensure first button in each container has active class
-                const firstButton = buttons[0];
-                if (!firstButton.classList.contains('active')) {
-                    firstButton.classList.add('active');
-                }
-            }
-        });
-    });
-}
 
 document.addEventListener('DOMContentLoaded', () => {
     const pasteArea = document.getElementById('base-stats-paste-image-section');

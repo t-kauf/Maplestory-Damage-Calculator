@@ -103,7 +103,7 @@
                 <button class="sidebar-submenu-item" onclick="navigateToTab('optimization', 'artifact-potential')">Artifact Potential</button>
                 <button class="sidebar-submenu-item" onclick="navigateToTab('optimization', 'scroll-optimizer')">Scrolling</button>
                 <button class="sidebar-submenu-item" onclick="navigateToTab('optimization', 'cube-potential')">Cube Potential</button>
-                <button class="sidebar-submenu-item" onclick="navigateToTab('optimization', 'stat-breakdown')">Stat Breakdown</button>
+                <button style="display: none;" class="sidebar-submenu-item" onclick="navigateToTab('optimization', 'stat-breakdown')">Stat Breakdown</button>
             </div>
 
             <!-- StatHub Section -->
@@ -171,11 +171,11 @@
         <div id="character-setup-card" class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-2xl p-3 shadow-lg mb-3" style="position: relative;">
             <div class="text-2xl mb-2 text-center text-blue-600 dark:text-blue-400 font-semibold">Loadout</div>
             <div class="flex flex-wrap gap-2.5 mb-3 border-b-2 border-gray-200/50 dark:border-gray-700/50 pb-0">
-                <button class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'base-stats')">Base Stats</button>
-                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'equipment')">Equipment</button>
-                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'weapon-levels')">Weapon Levels</button>
-                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'companions')">Companions</button>
-                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('setup', 'artifacts')">Artifacts</button>
+                <button class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTabAndUpdateURL('setup', 'base-stats', event)">Base Stats</button>
+                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTabAndUpdateURL('setup', 'equipment', event)">Equipment</button>
+                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTabAndUpdateURL('setup', 'weapon-levels', event)">Weapon Levels</button>
+                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTabAndUpdateURL('setup', 'companions', event)">Companions</button>
+                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTabAndUpdateURL('setup', 'artifacts', event)">Artifacts</button>
             </div>
 
             <!-- Base Stats Tab -->
@@ -811,18 +811,20 @@
         <div id="page-optimization" class="page-container" style="display: none;">
         <!-- Gear Lab Content -->
         <div id="character-optimization-card" class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-2xl p-3 shadow-lg mb-3">
-            <div class="text-2xl mb-2 text-center text-blue-600 dark:text-blue-400 font-semibold">Gear Lab 🧪</div>
-            <div class="flex flex-wrap gap-2.5 mb-3 border-b-2 border-gray-200/50 dark:border-gray-700/50 pb-0">
-                <button class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="navigateToTab('optimization', 'item-comparison'); checkPendingSlotNavigation();">Item Comparison</button>
-                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="navigateToTab('optimization', 'inner-ability')">Inner Ability</button>
-                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="navigateToTab('optimization', 'artifact-potential')">Artifact Potential</button>
-                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="navigateToTab('optimization', 'scroll-optimizer')">Scrolling</button>
-                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="navigateToTab('optimization', 'cube-potential')">Cube Potential</button>
-                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="navigateToTab('optimization', 'stat-breakdown'); updateStatBreakdown();">Stat Breakdown</button>
+            <div class="optimization-page-header">
+                <h1 class="optimization-page-title">Gear Lab 🧪</h1>
+            </div>
+            <div class="optimization-main-tabs">
+                <button class="optimization-tab-button active" data-tab="item-comparison" onclick="switchTabAndUpdateURL('analysis', 'item-comparison', event); checkPendingSlotNavigation();">Item Comparison</button>
+                <button class="optimization-tab-button" data-tab="inner-ability" onclick="switchTabAndUpdateURL('analysis', 'inner-ability', event)">Inner Ability</button>
+                <button class="optimization-tab-button" data-tab="artifact-potential" onclick="switchTabAndUpdateURL('analysis', 'artifact-potential', event)">Artifact Potential</button>
+                <button class="optimization-tab-button" data-tab="scroll-optimizer" onclick="switchTabAndUpdateURL('analysis', 'scroll-optimizer', event)">Scrolling</button>
+                <button class="optimization-tab-button" data-tab="cube-potential" onclick="switchTabAndUpdateURL('analysis', 'cube-potential', event)">Cube Potential</button>
+                <button style="display: none;" class="optimization-tab-button" data-tab="stat-breakdown" onclick="switchTabAndUpdateURL('analysis', 'stat-breakdown', event); updateStatBreakdown();">Stat Breakdown</button>
             </div>
 
             <!-- Item Comparison Tab - Enhanced UI/UX -->
-            <div id="analysis-item-comparison" class="tab-content active">
+            <div id="optimization-item-comparison" class="optimization-tab-content active">
                 <!-- Slot Selector with Improved Visual Hierarchy -->
                 <div class="comparison-slot-selector-wrapper">
                     <div class="comparison-slot-selector-inner">
@@ -918,12 +920,12 @@
             </div>
 
             <!-- Inner Ability Analysis Tab -->
-            <div id="analysis-inner-ability" class="tab-content">
+            <div id="optimization-inner-ability" class="optimization-tab-content">
                 <!-- Premium Tab Navigation -->
-                <div class="ia-tab-navigation">
-                    <button class="ia-tab-button active" onclick="switchInnerAbilityTab('my-ability-pages')">My Ability Pages</button>
-                    <button class="ia-tab-button" onclick="switchInnerAbilityTab('preset-comparison')">Preset Comparison</button>
-                    <button class="ia-tab-button" onclick="switchInnerAbilityTab('theoretical-best')">Theoretical Best</button>
+                <div class="tab-navigation">
+                    <button id="inner-ability-tab-button" class="tab-button active" onclick="switchInnerAbilityTab('my-ability-pages')">My Ability Pages</button>
+                    <button id="inner-ability-tab-button" class="tab-button" onclick="switchInnerAbilityTab('preset-comparison')">Preset Comparison</button>
+                    <button id="inner-ability-tab-button" class="tab-button" onclick="switchInnerAbilityTab('theoretical-best')">Theoretical Best</button>
                 </div>
 
                 <!-- My Ability Pages Sub-Tab -->
@@ -949,102 +951,39 @@
             </div>
 
             <!-- Artifact Potential Tab -->
-            <div id="analysis-artifact-potential" class="tab-content">
+            <div id="optimization-artifact-potential" class="optimization-tab-content">
                 <div id="artifact-potential-container">
                     <!-- Will be populated by JavaScript -->
                 </div>
             </div>
 
             <!-- Scroll Optimizer Tab -->
-            <div id="analysis-scroll-optimizer" class="tab-content">
+            <div id="optimization-scroll-optimizer" class="optimization-tab-content">
                 <!-- Sub-tabs for Scrolling -->
-                <div class="flex flex-wrap gap-2.5 mb-3 border-b-2 border-gray-200/50 dark:border-gray-700/50 pb-0">
-                    <button class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchScrollingSubTab('my-slot-performance')">My Slot Performance</button>
-                    <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchScrollingSubTab('simulation')">Simulation</button>
+                <div class="tab-navigation">
+                    <button id="scrolling-tab-button" class="tab-button active" onclick="switchScrollingSubTab('my-slot-performance')">My Slot Performance</button>
+                    <button id="scrolling-tab-button" class="tab-button" onclick="switchScrollingSubTab('simulation')">Simulation</button>
                 </div>
 
                 <!-- My Slot Performance Sub-Tab -->
                 <div id="scrolling-my-slot-performance" class="scrolling-subtab active">
-                    <div style="background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.05)); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px var(--shadow);">
-                        <div style="color: var(--text-primary); font-size: 0.9em; line-height: 1.5;">
-                            <strong style="color: var(--accent-primary);">Equipment Slot Analysis:</strong> Track individual equipment slot values in isolation. Each slot's DPS gain is calculated by comparing damage WITH that slot's stats vs damage WITH zero stats from that slot.
-                        </div>
-                    </div>
-                    <div id="equipment-slots-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <!-- Slot cards generated by JavaScript -->
-                    </div>
-                    <div style="margin-top: 20px; text-align: center;">
-                        <div style="background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(88, 86, 214, 0.1)); border: 2px solid var(--accent-primary); border-radius: 12px; padding: 20px; max-width: 500px; margin: 0 auto 20px; box-shadow: 0 4px 16px var(--shadow);">
-                            <div style="color: var(--text-secondary); font-size: 0.9em; margin-bottom: 8px; font-weight: 500;">Total DPS Gain from All Slots</div>
-                            <div style="color: var(--accent-primary); font-size: 2em; font-weight: 700;">
-                                <span id="total-slots-dps">0%</span>
-                            </div>
-                        </div>
-                        <button class="calculate-btn" onclick="calculateEquipmentSlotDPS()" style="max-width: 400px; margin: 0 auto;">Calculate Slot DPS</button>
-                    </div>
+                    <!-- Will be populated by JavaScript -->
                 </div>
 
                 <!-- Simulation Sub-Tab -->
                 <div id="scrolling-simulation" class="scrolling-subtab" style="display: none;">
-                    <div style="background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.05)); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px var(--shadow);">
-                        <div style="color: var(--text-primary); font-size: 0.9em; line-height: 1.5;">
-                            <strong style="color: var(--accent-primary);">Scroll Optimizer:</strong> Simulates different scrolling strategies using Level 65 scrolls to find the optimal approach. The damage gain shows how much your DPS will increase from the average scroll results.
-                        </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                        <div class="input-group">
-                            <label>Spell Trace Budget</label>
-                            <input type="number" id="scroll-spell-trace-budget" value="7000" min="500" max="50000" step="100">
-                        </div>
-                        <div class="input-group">
-                            <label>Number of Simulations</label>
-                            <input type="number" id="scroll-simulations" value="500" min="100" max="10000" step="100">
-                        </div>
-                    </div>
-
-                    <div style="background: rgba(0, 122, 255, 0.05); border: 1px solid var(--border-color); border-radius: 8px; padding: 15px; margin-bottom: 15px;">
-                        <label style="font-weight: 600; margin-bottom: 10px; display: block; color: var(--text-primary);">Scroll Level</label>
-                        <div style="display: flex; gap: 20px;">
-                            <label style="display: flex; align-items: center; cursor: pointer; font-size: 0.95em;">
-                                <input type="radio" name="scroll-level" value="65" checked onchange="updateScrollLevelInfo()" style="margin-right: 8px; cursor: pointer;">
-                                <span style="color: var(--text-primary);">Level 65 Scrolls</span>
-                            </label>
-                            <label style="display: flex; align-items: center; cursor: pointer; font-size: 0.95em;">
-                                <input type="radio" name="scroll-level" value="85" onchange="updateScrollLevelInfo()" style="margin-right: 8px; cursor: pointer;">
-                                <span style="color: var(--text-primary);">Level 85 Scrolls</span>
-                            </label>
-                        </div>
-                        <div id="scroll-level-info" style="margin-top: 12px; padding: 10px; background: var(--background); border-radius: 6px; font-size: 0.85em; color: var(--text-secondary); line-height: 1.6;">
-                            <!-- Info will be populated by JavaScript -->
-                        </div>
-                    </div>
-
-                    <button class="calculate-btn" onclick="runScrollSimulation()" id="scroll-run-btn">Run Simulation</button>
-
-                <div id="scroll-progress-container" style="display: none; margin-top: 15px;">
-                    <div style="width: 100%; height: 4px; background: var(--border-color); border-radius: 2px; overflow: hidden;">
-                        <div id="scroll-progress-bar" style="height: 100%; background: var(--accent-primary); transition: width 0.3s; width: 0%;"></div>
-                        </div>
-                    <p id="scroll-progress-text" style="text-align: center; color: var(--text-secondary); margin-top: 8px;"></p>
-                </div>
-
-                    <div id="scroll-results-container" style="margin-top: 20px;">
-                        <!-- Results will be populated by JavaScript -->
-                    </div>
+                    <!-- Will be populated by JavaScript -->
                 </div>
             </div>
 
             <!-- Cube Potential Tab -->
-            <div id="analysis-cube-potential" class="tab-content">
+            <div id="optimization-cube-potential" class="optimization-tab-content">
                 <!-- Class Warning Banner -->
-                <div id="cube-class-warning" style="display: none; background: linear-gradient(135deg, rgba(248, 113, 113, 0.15), rgba(239, 68, 68, 0.1)); border: 2px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 20px; margin-bottom: 20px; box-shadow: 0 4px 16px rgba(239, 68, 68, 0.1);">
-                    <div style="display: flex; align-items: center; gap: 12px;">
-                        <span style="font-size: 2em;">⚠️</span>
-                        <div>
-                            <div style="font-weight: 700; font-size: 1.1em; color: #ef4444; margin-bottom: 5px;">No Class Selected</div>
-                            <div style="color: var(--text-secondary); font-size: 0.95em;">Please select your class in the Hero Power section above to use the Cube Potential calculator. Class selection is needed to properly calculate stat damage gains.</div>
-                        </div>
+                <div id="cube-class-warning" class="optimization-info-banner optimization-info-banner--warning" style="display: none;">
+                    <span class="optimization-info-banner-icon">⚠️</span>
+                    <div>
+                        <div style="font-weight: 700; font-size: 1em; margin-bottom: 4px;">No Class Selected</div>
+                        <div style="color: var(--text-secondary); font-size: 0.9em;">Please select your class in the Hero Power section above to use the Cube Potential calculator. Class selection is needed to properly calculate stat damage gains.</div>
                     </div>
                 </div>
 
@@ -1217,7 +1156,7 @@
             </div>
 
             <!-- Stat Breakdown Tab -->
-            <div id="analysis-stat-breakdown" class="tab-content">
+            <div id="optimization-stat-breakdown" class="optimization-tab-content">
                 <div id="stat-breakdown-content">
                     <!-- Stat breakdown sections will be rendered here -->
                 </div>
@@ -1235,8 +1174,8 @@
             </div>
 
             <div class="flex flex-wrap gap-2.5 mb-3 border-b-2 border-gray-200/50 dark:border-gray-700/50 pb-0">
-                <button class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('predictions', 'stat-tables')">Stat Predictions</button>
-                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTab('predictions', 'equivalency')">Stat Equivalency</button>
+                <button class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTabAndUpdateURL('predictions', 'stat-tables', event)">Stat Predictions</button>
+                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTabAndUpdateURL('predictions', 'equivalency', event)">Stat Equivalency</button>
             </div>
 
             <!-- Stat Predictions Tab -->

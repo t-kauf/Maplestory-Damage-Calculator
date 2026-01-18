@@ -1,6 +1,8 @@
 // Hash-based Router
 // Manages navigation between pages using URL hashes
 
+import { switchTab } from '@utils/tabs.js';
+
 let currentPage = 'setup';
 let currentTab = null;
 
@@ -212,6 +214,16 @@ function presetActiveStates() {
         }
     }
 
+    // Set active nav item
+    //const tabItem = document.querySelector(`[data-tab="${tabName}"]`);
+    //if (tabName) {
+    //    tabItem.classList.add('active');
+    //    // Only add expanded class on mobile
+    //    if (isMobile) {
+    //        tabItem.classList.add('expanded');
+    //    }
+    //}
+
     // Expand the correct submenu (only on mobile, desktop shows all)
     if (isMobile) {
         const submenu = document.getElementById(`submenu-${pageName}`);
@@ -315,25 +327,19 @@ function resetCubeSubTabs() {
 
 // Reset sub-tabs to their default state based on the main tab
 export function resetSubTabsToDefault(pageName, tabName) {
-    if (pageName === 'setup') {
-        if (tabName === 'base-stats') {
-            // Reset base-stats sub-tabs to 'character-stats'
-            window.switchBaseStatsSubTab?.('character-stats');
-        }
-    } else if (pageName === 'optimization') {
-        if (tabName === 'inner-ability') {
-            // Reset inner ability to 'my-ability-pages'
-            window.switchInnerAbilityTab?.('my-ability-pages');
-        } else if (tabName === 'scroll-optimizer') {
-            // Reset scrolling sub-tabs to 'my-slot-performance'
-            window.switchScrollingSubTab?.('my-slot-performance');
-        } else if (tabName === 'cube-potential') {
-            // Reset cube main tabs to Selected Slot
-            resetCubeMainTabs();
-            // Reset cube sub-tabs to Comparison
-            resetCubeSubTabs();
-        }
-    }
+   if (pageName === 'setup') {
+       if (tabName === 'base-stats') {
+           // Reset base-stats sub-tabs to 'character-stats'
+           window.switchBaseStatsSubTab?.('character-stats');
+       }
+   } else if (pageName === 'optimization') {
+        if (tabName === 'cube-potential') {
+           // Reset cube main tabs to Selected Slot
+           resetCubeMainTabs();
+           // Reset cube sub-tabs to Comparison
+           resetCubeSubTabs();
+       }
+   }
 }
 
 // Restore the active tab on page load
@@ -345,44 +351,29 @@ function restoreTabState(pageName, tabName) {
         // Update submenu active states FIRST before any visual changes
         updateSubmenuActiveStates(pageName, targetTab);
 
-        // Immediate activation without delay to prevent flash
-        let groupName;
-        if (pageName === 'setup') {
-            groupName = 'setup';
-        } else if (pageName === 'optimization') {
-            groupName = 'analysis';
-        } else if (pageName === 'predictions') {
-            groupName = 'predictions';
-        }
+        const allTabContent = document.querySelectorAll(`[class^="${pageName}-tab-content"]`);
+        const allTabButtons = document.querySelectorAll(`[class^="${pageName}-tab-button"]`);
 
-        // Hide all tabs first
-        const allTabs = document.querySelectorAll(`[id^="${groupName}-"]`);
-        allTabs.forEach(tab => {
-            if (tab.classList.contains('tab-content')) {
+         // Hide all tabs first      
+        allTabContent.forEach(tab => {
                 tab.classList.remove('active');
-            }
         });
 
         // Show target tab immediately
-        const targetTabElement = document.getElementById(`${groupName}-${targetTab}`);
+        const targetTabElement = document.getElementById(`${pageName}-${targetTab}`);
         if (targetTabElement) {
             targetTabElement.classList.add('active');
         }
 
-        // Update button states
-        const tabContainer = document.querySelector(`#${groupName === 'analysis' ? 'character-optimization-card' : groupName === 'setup' ? 'character-setup-card' : 'stat-damage-predictions-card'}`);
-        if (tabContainer) {
-            const buttons = tabContainer.querySelectorAll('.tab-button');
-            buttons.forEach(button => {
-                button.classList.remove('active');
-                const onclickAttr = button.getAttribute('onclick');
-                if (onclickAttr &&
-                    onclickAttr.includes(`'${groupName}'`) &&
-                    onclickAttr.includes(`'${targetTab}'`)) {
-                    button.classList.add('active');
-                }
-            });
-        }
+        // Update button states      
+        allTabButtons.forEach(button => {
+            button.classList.remove('active');
+            const onclickAttr = button.getAttribute('data-tab');
+            if (onclickAttr &&
+                onclickAttr.includes(`${targetTab}`)) {
+                button.classList.add('active');
+            }
+        });
 
         // Reset sub-tabs to their default state
         resetSubTabsToDefault(pageName, targetTab);
@@ -420,8 +411,15 @@ export function toggleSubMenu(pageName) {
 
 // Navigate to a specific tab within a page
 export function navigateToTab(pageName, tabName) {
-    // Update URL hash to include tab
-    window.location.hash = `#/${pageName}/${tabName}`;
+    // Check if the hash is already set to the target (hashchange won't fire if same)
+    const currentHash = window.location.hash;
+    const targetHash = `#/${pageName}/${tabName}`;
+    const hashAlreadySet = currentHash === targetHash;
+
+    // Update URL hash to include tab (only if different)
+    if (!hashAlreadySet) {
+        window.location.hash = targetHash;
+    }
 
     // First navigate to the page
     if (currentPage !== pageName) {
@@ -434,7 +432,7 @@ export function navigateToTab(pageName, tabName) {
 
     // Use requestAnimationFrame for immediate, smooth transition
     requestAnimationFrame(() => {
-        // Find the appropriate tab button and click it to trigger switchTab properly
+        // Find the appropriate tab group and call switchTab directly
         let groupName;
         if (pageName === 'setup') {
             groupName = 'setup';
@@ -444,17 +442,11 @@ export function navigateToTab(pageName, tabName) {
             groupName = 'predictions';
         }
 
-        // Find and click the tab button
-        const tabButtons = document.querySelectorAll('.tab-button');
-        tabButtons.forEach(button => {
-            // Check if this button's onclick contains the tab name we want
-            const onclickAttr = button.getAttribute('onclick');
-            if (onclickAttr &&
-                onclickAttr.includes(`'${groupName}'`) &&
-                onclickAttr.includes(`'${tabName}'`)) {
-                button.click();
-            }
-        });
+        // Only call switchTab directly if hash was already set (no hashchange event fired)
+        // If hash changed, handleHashChange already called restoreTabState which handled the visual switching
+        if (hashAlreadySet) {
+            switchTab(groupName, tabName);
+        }
 
         // Close mobile menu if open
         closeMobileMenu();

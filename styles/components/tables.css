@@ -1,30 +1,420 @@
 /* ========================================
-   TABLES
+   UNIFIED TABLE SYSTEM
+   Premium glassmorphic tables by default
+   Base class + Variants + Utilities
    ======================================== */
 
-/* Tables */
+/* Premium Typography Import */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+/* ========================================
+   DESIGN TOKENS - Premium Color & Spacing System
+   ======================================== */
+
+:root {
+    /* Typography - Premium Pairing */
+    --table-font-display: 'Space Grotesk', -apple-system, sans-serif;
+    --table-font-mono: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+
+    /* Premium Gradients */
+    --table-gradient-primary: linear-gradient(135deg, #ec4899 0%, #f472b6 50%, #fb7185 100%);
+    --table-gradient-rank-1: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+    --table-gradient-rank-2: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 50%, #9ca3af 100%);
+    --table-gradient-rank-3: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #c2410c 100%);
+    --table-gradient-success: linear-gradient(135deg, #10b981 0%, #059669 100%);
+
+    /* Glassmorphism Surfaces */
+    --table-glass-bg: rgba(15, 23, 42, 0.5);
+    --table-glass-border: rgba(255, 255, 255, 0.08);
+    --table-glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    --table-glass-blur: blur(12px);
+
+    /* Surface Hierarchy */
+    --table-surface-elevated: rgba(30, 41, 59, 0.7);
+    --table-surface-base: rgba(15, 23, 42, 0.5);
+    --table-surface-subtle: rgba(51, 65, 85, 0.3);
+
+    /* Spacing Scale - Precise */
+    --table-space-sm: 6px;
+    --table-space-md: 10px;
+    --table-space-lg: 14px;
+
+    /* Animation Curves - Premium Feel */
+    --table-ease-smooth: cubic-bezier(0.4, 0, 0.2, 1);
+    --table-duration-base: 250ms;
+
+    /* Glow Effects */
+    --table-glow-subtle: 0 0 20px rgba(236, 72, 153, 0.15);
+    --table-glow-rank-1: 0 0 30px rgba(251, 191, 36, 0.4);
+}
+
+/* Dark Mode Premium Adjustments */
+.dark {
+    --table-glass-bg: rgba(15, 23, 42, 0.6);
+    --table-glass-border: rgba(255, 255, 255, 0.06);
+    --table-surface-elevated: rgba(30, 41, 59, 0.8);
+    --table-surface-base: rgba(15, 23, 42, 0.6);
+    --table-surface-subtle: rgba(51, 65, 85, 0.4);
+}
+
+/* ========================================
+   BASE TABLE CLASS - Premium Glassmorphic
+   All tables get this sophisticated styling by default
+   ======================================== */
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.table thead {
+    background: var(--table-surface-elevated);
+}
+
+.table th {
+    padding: var(--table-space-md) var(--table-space-lg);
+    text-align: left;
+    font-family: var(--table-font-display);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--table-glass-border);
+    cursor: pointer;
+    user-select: none;
+    transition: all var(--table-duration-base) var(--table-ease-smooth);
+    position: relative;
+}
+
+.table th:hover {
+    background: var(--table-surface-subtle);
+    color: var(--text-primary);
+}
+
+.table td {
+    padding: var(--table-space-md) var(--table-space-lg);
+    font-family: var(--table-font-display);
+    font-size: 0.9rem;
+    color: var(--text-primary);
+}
+
+.table tbody tr {
+    border-bottom: 1px solid var(--table-glass-border);
+    transition: all var(--table-duration-base) var(--table-ease-smooth);
+}
+
+.table tbody tr:hover {
+    background: var(--table-surface-subtle);
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ========================================
+   TABLE VARIANTS
+   Modifier classes for different table styles
+   ======================================== */
+
+/* Variant: Card (wrapped table with shadow and radius) */
+.table--card {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+/* Variant: Compact (smaller padding) */
+.table--compact th,
+.table--compact td {
+    padding: var(--table-space-sm);
+    font-size: 0.8125rem;
+}
+
+/* Variant: Spacious (larger padding) */
+.table--spacious th,
+.table--spacious td {
+    padding: 16px;
+}
+
+/* Variant: Striped (zebra striping) */
+.table--striped tbody tr:nth-child(odd) {
+    background: rgba(37, 99, 235, 0.03);
+}
+
+.dark .table--striped tbody tr:nth-child(odd) {
+    background: rgba(96, 165, 250, 0.05);
+}
+
+/* Variant: Center-aligned content */
+.table--center th,
+.table--center td {
+    text-align: center;
+}
+
+/* Variant: Right-aligned numeric data */
+.table--numeric th:not(:first-child),
+.table--numeric td:not(:first-child) {
+    text-align: right;
+}
+
+.table--numeric th:first-child,
+.table--numeric td:first-child {
+    text-align: left;
+}
+
+/* Variant: No margin (for inline use) */
+.table--inline {
+    margin: 0;
+}
+
+/* Variant: With top margin */
+.table--margin-top {
+    margin-top: 15px;
+}
+
+/* ========================================
+   INTERACTIVE STATES
+   ======================================== */
+
+/* Expandable rows */
+.table tr.expandable {
+    cursor: pointer;
+}
+
+.table tr.expandable:hover {
+    background: rgba(236, 72, 153, 0.08);
+}
+
+/* ========================================
+   TABLE WRAPPERS
+   Container classes for scrollable/contained tables
+   ======================================== */
+
+.table-wrapper {
+    background: var(--table-surface-base);
+    backdrop-filter: var(--table-glass-blur);
+    -webkit-backdrop-filter: var(--table-glass-blur);
+    border: 1px solid var(--table-glass-border);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--table-glass-shadow);
+}
+
+/* Scrollable table container */
+.table-scrollable {
+    max-height: 600px;
+    overflow-y: auto;
+    border-radius: 12px;
+}
+
+.table-scrollable::-webkit-scrollbar {
+    width: 8px;
+}
+
+.table-scrollable::-webkit-scrollbar-track {
+    background: rgba(51, 65, 85, 0.3);
+    border-radius: 4px;
+}
+
+.dark .table-scrollable::-webkit-scrollbar-track {
+    background: rgba(51, 65, 85, 0.4);
+}
+
+.table-scrollable::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 50%, #dc2626 100%);
+    border-radius: 4px;
+}
+
+.table-scrollable::-webkit-scrollbar-thumb:hover {
+    background: #f97316;
+}
+
+/* ========================================
+   SORTING INDICATORS
+   ======================================== */
+
+.table th.sortable::after {
+    content: '⇅';
+    margin-left: var(--table-space-sm);
+    opacity: 0.3;
+    font-size: 0.9em;
+}
+
+.table th.sorted-asc::after {
+    content: ' ▲';
+    opacity: 1;
+}
+
+.table th.sorted-desc::after {
+    content: ' ▼';
+    opacity: 1;
+}
+
+/* ========================================
+   UTILITY CLASSES
+   Composable modifiers for table cells and content
+   ======================================== */
+
+/* Text alignment */
+.table-cell--left { text-align: left; }
+.table-cell--center { text-align: center; }
+.table-cell--right { text-align: right; }
+
+/* Font weights */
+.table-cell--bold { font-weight: 600; }
+.table-cell--semibold { font-weight: 500; }
+
+/* Text colors */
+.table-cell--primary { color: #ec4899; }
+.dark .table-cell--primary { color: #f472b6; }
+
+.table-cell--secondary { color: var(--text-secondary); }
+
+/* Cell padding modifiers */
+.table-cell--compact { padding: var(--table-space-sm) !important; }
+.table-cell--spacious { padding: 16px !important; }
+
+/* First column emphasis */
+.table-emphasize-first td:first-child {
+    font-weight: 600;
+    color: #ec4899;
+}
+
+.dark .table-emphasize-first td:first-child {
+    color: #f472b6;
+}
+
+/* ========================================
+   BADGE SYSTEM
+   Unified badge component for ranks, rarity, status
+   ======================================== */
+
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    position: relative;
+    overflow: hidden;
+}
+
+.badge::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.3), transparent);
+    pointer-events: none;
+}
+
+/* Rank badges */
+.badge--rank-1 {
+    background: var(--table-gradient-rank-1);
+    box-shadow: var(--table-glow-rank-1), 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.badge--rank-2 {
+    background: var(--table-gradient-rank-2);
+    color: #1f2937;
+}
+
+.badge--rank-3 {
+    background: var(--table-gradient-rank-3);
+}
+
+/* Rarity badges */
+.badge--rarity {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    margin-right: 4px;
+    text-transform: uppercase;
+}
+
+.badge--rarity-mystic {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    box-shadow: 0 2px 10px rgba(239, 68, 68, 0.4);
+}
+
+.badge--rarity-ancient {
+    background: linear-gradient(135deg, #f97316, #ea580c);
+    box-shadow: 0 2px 10px rgba(249, 115, 22, 0.4);
+}
+
+.badge--rarity-legendary {
+    background: linear-gradient(135deg, #33ce85, #31df8d);
+    color: #1f2937;
+    box-shadow: 0 2px 10px rgba(51, 206, 133, 0.4);
+}
+
+.badge--rarity-unique {
+    background: linear-gradient(135deg, #fbbf24, #d97706);
+    color: #1f2937;
+    box-shadow: 0 2px 8px rgba(251, 191, 36, 0.3);
+}
+
+.badge--rarity-epic {
+    background: linear-gradient(135deg, #a855f7, #7c3aed);
+    box-shadow: 0 2px 10px rgba(168, 85, 247, 0.4);
+}
+
+.badge--rarity-rare {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
+}
+
+/* Status badge */
+.badge--status {
+    padding: 4px 10px;
+    height: auto;
+    min-width: auto;
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    border-radius: 6px;
+}
+
+.badge--success {
+    background: var(--table-gradient-success);
+    box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
+}
+
+/* ========================================
+   BACKWARD COMPATIBILITY
+   Legacy class names mapped to new system
+   ======================================== */
+
+/* ia-table -> table table--card */
 .ia-table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 15px;
-    background: white;
+    background: var(--table-surface-base);
+    backdrop-filter: var(--table-glass-blur);
+    -webkit-backdrop-filter: var(--table-glass-blur);
+    border: 1px solid var(--table-glass-border);
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--table-glass-shadow);
 }
 
-.dark .ia-table {
-    background: #1f2937;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+.ia-table thead {
+    background: var(--table-surface-elevated);
 }
 
 .ia-table th {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(88, 86, 214, 0.1));
     padding: 12px;
     text-align: left;
-    color: #2563eb;
+    font-family: var(--table-font-display);
     font-weight: 600;
     font-size: 0.95em;
+    color: #2563eb;
     border-bottom: 2px solid #e5e7eb;
     cursor: pointer;
     user-select: none;
@@ -32,37 +422,26 @@
 }
 
 .dark .ia-table th {
-    background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(147, 137, 230, 0.1));
     color: #60a5fa;
     border-bottom-color: #374151;
 }
 
 .ia-table th:hover {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.2), rgba(88, 86, 214, 0.15));
-}
-
-.dark .ia-table th:hover {
-    background: linear-gradient(135deg, rgba(96, 165, 250, 0.2), rgba(147, 137, 230, 0.15));
+    background: var(--table-surface-subtle);
 }
 
 .ia-table td {
     padding: 12px;
     border-bottom: 1px solid #e5e7eb;
-    color: #111827;
     font-size: 0.9em;
 }
 
 .dark .ia-table td {
     border-bottom-color: #374151;
-    color: #f3f4f6;
 }
 
-.ia-table tr:hover {
-    background: rgba(37, 99, 235, 0.05);
-}
-
-.dark .ia-table tr:hover {
-    background: rgba(96, 165, 250, 0.05);
+.ia-table tbody tr:hover {
+    background: var(--table-surface-subtle);
 }
 
 .ia-table tr.expandable {
@@ -73,32 +452,31 @@
     background: rgba(37, 99, 235, 0.1);
 }
 
-.dark .ia-table tr.expandable:hover {
-    background: rgba(96, 165, 250, 0.1);
-}
-
 .ia-table tr:last-child td {
     border-bottom: none;
 }
 
-/* Stat weight tables */
+/* stat-weight-table -> table table--numeric */
 .stat-weight-table {
     width: 100%;
     border-collapse: collapse;
 }
 
+.stat-weight-table thead {
+    background: var(--table-surface-elevated);
+}
+
 .stat-weight-table th {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(88, 86, 214, 0.1));
     padding: 12px 10px;
     text-align: right;
-    color: #2563eb;
-    font-size: 0.9em;
+    font-family: var(--table-font-display);
     font-weight: 600;
+    font-size: 0.9em;
+    color: #2563eb;
     border-bottom: 2px solid #e5e7eb;
 }
 
 .dark .stat-weight-table th {
-    background: linear-gradient(135deg, rgba(96, 165, 250, 0.1), rgba(147, 137, 230, 0.1));
     color: #60a5fa;
     border-bottom-color: #374151;
 }
@@ -120,98 +498,30 @@
     border-bottom: none;
 }
 
-.bucket-label {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(37, 99, 235, 0.1));
-    padding: 10px 12px;
-    font-weight: 600;
-    color: #10b981;
-    font-size: 0.95em;
-    border-left: 3px solid #10b981;
-}
-
-.dark .bucket-label {
-    color: #34d399;
-    border-left-color: #34d399;
-}
-
-.bucket-row {
-    border-left: 3px solid #10b981;
-}
-
-.dark .bucket-row {
-    border-left-color: #34d399;
-}
-
-.stat-name {
-    color: #6b7280;
-    font-weight: 500;
-}
-
-.dark .stat-name {
-    color: #9ca3af;
-}
-
-.gain-cell {
-    text-align: right;
-}
-
-/* Table sorting */
-.ia-table th.sortable::after {
-    content: ' ⇅';
-    opacity: 0.5;
-    font-size: 0.8em;
-}
-
-.ia-table th.sorted-asc::after {
-    content: ' ▲';
-    opacity: 1;
-}
-
-.ia-table th.sorted-desc::after {
-    content: ' ▼';
-    opacity: 1;
-}
-
-/* Line breakdown */
-.line-breakdown {
-    display: none;
-}
-
-.line-breakdown.expanded {
-    display: block;
-}
-
-/* Skill Mastery Table Styles */
+/* mastery-table -> table table--card table--center table--striped */
 .mastery-table {
     width: 100%;
     border-collapse: collapse;
-    background: white;
+    background: var(--table-surface-base);
+    backdrop-filter: var(--table-glass-blur);
+    -webkit-backdrop-filter: var(--table-glass-blur);
+    border: 1px solid var(--table-glass-border);
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--table-glass-shadow);
 }
 
-.dark .mastery-table {
-    background: #1f2937;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.mastery-table thead tr {
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.12), rgba(88, 86, 214, 0.08));
-    border-bottom: 2px solid #e5e7eb;
-}
-
-.dark .mastery-table thead tr {
-    background: linear-gradient(135deg, rgba(96, 165, 250, 0.15), rgba(147, 137, 230, 0.1));
-    border-bottom: 2px solid #374151;
+.mastery-table thead {
+    background: var(--table-surface-elevated);
 }
 
 .mastery-table th {
     padding: 12px 8px;
     text-align: center;
-    color: #2563eb;
+    font-family: var(--table-font-display);
     font-weight: 600;
     font-size: 0.9em;
+    color: #2563eb;
 }
 
 .dark .mastery-table th {
@@ -219,12 +529,7 @@
 }
 
 .mastery-table tbody tr {
-    border-bottom: 1px solid #e5e7eb;
-    transition: all 0.2s ease;
-}
-
-.dark .mastery-table tbody tr {
-    border-bottom: 1px solid #374151;
+    border-bottom: 1px solid var(--table-glass-border);
 }
 
 .mastery-table tbody tr:nth-child(odd) {
@@ -235,21 +540,9 @@
     background: rgba(96, 165, 250, 0.05);
 }
 
-.mastery-table tbody tr:nth-child(even) {
-    background: white;
-}
-
-.dark .mastery-table tbody tr:nth-child(even) {
-    background: #1f2937;
-}
-
 .mastery-table tbody tr:hover {
-    background: rgba(37, 99, 235, 0.08);
+    background: var(--table-surface-subtle);
     transform: scale(1.01);
-}
-
-.dark .mastery-table tbody tr:hover {
-    background: rgba(96, 165, 250, 0.1);
 }
 
 .mastery-table tbody tr:last-child {
@@ -259,13 +552,9 @@
 .mastery-table td {
     padding: 10px 8px;
     text-align: center;
-    color: #111827;
+    font-family: var(--table-font-display);
     font-size: 0.9em;
     vertical-align: middle;
-}
-
-.dark .mastery-table td {
-    color: #f3f4f6;
 }
 
 .mastery-table td:first-child {
@@ -304,6 +593,48 @@
     color: #9ca3af;
 }
 
+/* ========================================
+   SPECIALIZED COMPONENTS
+   Feature-specific table components
+   ======================================== */
+
+/* Bucket label for stat weight tables */
+.bucket-label {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(37, 99, 235, 0.1));
+    padding: 10px 12px;
+    font-weight: 600;
+    color: #10b981;
+    font-size: 0.95em;
+    border-left: 3px solid #10b981;
+}
+
+.dark .bucket-label {
+    color: #34d399;
+    border-left-color: #34d399;
+}
+
+.bucket-row {
+    border-left: 3px solid #10b981;
+}
+
+.dark .bucket-row {
+    border-left-color: #34d399;
+}
+
+.stat-name {
+    color: #6b7280;
+    font-weight: 500;
+}
+
+.dark .stat-name {
+    color: #9ca3af;
+}
+
+.gain-cell {
+    text-align: right;
+}
+
+/* Mastery totals container */
 .mastery-totals-container {
     margin-top: 12px;
     padding-top: 12px;
@@ -371,3 +702,53 @@
 .dark .mastery-total-value.boss-only {
     color: #ffa726;
 }
+
+/* Line breakdown */
+.line-breakdown {
+    display: none;
+}
+
+.line-breakdown.expanded {
+    display: block;
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+   ======================================== */
+
+@media (max-width: 767px) {
+    .table,
+    .table--compact,
+    .table--spacious {
+        font-size: 0.85rem;
+    }
+
+    .table th,
+    .table td,
+    .table--compact th,
+    .table--compact td,
+    .table--spacious th,
+    .table--spacious td {
+        padding: 6px 10px;
+    }
+
+    .badge {
+        min-width: 28px;
+        height: 28px;
+        font-size: 0.85rem;
+    }
+
+    .badge--rarity {
+        width: 22px;
+        height: 22px;
+        font-size: 0.7rem;
+    }
+
+    .table-scrollable {
+        max-height: 400px;
+    }
+}
+
+/* ========================================
+   END UNIFIED TABLE SYSTEM
+   ======================================== */

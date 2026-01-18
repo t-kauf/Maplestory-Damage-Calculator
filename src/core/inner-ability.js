@@ -305,14 +305,17 @@ export function calculateBestCombinations() {
 
 // Switch inner ability sub-tabs
 export function switchInnerAbilityTab(tabName) {
+    const allSubTabContent = document.querySelectorAll('.inner-ability-subtab'); 
+    const allSubTabButtons = document.querySelectorAll('#inner-ability-tab-button'); 
+
     // Hide all subtabs
-    document.querySelectorAll('.inner-ability-subtab').forEach(tab => {
+    allSubTabContent.forEach(tab => {
         tab.classList.remove('active');
         tab.style.display = 'none';
     });
 
-    // Remove active from all buttons - update to use new ia-tab-button class
-    document.querySelectorAll('#analysis-inner-ability .ia-tab-button').forEach(btn => {
+    // Remove active from all buttons - update to use new tab-button class
+    allSubTabButtons.forEach(btn => {
         btn.classList.remove('active');
     });
 
@@ -324,9 +327,8 @@ export function switchInnerAbilityTab(tabName) {
     }
 
     // Activate button - Find the button by matching the onclick attribute
-    // This works both when called from a click event and during initialization
-    const buttons = document.querySelectorAll('#analysis-inner-ability .ia-tab-button');
-    buttons.forEach(btn => {
+    // This works both when called from a click event and during initialization    
+    allSubTabButtons.forEach(btn => {
         const onclickAttr = btn.getAttribute('onclick');
         if (onclickAttr && onclickAttr.includes(`'${tabName}'`)) {
             btn.classList.add('active');
@@ -379,8 +381,8 @@ export function renderPresetComparison() {
         return presetSortAsc ? valA - valB : valB - valA;
     });
 
-    let html = '<div class="ia-comparison-table-wrapper">';
-    html += '<table class="ia-comparison-table"><thead><tr>';
+    let html = '<div class="table-wrapper">';
+    html += '<table class="table"><thead><tr>';
     html += '<th class="sortable" onclick="sortPresetTable(0)">Rank</th>';
     html += '<th class="sortable" onclick="sortPresetTable(1)">Preset</th>';
     html += '<th class="sortable" onclick="sortPresetTable(2)">Boss DPS Gain</th>';
@@ -405,8 +407,8 @@ export function renderPresetComparison() {
     }
 
     comparisons.forEach((comp, index) => {
-        const rankClass = index < 3 ? `rank-${index + 1}` : 'rank-default';
-        const rankBadge = `<span class="ia-rank-badge ${rankClass}">${index + 1}</span>`;
+        const rankClass = index < 3 ? `badge--rank-${index + 1}` : 'rank-default';
+        const rankBadge = `<span class="badge ${rankClass}">${index + 1}</span>`;
         const equippedBadge = comp.isEquipped ? '<span class="ia-equipped-badge">Equipped</span>' : '';
 
         html += `<tr class="expandable" onclick="toggleLineBreakdown(${comp.id})">`;
@@ -455,9 +457,9 @@ export function renderTheoreticalBest() {
     }
 
     let html = '<div class="ia-theoretical-section">';
-    html += '<h3 class="ia-theoretical-title">All Possible Rolls Ranked</h3>';
-    html += '<div class="ia-table-scrollable">';
-    html += '<table class="ia-comparison-table"><thead><tr>';
+    html += '<h3 class="title">All Possible Rolls Ranked</h3>';
+    html += '<div class="table-scrollable">';
+    html += '<table class="table"><thead><tr>';
     html += '<th>Stat & Roll</th>';
     html += '<th>Value</th>';
     html += '<th class="sortable" onclick="sortTheoreticalTable(2)">DPS Gain</th>';
@@ -466,7 +468,7 @@ export function renderTheoreticalBest() {
     results.forEach(result => {
         const rarityLetter = result.rarity.charAt(0).toUpperCase();
         const rarityClass = `rarity-${result.rarity.toLowerCase()}`;
-        const badge = `<span class="ia-rarity-badge ${rarityClass}">${rarityLetter}</span>`;
+        const badge = `<span class="badge badge--rarity ${rarityClass}">${rarityLetter}</span>`;
         const percentClass = result.percentIncrease > 0 ? 'ia-dps-positive' : 'ia-dps-negative';
 
         html += '<tr>';
@@ -480,15 +482,15 @@ export function renderTheoreticalBest() {
 
     // Best Combinations
     html += '<div class="ia-theoretical-section">';
-    html += '<h3 class="ia-theoretical-title">Best Possible Combinations</h3>';
+    html += '<h3 class="title">Best Possible Combinations</h3>';
 
     // Unique Only
     html += '<div class="ia-combo-card">';
-    html += '<h4><span class="ia-rarity-badge rarity-unique">U</span>Best with Unique Only (3 Lines)</h4>';
+    html += '<h4><span class="badge badge--rarity rarity-unique">U</span>Best with Unique Only (3 Lines)</h4>';
     html += '<div class="ia-combo-lines">';
     combinations.uniqueOnly.lines.forEach(line => {
         const rarityClass = `rarity-${line.rarity.toLowerCase()}`;
-        html += `<div class="ia-combo-line"><span class="ia-rarity-badge ${rarityClass}">${line.rarity.charAt(0)}</span>${line.stat}: ${line.value}</div>`;
+        html += `<div class="ia-combo-line"><span class="badge badge--rarity ${rarityClass}">${line.rarity.charAt(0)}</span>${line.stat}: ${line.value}</div>`;
     });
     html += '</div>';
     {
@@ -499,11 +501,11 @@ export function renderTheoreticalBest() {
 
     // Unique + Legendary
     html += '<div class="ia-combo-card">';
-    html += '<h4><span class="ia-rarity-badge rarity-unique">U</span><span class="ia-rarity-badge rarity-legendary">L</span>Best with Unique + Legendary (Up to 5 Lines)</h4>';
+    html += '<h4><span class="badge badge--rarity rarity-unique">U</span><span class="badge badge--rarity rarity-legendary">L</span>Best with Unique + Legendary (Up to 5 Lines)</h4>';
     html += '<div class="ia-combo-lines">';
     combinations.uniqueLegendary.lines.forEach(line => {
         const rarityClass = `rarity-${line.rarity.toLowerCase()}`;
-        html += `<div class="ia-combo-line"><span class="ia-rarity-badge ${rarityClass}">${line.rarity.charAt(0)}</span>${line.stat}: ${line.value}</div>`;
+        html += `<div class="ia-combo-line"><span class="badge badge--rarity ${rarityClass}">${line.rarity.charAt(0)}</span>${line.stat}: ${line.value}</div>`;
     });
     html += '</div>';
     {
@@ -514,11 +516,11 @@ export function renderTheoreticalBest() {
 
     // Mystic + Legendary + Unique
     html += '<div class="ia-combo-card">';
-    html += '<h4><span class="ia-rarity-badge rarity-mystic">M</span><span class="ia-rarity-badge rarity-legendary">L</span><span class="ia-rarity-badge rarity-unique">U</span>Best with Mystic + Legendary + Unique (Up to 6 Lines)</h4>';
+    html += '<h4><span class="badge badge--rarity rarity-mystic">M</span><span class="badge badge--rarity rarity-legendary">L</span><span class="badge badge--rarity rarity-unique">U</span>Best with Mystic + Legendary + Unique (Up to 6 Lines)</h4>';
     html += '<div class="ia-combo-lines">';
     combinations.mysticLegendaryUnique.lines.forEach(line => {
         const rarityClass = `rarity-${line.rarity.toLowerCase()}`;
-        html += `<div class="ia-combo-line"><span class="ia-rarity-badge ${rarityClass}">${line.rarity.charAt(0)}</span>${line.stat}: ${line.value}</div>`;
+        html += `<div class="ia-combo-line"><span class="badge badge--rarity ${rarityClass}">${line.rarity.charAt(0)}</span>${line.stat}: ${line.value}</div>`;
     });
     html += '</div>';
     {
@@ -533,7 +535,7 @@ export function renderTheoreticalBest() {
     html += '<div class="ia-combo-lines">';
     combinations.allRarities.lines.forEach(line => {
         const rarityClass = `rarity-${line.rarity.toLowerCase()}`;
-        html += `<div class="ia-combo-line"><span class="ia-rarity-badge ${rarityClass}">${line.rarity.charAt(0)}</span>${line.stat}: ${line.value}</div>`;
+        html += `<div class="ia-combo-line"><span class="badge badge--rarity ${rarityClass}">${line.rarity.charAt(0)}</span>${line.stat}: ${line.value}</div>`;
     });
     html += '</div>';
     {
@@ -583,9 +585,6 @@ export function sortTheoreticalTable(column) {
 
 // Initialize Inner Ability Analysis
 export function initializeInnerAbilityAnalysis() {
-    // Initialize the default tab (My Ability Pages) to ensure proper styling on page load
-    switchInnerAbilityTab('my-ability-pages');
-
     // Pre-render other tabs
     renderPresetComparison();
     renderTheoreticalBest();

@@ -1,0 +1,9 @@
+.title {
+    font-family: var(--ia-font-display);
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    margin: 0 0 var(--ia-space-lg) 0;
+}
+

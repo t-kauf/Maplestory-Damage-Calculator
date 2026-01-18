@@ -91,12 +91,7 @@ const STAT_BREAKDOWN_STYLES = `
     .stat-breakdown-wrapper {
         font-family: var(--sb-font-display);
         position: relative;
-        background: linear-gradient(135deg,
-            rgba(99, 102, 241, 0.03) 0%,
-            rgba(168, 85, 247, 0.02) 50%,
-            rgba(20, 184, 166, 0.03) 100%);
         border-radius: 16px;
-        padding: var(--sb-space-xl);
         animation: fadeIn var(--sb-duration-base) var(--sb-ease-smooth);
     }
 
@@ -105,10 +100,6 @@ const STAT_BREAKDOWN_STYLES = `
         position: absolute;
         inset: -2px;
         border-radius: 18px;
-        background: linear-gradient(135deg,
-            rgba(99, 102, 241, 0.1),
-            rgba(168, 85, 247, 0.08),
-            rgba(20, 184, 166, 0.1));
         z-index: -1;
         opacity: 0.5;
         animation: gradientShift 8s ease-in-out infinite;
@@ -1023,15 +1014,6 @@ const STAT_BREAKDOWN_STYLES = `
     .legend-item[data-type="unlockable"] .legend-dot { background: var(--sb-unlockable); }
     .legend-item[data-type="guild"] .legend-dot { background: var(--sb-guild); }
     .legend-item[data-type="unaccounted"] .legend-dot { background: var(--sb-unaccounted); }
-
-    /* Dark mode premium adjustments */
-    .dark .stat-breakdown-wrapper {
-        --sb-glass-bg: rgba(15, 23, 42, 0.75);
-        --sb-glass-border: rgba(255, 255, 255, 0.06);
-        --sb-surface-elevated: rgba(30, 41, 59, 0.8);
-        --sb-surface-base: rgba(15, 23, 42, 0.6);
-        --sb-surface-subtle: rgba(51, 65, 85, 0.4);
-    }
 
     /* Focus states for accessibility - Premium Glow */
     .stat-tab-button:focus-visible,

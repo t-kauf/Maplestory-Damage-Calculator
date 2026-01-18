@@ -126,7 +126,7 @@ export function populateStageDropdownFiltered(contentType, filter) {
         const accuracy = entry.accuracy ? `, Acc: ${entry.accuracy}` : '';
 
         if (contentType === 'worldBoss') {
-            opt.textContent = `${identifier} (Def: ${Math.floor(entry.defense * 10)} ${accuracy})`;
+            opt.textContent = `${identifier} (Def: ${Math.floor(entry.defense * 100)} ${accuracy})`;
         } else {
             opt.textContent = `${identifier} (Def: ${Math.floor(entry.defense * 100)} ${accuracy})`;
         }
@@ -170,7 +170,7 @@ export function populateStageDropdown(contentType = null) {
         const accuracy = entry.accuracy ? `, Acc: ${entry.accuracy}` : '';
 
         if (contentType === 'worldBoss') {
-            opt.textContent = `${label} (Def: ${Math.floor(entry.defense * 10)} ${accuracy})`;
+            opt.textContent = `${label} (Def: ${Math.floor(entry.defense * 100)} ${accuracy})`;
         } else {
             opt.textContent = `${label} (Def: ${Math.floor(entry.defense * 100)} ${accuracy})`;
         }

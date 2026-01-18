@@ -194,9 +194,9 @@ export function renderArtifactPotential() {
         return artifactSortAsc ? valA - valB : valB - valA;
     });
 
-    let html = '<h3 style="margin-bottom: 15px;">All Possible Rolls Ranked</h3>';
-    html += '<div style="max-height: 600px; overflow-y: auto; border-radius: 12px;">';
-    html += '<table class="ia-table"><thead><tr>';
+    let html = '<h3 class="title">All Possible Rolls Ranked</h3>';
+    html += '<div class="table-scrollable"><div class="artifact-table-container">';
+    html += '<table class="table"><thead><tr>';
     html += '<th>Rank</th>';
     html += '<th>Rarity & Stat</th>';
     html += '<th>Value</th>';
@@ -208,35 +208,31 @@ export function renderArtifactPotential() {
     results.forEach((result, index) => {
         const rarityLetter = result.rarity.charAt(0).toUpperCase();
         const rarityClass = `rarity-${result.rarity.toLowerCase()}`;
-        const badge = `<span class="rarity-badge ${rarityClass}">${rarityLetter}</span>`;
+        const badge = `<span class="badge badge--rarity ${rarityClass}">${rarityLetter}</span>`;
 
         // Rank badge with special styling for top 3
         let rankBadge;
         if (index < 3) {
-            rankBadge = `<span class="preset-rank rank-${index + 1}">${index + 1}</span>`;
+            rankBadge = `<span class="badge badge--rank-${index + 1}">${index + 1}</span>`;
         } else {
-            rankBadge = `<span class="preset-rank">${index + 1}</span>`;
+            rankBadge = `<span class="badge">${index + 1}</span>`;
         }
 
         html += '<tr>';
         html += `<td>${rankBadge}</td>`;
         html += `<td>${badge}${result.stat}</td>`;
         html += `<td>${result.value}</td>`;
-        html += `<td>+${formatNumber(result.bossDPSGain)}${result.bossDPSPercentChange !== 0 ? ` <span class="dps-positive" style="font-weight:600; opacity:0.85; font-size:0.85em;">(+${result.bossDPSPercentChange.toFixed(2)}%)</span>` : ''}</td>`;
-        html += `<td>+${formatNumber(result.normalDPSGain)}${result.normalDPSPercentChange !== 0 ? ` <span class="dps-positive" style="font-weight:600; opacity:0.85; font-size:0.85em;">(+${result.normalDPSPercentChange.toFixed(2)}%)</span>` : ''}</td>`;
-        html += `<td><strong>+${formatNumber(result.avgDPSGain)}</strong>${result.avgDPSPercentChange !== 0 ? ` <span class="dps-positive" style="font-weight:600; opacity:0.85; font-size:0.85em;">(+${result.avgDPSPercentChange.toFixed(2)}%)</span>` : ''}</td>`;
+        html += `<td>+${formatNumber(result.bossDPSGain)}${result.bossDPSPercentChange !== 0 ? ` <span style="color:#10b981; font-weight:600;">(+${result.bossDPSPercentChange.toFixed(2)}%)</span>` : ''}</td>`;
+        html += `<td>+${formatNumber(result.normalDPSGain)}${result.normalDPSPercentChange !== 0 ? ` <span style="color:#10b981; font-weight:600;">(+${result.normalDPSPercentChange.toFixed(2)}%)</span>` : ''}</td>`;
+        html += `<td><strong>+${formatNumber(result.avgDPSGain)}</strong>${result.avgDPSPercentChange !== 0 ? ` <span style="color:#10b981; font-weight:600;">(+${result.avgDPSPercentChange.toFixed(2)}%)</span>` : ''}</td>`;
         html += '</tr>';
     });
 
-    html += '</tbody></table></div>';
+    html += '</tbody></table></div></div>';
     container.innerHTML = html;
 }
 
 // Initialize Artifact Potential Analysis
 export function initializeArtifactPotential() {
-    // Render only if the tab is active
-    const tab = document.getElementById('analysis-artifact-potential');
-    if (tab && tab.classList.contains('active')) {
         renderArtifactPotential();
-    }
 }

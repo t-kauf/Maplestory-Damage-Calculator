@@ -33,6 +33,8 @@ export function updateScrollLevelInfo() {
     const level = document.querySelector('input[name="scroll-level"]:checked')?.value || '65';
     const infoDiv = document.getElementById('scroll-level-info');
 
+    if (!infoDiv) return;
+
     if (level === '65') {
         infoDiv.innerHTML = `
             <strong>Level 65 Scrolls:</strong><br>
@@ -47,13 +49,6 @@ export function updateScrollLevelInfo() {
             • 15%: +800 ATK, +0.8% Damage Amp, 800 spell trace
         `;
     }
-}
-
-// Initialize scroll level info on page load
-if (typeof document !== 'undefined') {
-    document.addEventListener('DOMContentLoaded', () => {
-        updateScrollLevelInfo();
-    });
 }
 
 // Calculate success rate for a scroll at a specific slot
@@ -501,81 +496,6 @@ export function createL85Strategies() {
         shouldReset: () => false
     });
 
-    // Slot 10 Lock-In (highest bonus slot)
-    strategies.push({
-        id: 'L85_slot10_15_lock',
-        name: 'Slot 10 15% Lock-In',
-        description: '15% L85 on slot 10 first (37% with bonus), reset until success. Then 15% on slots 1&5, 70% on others.',
-        selectScroll: (slot) => {
-            if (slot === 10) return 'L85_15';
-            if (slot === 1 || slot === 5) return 'L85_15';
-            return 'L85_70';
-        },
-        shouldResetEarly: (slotResults, currentSlot) => {
-            if (currentSlot === 10 && slotResults.length >= 10) {
-                const slot10 = slotResults[9];
-                if (!slot10.success && !slot10.unfunded) {
-                    return true;
-                }
-            }
-            return false;
-        },
-        shouldReset: () => false
-    });
-
-    // Slot 5 Lock-In (medium bonus slot)
-    strategies.push({
-        id: 'L85_slot5_15_lock',
-        name: 'Slot 5 15% Lock-In',
-        description: '15% L85 on slot 5 first (27% with bonus), reset until success. Then 15% on slots 1&10, 70% on others.',
-        selectScroll: (slot) => {
-            if (slot === 5) return 'L85_15';
-            if (slot === 1 || slot === 10) return 'L85_15';
-            return 'L85_70';
-        },
-        shouldResetEarly: (slotResults, currentSlot) => {
-            if (currentSlot === 5 && slotResults.length >= 5) {
-                const slot5 = slotResults[4];
-                if (!slot5.success && !slot5.unfunded) {
-                    return true;
-                }
-            }
-            return false;
-        },
-        shouldReset: () => false
-    });
-
-    // Double Lock: Slot 1 + Slot 10
-    strategies.push({
-        id: 'L85_slot1_10_double_lock',
-        name: 'Slot 1+10 Double Lock',
-        description: 'Lock slot 1, then lock slot 10 (both 15%). Then 15% on slot 5, 70% on others. Very high damage floor.',
-        selectScroll: (slot) => {
-            if (slot === 1 || slot === 10) return 'L85_15';
-            if (slot === 5) return 'L85_15';
-            return 'L85_70';
-        },
-        shouldResetEarly: (slotResults, currentSlot) => {
-            // Reset if slot 1 fails
-            if (currentSlot === 1 && slotResults.length >= 1) {
-                const slot1 = slotResults[0];
-                if (!slot1.success && !slot1.unfunded) {
-                    return true;
-                }
-            }
-            // Reset if slot 10 fails (after slot 1 succeeded)
-            if (currentSlot === 10 && slotResults.length >= 10) {
-                const slot1 = slotResults[0];
-                const slot10 = slotResults[9];
-                if (slot1.success && !slot10.success && !slot10.unfunded) {
-                    return true;
-                }
-            }
-            return false;
-        },
-        shouldReset: () => false
-    });
-
     // Slot 1 Lock + All 30%
     strategies.push({
         id: 'L85_slot1_lock_then_30',
@@ -595,38 +515,6 @@ export function createL85Strategies() {
             return false;
         },
         shouldReset: () => false
-    });
-
-    // Slot 1 Lock + Bonus Retry
-    strategies.push({
-        id: 'L85_slot1_lock_bonus_retry',
-        name: 'Slot 1 Lock + Bonus Retry',
-        description: 'Lock slot 1, then 15% on slots 5&10, 70% elsewhere. Also reset if both bonus slots (5&10) fail. High budget.',
-        selectScroll: (slot) => {
-            if (slot === 1) return 'L85_15';
-            if (slot === 5 || slot === 10) return 'L85_15';
-            return 'L85_70';
-        },
-        shouldResetEarly: (slotResults, currentSlot) => {
-            if (currentSlot === 1 && slotResults.length >= 1) {
-                const slot1 = slotResults[0];
-                if (!slot1.success && !slot1.unfunded) {
-                    return true;
-                }
-            }
-            return false;
-        },
-        shouldReset: (result) => {
-            // Reset if both slot 5 and slot 10 failed
-            const slot5 = result.slotResults.find(s => s.slot === 5);
-            const slot10 = result.slotResults.find(s => s.slot === 10);
-            if (slot5 && slot10 && !slot5.unfunded && !slot10.unfunded) {
-                if (!slot5.success && !slot10.success) {
-                    return true;
-                }
-            }
-            return false;
-        }
     });
 
     // Slot 1 Lock + High Success Requirement
@@ -657,7 +545,7 @@ export function createL85Strategies() {
     strategies.push({
         id: 'L85_slot1_5_double_lock',
         name: 'Slot 1+5 Double Lock',
-        description: 'Lock slot 1, then lock slot 5 (both 15%). Then 15% on slot 10, 70% on others. High damage floor.',
+        description: 'Reset until slot 1 succeeds with a 15%, 70% until slot 5, reset until slot 15% suceeds here too, 70% until slot 10 where finish off with 15%.',
         selectScroll: (slot) => {
             if (slot === 1 || slot === 5) return 'L85_15';
             if (slot === 10) return 'L85_15';
@@ -676,45 +564,6 @@ export function createL85Strategies() {
                 const slot1 = slotResults[0];
                 const slot5 = slotResults[4];
                 if (slot1.success && !slot5.success && !slot5.unfunded) {
-                    return true;
-                }
-            }
-            return false;
-        },
-        shouldReset: () => false
-    });
-
-    // Triple Lock: All bonus slots
-    strategies.push({
-        id: 'L85_triple_lock_1_5_10',
-        name: 'Triple Lock 1+5+10',
-        description: 'Lock slots 1, 5, and 10 sequentially (all 15%). 70% on others. Extremely high budget, guaranteed 3x 15% success.',
-        selectScroll: (slot) => {
-            if (slot === 1 || slot === 5 || slot === 10) return 'L85_15';
-            return 'L85_70';
-        },
-        shouldResetEarly: (slotResults, currentSlot) => {
-            // Reset if slot 1 fails
-            if (currentSlot === 1 && slotResults.length >= 1) {
-                const slot1 = slotResults[0];
-                if (!slot1.success && !slot1.unfunded) {
-                    return true;
-                }
-            }
-            // Reset if slot 5 fails (after slot 1 succeeded)
-            if (currentSlot === 5 && slotResults.length >= 5) {
-                const slot1 = slotResults[0];
-                const slot5 = slotResults[4];
-                if (slot1.success && !slot5.success && !slot5.unfunded) {
-                    return true;
-                }
-            }
-            // Reset if slot 10 fails (after slots 1 and 5 succeeded)
-            if (currentSlot === 10 && slotResults.length >= 10) {
-                const slot1 = slotResults[0];
-                const slot5 = slotResults[4];
-                const slot10 = slotResults[9];
-                if (slot1.success && slot5.success && !slot10.success && !slot10.unfunded) {
                     return true;
                 }
             }
@@ -977,9 +826,6 @@ export function displayScrollResults(results, budget, numSimulations) {
 
         tableHTML += `
             <div id="scroll-strategy-tab-${strategyId}" class="scroll-strategy-tab-content" style="display: ${displayStyle};">
-                <h4 style="color: var(--accent-primary); margin-top: 0; font-size: 1.1em;">
-                    ${data.strategy.name}${isBest ? ' ⭐ (Best DPS Gain)' : ''}
-                </h4>
                 <p style="color: var(--text-secondary); font-size: 0.9em; margin: 5px 0 15px 0;">
                     ${data.strategy.description}
                 </p>

@@ -164,12 +164,12 @@ export function calculateStatWeights(setup, stats) {
     const percentIncreases = [1, 5, 10, 25, 50, 75];
 
     const multiplicativeStats = {
-        'finalDamage': true
+        'finalDamage': true,
+        'defPen': true
     };
 
     const diminishingReturnStats = {
-        'attackSpeed': { denominator: 150 },
-        'defPenMultiplier': { denominator: 100 }
+        'attackSpeed': { denominator: 150 }
     };
 
     let html = '';
@@ -277,7 +277,7 @@ export function calculateStatWeights(setup, stats) {
             let stepSize = increase <= 5 ? 0.1 : 1;
 
             // Step through in 1% increments (or 0.1% for small increases)
-            if(stat.key === "finalDamage")
+            if (multiplicativeStats[stat.key])
             {
                 stepSize = increase;
             }
@@ -499,9 +499,15 @@ export function calculateStatEquivalency(sourceStat) {
         'def-pen': {
             label: 'Defense Penetration',
             getValue: () => parseFloat(document.getElementById('equiv-def-pen').value) || 0,
-            applyToStats: (stats, value) => ({ ...stats, defPen: stats.defPen + value }),
+            applyToStats: (stats, value) => 
+                { 
+                    const newValue = (((1 + stats.defPen / 100) * (1 + value / 100)) - 1) * 100;
+                    return { ...stats, defPen: newValue };
+                }
+            ,
             formatValue: (val) => `${val.toFixed(2)}%`,
-            suffix: '%'
+            suffix: '%',
+            isMultiplicative: true
         }
     };
 
@@ -554,7 +560,8 @@ export function calculateStatEquivalency(sourceStat) {
         'skill-coeff': 1000, // Reasonable max
         'skill-mastery': 100, // Reasonable max
         'attack': 100000, // Very high but finite
-        'main-stat': 500000 // Very high but finite
+        'main-stat': 500000, // Very high but finite,
+        'def-pen': 100
     };
 
     // Calculate equivalents for all other stats

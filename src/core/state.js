@@ -101,10 +101,11 @@ export function getItemStats(prefix) {
         }
     } else {
         // Get comparison item stats
-        const itemId = prefix.split('-')[1];
+        // prefix format: item-{slot}-{itemId}
+        // Element IDs are: item-{slot}-{itemId}-stat-{statId}-{type|value}
         for (let i = 1; i <= 10; i++) {
-            const typeElem = document.getElementById(`item-${itemId}-stat-${i}-type`);
-            const valueElem = document.getElementById(`item-${itemId}-stat-${i}-value`);
+            const typeElem = document.getElementById(`${prefix}-stat-${i}-type`);
+            const valueElem = document.getElementById(`${prefix}-stat-${i}-value`);
 
             if (typeElem && valueElem) {
                 const statType = typeElem.value;

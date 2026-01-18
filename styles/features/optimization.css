@@ -1,0 +1,610 @@
+/* ========================================
+   OPTIMIZATION PAGE - UNIFIED PREMIUM TAB SYSTEM
+   Extends Inner Ability & Stat Breakdown aesthetics
+
+   DESIGN SYSTEM:
+   - Typography: Space Grotesk (display) + JetBrains Mono (data)
+   - Theme: Premium Fintech Terminal × Gaming HUD
+   - Surfaces: Glassmorphic with premium blur effects
+   - Accents: Each main tab has unique gradient color
+   - Animations: Staggered reveals with spring physics
+
+   USAGE:
+   - Main tabs: .optimization-tab-button with data-tab attribute
+   - Sub-tabs: .optimization-sub-tab-button
+   - Tab content: .optimization-tab-content
+   - Info banners: .optimization-info-banner
+   - Slot selector: .optimization-slot-button
+
+   COLOR CODING:
+   - Item Comparison: Blue (#3b82f6)
+   - Inner Ability: Pink (#ec4899)
+   - Artifact Potential: Amber (#f59e0b)
+   - Scrolling: Teal (#14b8a6)
+   - Cube Potential: Purple (#a855f7)
+   - Stat Breakdown: Indigo (#667eea)
+   ======================================== */
+
+/* Premium Typography Import - Already loaded in inner-ability.css
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+*/
+
+/* ========================================
+   DESIGN TOKENS - Unified Color System
+   Extends existing IA/SB tokens for consistency
+   ======================================== */
+
+:root {
+    /* Reuse existing Inner Ability tokens */
+    --opt-font-display: var(--ia-font-display, 'Space Grotesk', -apple-system, sans-serif);
+    --opt-font-mono: var(--ia-font-mono, 'JetBrains Mono', 'SF Mono', 'Consolas', monospace);
+
+    /* Tab-specific accent colors - each main tab gets unique color */
+    --opt-tab-item-comparison: #3b82f6;
+    --opt-tab-inner-ability: #ec4899;
+    --opt-tab-artifact: #f59e0b;
+    --opt-tab-scrolling: #14b8a6;
+    --opt-tab-cube: #a855f7;
+    --opt-tab-stat-breakdown: #667eea;
+
+    /* Premium Gradients */
+    --opt-gradient-item-comparison: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    --opt-gradient-inner-ability: linear-gradient(135deg, #ec4899 0%, #f472b6 100%);
+    --opt-gradient-artifact: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+    --opt-gradient-scrolling: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+    --opt-gradient-cube: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+    --opt-gradient-stat-breakdown: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+
+    /* Glassmorphism Surfaces */
+    --opt-glass-bg: var(--ia-glass-bg, rgba(15, 23, 42, 0.6));
+    --opt-glass-border: var(--ia-glass-border, rgba(255, 255, 255, 0.08));
+    --opt-glass-shadow: var(--ia-glass-shadow, 0 8px 32px rgba(0, 0, 0, 0.3));
+    --opt-glass-blur: var(--ia-glass-blur, blur(12px));
+
+    /* Surface Hierarchy */
+    --opt-surface-elevated: var(--ia-surface-elevated, rgba(30, 41, 59, 0.7));
+    --opt-surface-base: var(--ia-surface-base, rgba(15, 23, 42, 0.5));
+    --opt-surface-subtle: var(--ia-surface-subtle, rgba(51, 65, 85, 0.3));
+
+    /* Spacing Scale */
+    --opt-space-xs: var(--ia-space-xs, 4px);
+    --opt-space-sm: var(--ia-space-sm, 6px);
+    --opt-space-md: var(--ia-space-md, 10px);
+    --opt-space-lg: var(--ia-space-lg, 14px);
+    --opt-space-xl: var(--ia-space-xl, 20px);
+    --opt-space-2xl: var(--ia-space-2xl, 28px);
+
+    /* Animation Curves */
+    --opt-ease-spring: var(--ia-ease-spring, cubic-bezier(0.34, 1.56, 0.64, 1));
+    --opt-ease-smooth: var(--ia-ease-smooth, cubic-bezier(0.4, 0, 0.2, 1));
+    --opt-duration-fast: var(--ia-duration-fast, 150ms);
+    --opt-duration-base: var(--ia-duration-base, 250ms);
+    --opt-duration-slow: var(--ia-duration-slow, 400ms);
+}
+
+/* Dark Mode Adjustments */
+.dark {
+    --opt-glass-bg: rgba(15, 23, 42, 0.75);
+    --opt-glass-border: rgba(255, 255, 255, 0.06);
+}
+
+/* ========================================
+   OPTIMIZATION PAGE CONTAINER
+   Premium glassmorphic wrapper
+   ======================================== */
+
+#page-optimization {
+    font-family: var(--opt-font-display);
+}
+
+#character-optimization-card {
+    background: var(--opt-glass-bg);
+    backdrop-filter: var(--opt-glass-blur);
+    -webkit-backdrop-filter: var(--opt-glass-blur);
+    border: 1px solid var(--opt-glass-border);
+    box-shadow: var(--opt-glass-shadow);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Subtle animated gradient border effect */
+#character-optimization-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg,
+        rgba(59, 130, 246, 0.1),
+        rgba(236, 72, 153, 0.1),
+        rgba(20, 184, 166, 0.1));
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+/* ========================================
+   PREMIUM MAIN TAB SYSTEM
+   Glassmorphic navigation with unique accent per tab
+    ======================================== */
+
+.optimization-main-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--opt-space-sm);
+    padding: var(--opt-space-sm);
+    background: var(--opt-surface-subtle);
+    border: 1px solid var(--opt-glass-border);
+    border-radius: 12px;
+    margin-bottom: var(--opt-space-xl);
+}
+
+.optimization-tab-button {
+    flex: 1;
+    min-width: 120px;
+    padding: 12px 18px;
+    background: transparent;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: var(--opt-font-display);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    transition: all var(--opt-duration-base) var(--opt-ease-smooth);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Glossy overlay on hover */
+.optimization-tab-button::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg,
+        rgba(255, 255, 255, 0.1),
+        rgba(255, 255, 255, 0.05));
+    opacity: 0;
+    transition: opacity var(--opt-duration-base) var(--opt-ease-smooth);
+    border-radius: 8px;
+}
+
+/* Bottom accent bar */
+.optimization-tab-button::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%) scaleX(0);
+    width: 60%;
+    height: 2px;
+    background: currentColor;
+    transition: transform var(--opt-duration-base) var(--opt-ease-spring);
+    border-radius: 2px 2px 0 0;
+}
+
+.optimization-tab-button:hover {
+    color: var(--text-primary);
+    transform: translateY(-1px);
+}
+
+.optimization-tab-button:hover::before {
+    opacity: 1;
+}
+
+/* Active state with tab-specific color */
+.optimization-tab-button.active {
+    background: var(--opt-surface-elevated);
+    color: var(--text-primary);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2),
+                0 0 0 1px var(--opt-glass-border);
+}
+
+.optimization-tab-button.active::after {
+    transform: translateX(-50%) scaleX(1);
+}
+
+/* Tab-specific accent colors */
+.optimization-tab-button[data-tab="item-comparison"].active {
+    background: linear-gradient(135deg,
+        rgba(59, 130, 246, 0.15),
+        rgba(59, 130, 246, 0.08));
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #3b82f6;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.2),
+                0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.optimization-tab-button[data-tab="item-comparison"].active::after {
+    background: var(--opt-gradient-item-comparison);
+}
+
+.optimization-tab-button[data-tab="inner-ability"].active {
+    background: linear-gradient(135deg,
+        rgba(236, 72, 153, 0.15),
+        rgba(236, 72, 153, 0.08));
+    border-color: rgba(236, 72, 153, 0.3);
+    color: #ec4899;
+    box-shadow: 0 0 20px rgba(236, 72, 153, 0.2),
+                0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.optimization-tab-button[data-tab="inner-ability"].active::after {
+    background: var(--opt-gradient-inner-ability);
+}
+
+.optimization-tab-button[data-tab="artifact-potential"].active {
+    background: linear-gradient(135deg,
+        rgba(245, 158, 11, 0.15),
+        rgba(245, 158, 11, 0.08));
+    border-color: rgba(245, 158, 11, 0.3);
+    color: #f59e0b;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.2),
+                0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.optimization-tab-button[data-tab="artifact-potential"].active::after {
+    background: var(--opt-gradient-artifact);
+}
+
+.optimization-tab-button[data-tab="scroll-optimizer"].active {
+    background: linear-gradient(135deg,
+        rgba(20, 184, 166, 0.15),
+        rgba(20, 184, 166, 0.08));
+    border-color: rgba(20, 184, 166, 0.3);
+    color: #14b8a6;
+    box-shadow: 0 0 20px rgba(20, 184, 166, 0.2),
+                0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.optimization-tab-button[data-tab="scroll-optimizer"].active::after {
+    background: var(--opt-gradient-scrolling);
+}
+
+.optimization-tab-button[data-tab="cube-potential"].active {
+    background: linear-gradient(135deg,
+        rgba(168, 85, 247, 0.15),
+        rgba(168, 85, 247, 0.08));
+    border-color: rgba(168, 85, 247, 0.3);
+    color: #a855f7;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.2),
+                0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.optimization-tab-button[data-tab="cube-potential"].active::after {
+    background: var(--opt-gradient-cube);
+}
+
+.optimization-tab-button[data-tab="stat-breakdown"].active {
+    background: linear-gradient(135deg,
+        rgba(102, 126, 234, 0.15),
+        rgba(102, 126, 234, 0.08));
+    border-color: rgba(102, 126, 234, 0.3);
+    color: #667eea;
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.2),
+                0 2px 8px rgba(0, 0, 0, 0.2);
+}
+.optimization-tab-button[data-tab="stat-breakdown"].active::after {
+    background: var(--opt-gradient-stat-breakdown);
+}
+
+/* ========================================
+   TAB CONTENT - Premium Reveal
+   ======================================== */
+
+.optimization-tab-content {
+    display: none;
+    position: relative;
+    background: linear-gradient(135deg,
+        rgba(236, 72, 153, 0.02) 0%,
+        rgba(168, 85, 247, 0.02) 50%,
+        rgba(20, 184, 166, 0.02) 100%);
+    border-radius: 12px;
+    padding: var(--opt-space-xl);
+    animation: fadeIn var(--opt-duration-base) var(--opt-ease-smooth);
+}
+
+.optimization-tab-content.active {
+    display: block !important;
+    animation: slideUp var(--opt-duration-base) var(--opt-ease-spring);
+}
+
+/* ========================================
+   PAGE HEADER - Premium Title
+    ======================================== */
+
+.optimization-page-header {
+    text-align: center;
+    margin-bottom: var(--opt-space-2xl);
+    position: relative;
+}
+
+.optimization-page-title {
+    font-family: var(--opt-font-display);
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    background: linear-gradient(135deg, #3b82f6, #ec4899, #14b8a6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    display: inline-block;
+    margin: 0;
+}
+
+/* ========================================
+   SUB-TAB SYSTEM (Secondary Navigation)
+   Lighter visual weight than main tabs
+    ======================================== */
+
+.optimization-sub-tabs {
+    display: flex;
+    gap: var(--opt-space-sm);
+    padding: var(--opt-space-sm);
+    background: var(--opt-surface-subtle);
+    border: 1px solid var(--opt-glass-border);
+    border-radius: 10px;
+    margin-bottom: var(--opt-space-lg);
+}
+
+.optimization-sub-tab-button {
+    flex: 1;
+    padding: 10px 16px;
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 7px;
+    cursor: pointer;
+    font-family: var(--opt-font-display);
+    font-weight: 600;
+    font-size: 0.75rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    transition: all var(--opt-duration-base) var(--opt-ease-smooth);
+    position: relative;
+}
+
+.optimization-sub-tab-button:hover {
+    color: var(--text-primary);
+    background: var(--opt-surface-base);
+}
+
+/* Generic active state */
+.optimization-sub-tab-button.active {
+    background: var(--opt-surface-elevated);
+    color: var(--text-primary);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
+    position: relative;
+}
+
+/* Tab-specific accent colors for sub-tabs */
+/* Item Comparison sub-tabs */
+#optimization-item-comparison .optimization-sub-tab-button.active {
+    background: linear-gradient(135deg,
+        rgba(59, 130, 246, 0.15),
+        rgba(59, 130, 246, 0.08));
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    color: #3b82f6;
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.15),
+                0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Inner Ability sub-tabs - inherits from ia-preset-tab.active */
+#optimization-inner-ability .optimization-sub-tab-button.active {
+    background: linear-gradient(135deg,
+        rgba(236, 72, 153, 0.15),
+        rgba(244, 114, 182, 0.08));
+    border: 1px solid rgba(236, 72, 153, 0.3);
+    color: #ec4899;
+    box-shadow: 0 0 20px rgba(236, 72, 153, 0.15),
+                0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Artifact Potential sub-tabs */
+#optimization-artifact-potential .optimization-sub-tab-button.active {
+    background: linear-gradient(135deg,
+        rgba(245, 158, 11, 0.15),
+        rgba(245, 158, 11, 0.08));
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #f59e0b;
+    box-shadow: 0 0 20px rgba(245, 158, 11, 0.15),
+                0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Scrolling sub-tabs */
+#optimization-scroll-optimizer .optimization-sub-tab-button.active {
+    background: linear-gradient(135deg,
+        rgba(20, 184, 166, 0.15),
+        rgba(20, 184, 166, 0.08));
+    border: 1px solid rgba(20, 184, 166, 0.3);
+    color: #14b8a6;
+    box-shadow: 0 0 20px rgba(20, 184, 166, 0.15),
+                0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Cube Potential sub-tabs */
+#optimization-cube-potential .optimization-sub-tab-button.active {
+    background: linear-gradient(135deg,
+        rgba(168, 85, 247, 0.15),
+        rgba(168, 85, 247, 0.08));
+    border: 1px solid rgba(168, 85, 247, 0.3);
+    color: #a855f7;
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.15),
+                0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.optimization-sub-tab-content {
+    display: none;
+}
+
+.optimization-sub-tab-content.active {
+    display: block !important;
+    animation: fadeIn var(--opt-duration-base) var(--opt-ease-smooth);
+}
+
+/* Legacy scrolling subtab support */
+.scrolling-subtab {
+    display: none;
+}
+
+.scrolling-subtab.active {
+    display: block !important;
+}
+
+/* ========================================
+   INFO BANNER - Premium Alert Style
+    ======================================== */
+
+.optimization-info-banner {
+    background: linear-gradient(135deg,
+        rgba(59, 130, 246, 0.1),
+        rgba(88, 86, 214, 0.05));
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: 10px;
+    padding: var(--opt-space-md) var(--opt-space-lg);
+    margin-bottom: var(--opt-space-lg);
+    display: flex;
+    align-items: flex-start;
+    gap: var(--opt-space-md);
+    transition: all var(--opt-duration-base) var(--opt-ease-smooth);
+}
+
+.optimization-info-banner:hover {
+    border-color: rgba(59, 130, 246, 0.3);
+    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+}
+
+.optimization-info-banner strong {
+    color: #3b82f6;
+    font-weight: 700;
+}
+
+.optimization-info-banner-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    line-height: 1;
+}
+
+/* Warning variant */
+.optimization-info-banner--warning {
+    background: linear-gradient(135deg,
+        rgba(239, 68, 68, 0.1),
+        rgba(220, 38, 38, 0.05));
+    border-color: rgba(239, 68, 68, 0.2);
+}
+
+.optimization-info-banner--warning:hover {
+    border-color: rgba(239, 68, 68, 0.3);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
+}
+
+.optimization-info-banner--warning strong {
+    color: #ef4444;
+}
+
+/* ========================================
+   SLOT SELECTOR - Premium Choice Grid
+    ======================================== */
+
+.optimization-slot-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--opt-space-sm);
+}
+
+.optimization-slot-button {
+    padding: 8px 14px;
+    background: var(--opt-surface-base);
+    border: 1px solid var(--opt-glass-border);
+    border-radius: 8px;
+    cursor: pointer;
+    font-family: var(--opt-font-display);
+    font-weight: 600;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+    transition: all var(--opt-duration-base) var(--opt-ease-smooth);
+}
+
+.optimization-slot-button:hover {
+    background: var(--opt-surface-elevated);
+    color: var(--text-primary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.optimization-slot-button.active {
+    background: linear-gradient(135deg,
+        rgba(59, 130, 246, 0.15),
+        rgba(59, 130, 246, 0.08));
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #3b82f6;
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
+}
+
+/* ========================================
+   ANIMATIONS
+    ======================================== */
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* ========================================
+   ACCESSIBILITY - Focus States
+    ======================================== */
+
+.optimization-tab-button:focus-visible,
+.optimization-sub-tab-button:focus-visible,
+.optimization-slot-button:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--opt-tab-item-comparison),
+                0 0 20px rgba(59, 130, 246, 0.2);
+}
+
+/* ========================================
+   RESPONSIVE DESIGN
+    ======================================== */
+
+@media (max-width: 767px) {
+    .optimization-main-tabs {
+        flex-direction: column;
+    }
+
+    .optimization-tab-button {
+        flex: none;
+        width: 100%;
+    }
+
+    .optimization-sub-tabs {
+        flex-wrap: wrap;
+    }
+
+    .optimization-sub-tab-button {
+        flex: 1 1 45%;
+        min-width: 120px;
+    }
+
+    .optimization-slot-selector {
+        justify-content: center;
+    }
+}
+
+/* ========================================
+   END OPTIMIZATION PAGE STYLES
+    ======================================== */

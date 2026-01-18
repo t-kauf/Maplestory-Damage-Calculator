@@ -83,36 +83,6 @@
     --ia-surface-subtle: rgba(51, 65, 85, 0.4);
 }
 
-/* ========================================
-   ANIMATED MESH GRADIENT BACKGROUND
-   ======================================== */
-
-#analysis-inner-ability {
-    font-family: var(--ia-font-display);
-    position: relative;
-    background: linear-gradient(135deg,
-        rgba(236, 72, 153, 0.03) 0%,
-        rgba(168, 85, 247, 0.02) 50%,
-        rgba(20, 184, 166, 0.03) 100%);
-    border-radius: 16px;
-    padding: var(--ia-space-xl);
-    animation: fadeIn var(--ia-duration-base) var(--ia-ease-smooth);
-}
-
-#analysis-inner-ability::before {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    border-radius: 18px;
-    background: linear-gradient(135deg,
-        rgba(236, 72, 153, 0.1),
-        rgba(168, 85, 247, 0.08),
-        rgba(20, 184, 166, 0.1));
-    z-index: -1;
-    opacity: 0.5;
-    animation: gradientShift 8s ease-in-out infinite;
-}
-
 @keyframes gradientShift {
     0%, 100% {
         filter: hue-rotate(0deg);
@@ -125,83 +95,6 @@
 /* ========================================
    PREMIUM TAB SYSTEM - Glassmorphic Navigation
    ======================================== */
-
-.ia-tab-navigation {
-    display: flex;
-    gap: var(--ia-space-sm);
-    padding: var(--ia-space-sm);
-    background: var(--ia-glass-bg);
-    backdrop-filter: var(--ia-glass-blur);
-    -webkit-backdrop-filter: var(--ia-glass-blur);
-    border: 1px solid var(--ia-glass-border);
-    border-radius: 12px;
-    margin-bottom: var(--ia-space-xl);
-    box-shadow: var(--ia-glass-shadow),
-                inset 0 1px 0 rgba(255, 255, 255, 0.05);
-}
-
-.ia-tab-button {
-    flex: 1;
-    padding: 12px 18px;
-    background: transparent;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-family: var(--ia-font-display);
-    font-weight: 600;
-    font-size: 0.8125rem;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-    transition: all var(--ia-duration-base) var(--ia-ease-smooth);
-    position: relative;
-    overflow: hidden;
-}
-
-.ia-tab-button::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg,
-        rgba(255, 255, 255, 0.1),
-        rgba(255, 255, 255, 0.05));
-    opacity: 0;
-    transition: opacity var(--ia-duration-base) var(--ia-ease-smooth);
-    border-radius: 8px;
-}
-
-.ia-tab-button::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%) scaleX(0);
-    width: 60%;
-    height: 2px;
-    background: var(--ia-gradient-primary);
-    transition: transform var(--ia-duration-base) var(--ia-ease-spring);
-    border-radius: 2px 2px 0 0;
-}
-
-.ia-tab-button:hover {
-    color: var(--text-primary);
-    transform: translateY(-1px);
-}
-
-.ia-tab-button:hover::before {
-    opacity: 1;
-}
-
-.ia-tab-button.active {
-    background: var(--ia-surface-elevated);
-    color: var(--ia-inner-ability);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2),
-                0 0 0 1px var(--ia-glass-border);
-}
-
-.ia-tab-button.active::after {
-    transform: translateX(-50%) scaleX(1);
-}
 
 /* Tab content with staggered animation */
 .ia-tab-content {
@@ -479,124 +372,6 @@
     font-weight: 600;
 }
 
-/* ========================================
-   PRESET COMPARISON - Premium Data Grid
-   ======================================== */
-
-.ia-comparison-table-wrapper {
-    background: var(--ia-surface-base);
-    backdrop-filter: var(--ia-glass-blur);
-    -webkit-backdrop-filter: var(--ia-glass-blur);
-    border: 1px solid var(--ia-glass-border);
-    border-radius: 12px;
-    overflow: hidden;
-    box-shadow: var(--ia-glass-shadow);
-}
-
-.ia-comparison-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.ia-comparison-table thead {
-    background: var(--ia-surface-elevated);
-}
-
-.ia-comparison-table th {
-    padding: var(--ia-space-md) var(--ia-space-lg);
-    text-align: left;
-    font-family: var(--ia-font-display);
-    font-weight: 600;
-    font-size: 0.8125rem;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-    color: var(--text-secondary);
-    border-bottom: 1px solid var(--ia-glass-border);
-    cursor: pointer;
-    user-select: none;
-    transition: all var(--ia-duration-base) var(--ia-ease-smooth);
-    position: relative;
-}
-
-.ia-comparison-table th:hover {
-    background: var(--ia-surface-subtle);
-    color: var(--text-primary);
-}
-
-.ia-comparison-table th.sortable::after {
-    content: '⇅';
-    margin-left: var(--ia-space-sm);
-    opacity: 0.3;
-    font-size: 0.9em;
-}
-
-.ia-comparison-table tbody tr {
-    border-bottom: 1px solid var(--ia-glass-border);
-    transition: all var(--ia-duration-base) var(--ia-ease-smooth);
-}
-
-.ia-comparison-table tbody tr:hover {
-    background: var(--ia-surface-subtle);
-}
-
-.ia-comparison-table tbody tr.expandable {
-    cursor: pointer;
-}
-
-.ia-comparison-table tbody tr.expandable:hover {
-    background: rgba(236, 72, 153, 0.08);
-}
-
-.ia-comparison-table td {
-    padding: var(--ia-space-md) var(--ia-space-lg);
-    font-family: var(--ia-font-display);
-    font-size: 0.9rem;
-    color: var(--text-primary);
-}
-
-/* Premium Rank Badges */
-.ia-rank-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: 8px;
-    font-family: var(--ia-font-display);
-    font-weight: 700;
-    font-size: 0.9rem;
-    color: white;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    position: relative;
-    overflow: hidden;
-}
-
-.ia-rank-badge::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.3), transparent);
-    pointer-events: none;
-}
-
-.ia-rank-badge.rank-1 {
-    background: var(--ia-gradient-rank-1);
-    box-shadow: var(--ia-glow-rank-1), 0 2px 8px rgba(0, 0, 0, 0.2);
-}
-
-.ia-rank-badge.rank-2 {
-    background: var(--ia-gradient-rank-2);
-    color: #1f2937;
-}
-
-.ia-rank-badge.rank-3 {
-    background: var(--ia-gradient-rank-3);
-}
-
-.ia-rank-badge.rank-default {
-    background: var(--ia-surface-elevated);
-    color: var(--text-secondary);
-}
 
 /* Equipped Badge */
 .ia-equipped-badge {
@@ -711,16 +486,7 @@
     margin-bottom: var(--ia-space-2xl);
 }
 
-.ia-theoretical-title {
-    font-family: var(--ia-font-display);
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: var(--text-primary);
-    letter-spacing: -0.02em;
-    margin: 0 0 var(--ia-space-lg) 0;
-}
-
-/* Scrollable Table Container */
+/* Scrollable Table Container - Extends base .table-scrollable with IA theming */
 .ia-table-scrollable {
     max-height: 600px;
     overflow-y: auto;
@@ -730,7 +496,7 @@
     box-shadow: var(--ia-glass-shadow);
 }
 
-/* Custom Scrollbar */
+/* Custom Scrollbar - IA-themed gradient */
 .ia-table-scrollable::-webkit-scrollbar {
     width: 8px;
 }
@@ -749,7 +515,7 @@
     background: var(--ia-inner-ability);
 }
 
-/* Rarity Badges - Premium Glow */
+/* Rarity Badges - Extends base .badge system with IA premium styling */
 .ia-rarity-badge {
     display: inline-flex;
     align-items: center;
@@ -777,7 +543,7 @@
 }
 
 .ia-rarity-badge.rarity-legendary {
-    background: linear-gradient(135deg, #fbbf24, #f59e0b);
+    background: linear-gradient(135deg, #33ce85, #31df8d);
     color: #1f2937;
     box-shadow: 0 2px 10px rgba(251, 191, 36, 0.4);
 }
@@ -965,8 +731,7 @@
    ACCESSIBILITY - Focus States
    ======================================== */
 
-.ia-tab-button:focus-visible,
-.ia-preset-tab:focus-visible,
+.preset-tab:focus-visible,
 .ia-line-card select:focus-visible,
 .ia-line-card input:focus-visible {
     outline: none;
@@ -979,26 +744,8 @@
    ======================================== */
 
 @media (max-width: 767px) {
-    .ia-tab-navigation {
-        flex-wrap: wrap;
-    }
-
-    .ia-tab-button {
-        flex: 1 1 100%;
-        min-width: 0;
-    }
-
     .ia-lines-grid {
         grid-template-columns: 1fr;
-    }
-
-    .ia-comparison-table {
-        font-size: 0.85rem;
-    }
-
-    .ia-comparison-table th,
-    .ia-comparison-table td {
-        padding: var(--ia-space-sm) var(--ia-space-md);
     }
 }
 
