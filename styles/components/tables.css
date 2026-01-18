@@ -87,12 +87,6 @@
     position: relative;
 }
 
-.table-scrollable {
-    max-height: 600px;
-    overflow-y: auto;
-    border-radius: 12px;
-}
-
 @media (max-width: 767px) {
     .table-scrollable {
         max-height: 400px;
@@ -245,7 +239,6 @@
 .table-scrollable {
     max-height: 600px;
     overflow-y: auto;
-    border-radius: 12px;
 }
 
 .table-scrollable::-webkit-scrollbar {

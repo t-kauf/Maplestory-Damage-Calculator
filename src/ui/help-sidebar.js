@@ -33,9 +33,6 @@ const helpContent = {
                 <li>Chapter Bosses (20-25% defense)</li>
                 <li>High-level stage hunts</li>
             </ul>
-
-            <h4>How It Works</h4>
-            <p>If an enemy has 30% defense and you have 10% defense penetration, the enemy's effective defense becomes 20%.</p>
         `
     },
     'skill-mastery': {

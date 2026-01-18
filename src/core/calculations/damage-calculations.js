@@ -164,8 +164,7 @@ export function calculateStatWeights(setup, stats) {
     const percentIncreases = [1, 5, 10, 25, 50, 75];
 
     const multiplicativeStats = {
-        'finalDamage': true,
-        'defPen': true
+        'finalDamage': true
     };
 
     const diminishingReturnStats = {
@@ -178,23 +177,23 @@ export function calculateStatWeights(setup, stats) {
     let html = '';
 
     // Tab navigation
-    html += '<div class="stat-predictions-tabs" style="display: flex; gap: 8px; margin-bottom: 16px; border-bottom: 2px solid rgba(255,255,255,0.08);">';
-    html += `<button class="stat-pred-tab active" data-tab="flat" onclick="switchStatPredictionTab('${setup}', 'flat')" style="background: transparent; border: none; padding: 10px 16px; font-family: var(--table-font-display); font-weight: 600; font-size: 0.875rem; color: var(--accent-primary); cursor: pointer; border-bottom: 3px solid var(--accent-primary); transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); letter-spacing: -0.01em;">Flat Stats</button>`;
-    html += `<button class="stat-pred-tab" data-tab="percentage" onclick="switchStatPredictionTab('${setup}', 'percentage')" style="background: transparent; border: none; padding: 10px 16px; font-family: var(--table-font-display); font-weight: 600; font-size: 0.875rem; color: var(--text-secondary); cursor: pointer; border-bottom: 3px solid transparent; transition: all 250ms cubic-bezier(0.4, 0, 0.2, 1); letter-spacing: -0.01em;">Percentage Stats</button>`;
+    html += '<div class="stat-predictions-tabs">';
+    html += `<button class="stat-pred-tab active" data-tab="flat" onclick="switchStatPredictionTab('${setup}', 'flat')">Flat Stats</button>`;
+    html += `<button class="stat-pred-tab" data-tab="percentage" onclick="switchStatPredictionTab('${setup}', 'percentage')">Percentage Stats</button>`;
     html += '</div>';
 
     // ========== FLAT STATS PANEL ==========
-    html += `<div id="stat-pred-panel-${setup}-flat" class="stat-pred-panel active" style="display: block;">`;
-    html += '<div class="table-wrapper" style="background: var(--table-surface-base); backdrop-filter: var(--table-glass-blur); border: 1px solid var(--table-glass-border); border-radius: 12px; overflow: hidden; box-shadow: var(--table-glass-shadow);">';
-    html += `<table class="table table--compact table--numeric" id="stat-pred-table-${setup}-flat">`;
-    html += '<thead><tr><th style="padding: 8px 10px; font-size: 0.75rem;">Stat</th>';
+    html += `<div id="stat-pred-panel-${setup}-flat" class="stat-pred-panel active">`;
+    html += '<div class="">';
+    html += `<table class="table" id="stat-pred-table-${setup}-flat">`;
+    html += '<thead><tr><th>Stat</th>';
     attackIncreases.forEach((inc, idx) => {
-        html += `<th style="padding: 8px 10px; font-size: 0.75rem; text-align: right; cursor: pointer; user-select: none; transition: background 200ms;" onclick="sortStatPredictions('${setup}', 'flat', ${idx + 1}, this)" onmouseover="this.style.background='var(--table-surface-subtle)'" onmouseout="this.style.background='transparent'">+${formatNumber(inc)} <span class="sort-indicator" style="opacity: 0.3; font-size: 0.8em; margin-left: 4px;">⇅</span></th>`;
+        html += `<th onclick="sortStatPredictions('${setup}', 'flat', ${idx + 1}, this)" onmouseover="this.style.background='var(--table-surface-subtle)'" onmouseout="this.style.background='transparent'">+${formatNumber(inc)} <span class="sort-indicator" style="opacity: 0.3; font-size: 0.8em; margin-left: 4px;">⇅</span></th>`;
     });
     html += '</tr></thead><tbody>';
 
     // Attack row
-    html += `<tr><td style="padding: 8px 10px; font-weight: 600; font-size: 0.85rem; color: var(--text-primary);"><button onclick="toggleStatChart('${setup}', 'attack', 'Attack', true)" style="background: none; border: none; cursor: pointer; font-size: 1em; margin-right: 6px; color: var(--accent-primary); opacity: 0.7; transition: opacity 200ms;" title="Toggle graph" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">📊</button>Attack</td>`;
+    html += `<tr><td><button onclick="toggleStatChart('${setup}', 'attack', 'Attack', true)" title="Toggle graph" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">📊</button>Attack</td>`;
     attackIncreases.forEach(increase => {
         const modifiedStats = { ...stats };
         const oldValue = stats.attack;
@@ -207,13 +206,13 @@ export function calculateStatWeights(setup, stats) {
 
         const tooltip = `+${formatNumber(increase)} Attack\nOld: ${formatNumber(oldValue)}, New: ${formatNumber(newValue)}\nEffective: +${formatNumber(effectiveIncrease)}\nGain: ${gain}%`;
 
-        html += `<td style="padding: 8px 10px; text-align: right; font-family: var(--table-font-mono); font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; font-size: 0.85rem;" title="${tooltip}"><span style="color: var(--text-primary);">+${gain}%</span></td>`;
+        html += `<td>+${gain}%</span></td>`;
     });
     html += '</tr>';
-    html += `<tr id="chart-row-${setup}-attack" class="chart-row" style="display: none;"><td colspan="7" style="padding: 16px; background: var(--background); border-top: 1px solid var(--table-glass-border);"><canvas id="chart-${setup}-attack"></canvas></td></tr>`;
+    html += `<tr id="chart-row-${setup}-attack" class="chart-row" style="display: none;"><td colspan="7"><canvas id="chart-${setup}-attack"></canvas></td></tr>`;
 
     // Main Stat row
-    html += `<tr><td style="padding: 8px 10px; font-weight: 600; font-size: 0.85rem; color: var(--text-primary);"><button onclick="toggleStatChart('${setup}', 'mainStat', 'Main Stat', true)" style="background: none; border: none; cursor: pointer; font-size: 1em; margin-right: 6px; color: var(--accent-primary); opacity: 0.7; transition: opacity 200ms;" title="Toggle graph" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">📊</button>Main Stat</td>`;
+    html += `<tr><td><button onclick="toggleStatChart('${setup}', 'mainStat', 'Main Stat', true)" title="Toggle graph" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">📊</button>Main Stat</td>`;
     mainStatIncreases.forEach(increase => {
         const modifiedStats = { ...stats };
         const oldValue = stats.statDamage;
@@ -226,7 +225,7 @@ export function calculateStatWeights(setup, stats) {
 
         const tooltip = `+${formatNumber(increase)} Main Stat\n+${statDamageIncrease.toFixed(2)}% Stat Damage\nGain: ${gain}%`;
 
-        html += `<td style="padding: 8px 10px; text-align: right; font-family: var(--table-font-mono); font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; font-size: 0.85rem;" title="${tooltip}"><span style="color: var(--text-primary);">+${gain}%</span></td>`;
+        html += `<td title="${tooltip}"><span style="color: var(--text-primary);">+${gain}%</span></td>`;
     });
     html += '</tr>';
     html += `<tr id="chart-row-${setup}-mainStat" class="chart-row" style="display: none;"><td colspan="7" style="padding: 16px; background: var(--background); border-top: 1px solid var(--table-glass-border);"><canvas id="chart-${setup}-mainStat"></canvas></td></tr>`;
@@ -236,12 +235,12 @@ export function calculateStatWeights(setup, stats) {
     html += '</div>';
 
     // ========== PERCENTAGE STATS PANEL ==========
-    html += `<div id="stat-pred-panel-${setup}-percentage" class="stat-pred-panel" style="display: none;">`;
-    html += '<div class="table-wrapper" style="background: var(--table-surface-base); backdrop-filter: var(--table-glass-blur); border: 1px solid var(--table-glass-border); border-radius: 12px; overflow: hidden; box-shadow: var(--table-glass-shadow);">';
-    html += `<table class="table table--compact table--numeric" id="stat-pred-table-${setup}-percentage">`;
+    html += `<div id="stat-pred-panel-${setup}-percentage" class="stat-pred-panel">`;
+    html += '<div class="">';
+    html += `<table class="table" id="stat-pred-table-${setup}-percentage">`;
     html += '<thead><tr><th style="padding: 8px 10px; font-size: 0.75rem;">Stat</th>';
     percentIncreases.forEach((inc, idx) => {
-        html += `<th style="padding: 8px 10px; font-size: 0.75rem; text-align: right; cursor: pointer; user-select: none; transition: background 200ms;" onclick="sortStatPredictions('${setup}', 'percentage', ${idx + 1}, this)" onmouseover="this.style.background='var(--table-surface-subtle)'" onmouseout="this.style.background='transparent'">+${inc}% <span class="sort-indicator" style="opacity: 0.3; font-size: 0.8em; margin-left: 4px;">⇅</span></th>`;
+        html += `<th onclick="sortStatPredictions('${setup}', 'percentage', ${idx + 1}, this)" onmouseover="this.style.background='var(--table-surface-subtle)'" onmouseout="this.style.background='transparent'">+${inc}% <span class="sort-indicator" style="opacity: 0.3; font-size: 0.8em; margin-left: 4px;">⇅</span></th>`;
     });
     html += '</tr></thead><tbody>';
 
@@ -254,7 +253,7 @@ export function calculateStatWeights(setup, stats) {
             //labelContent += ` <span style="font-size: 0.7em; opacity: 0.5;" title="Diminishing returns">📉</span>`;
         }
 
-        html += `<tr><td style="padding: 8px 10px; font-weight: 600; font-size: 0.85rem; color: var(--text-primary);"><button onclick="toggleStatChart('${setup}', '${stat.key}', '${stat.label}', false)" style="background: none; border: none; cursor: pointer; font-size: 1em; margin-right: 6px; color: var(--accent-primary); opacity: 0.7; transition: opacity 200ms;" title="Toggle graph" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">📊</button>${labelContent}</td>`;
+        html += `<tr><td><button onclick="toggleStatChart('${setup}', '${stat.key}', '${stat.label}', false)" title="Toggle graph" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">📊</button>${labelContent}</td>`;
 
         percentIncreases.forEach(increase => {
             let cumulativeGainPct = 0;
@@ -314,11 +313,11 @@ export function calculateStatWeights(setup, stats) {
                 tooltip = `+${increase}%\nOld: ${formatNumber(oldValue)}, New: ${formatNumber(newValue)}\nGain: ${gain}%`;
             }
 
-            html += `<td style="padding: 8px 10px; text-align: right; font-family: var(--table-font-mono); font-weight: 400; font-variant-numeric: tabular-nums; letter-spacing: -0.03em; font-size: 0.85rem;" title="${tooltip}"><span style="color: var(--text-primary);">+${gain}%</span></td>`;
+            html += `<td title="${tooltip}"><span style="color: var(--text-primary);">+${gain}%</span></td>`;
         });
 
         html += '</tr>';
-        html += `<tr id="chart-row-${setup}-${stat.key}" class="chart-row" style="display: none;"><td colspan="7" style="padding: 16px; background: var(--background); border-top: 1px solid var(--table-glass-border);"><canvas id="chart-${setup}-${stat.key}"></canvas></td></tr>`;
+        html += `<tr id="chart-row-${setup}-${stat.key}" class="chart-row" style="display: none;"><td colspan="7"><canvas id="chart-${setup}-${stat.key}"></canvas></td></tr>`;
     });
 
     html += '</tbody></table>';
@@ -336,12 +335,8 @@ window.switchStatPredictionTab = function(setup, tabName) {
     tabs.forEach(tab => {
         if (tab.dataset.tab === tabName) {
             tab.classList.add('active');
-            tab.style.color = 'var(--accent-primary)';
-            tab.style.borderBottomColor = 'var(--accent-primary)';
         } else {
             tab.classList.remove('active');
-            tab.style.color = 'var(--text-secondary)';
-            tab.style.borderBottomColor = 'transparent';
         }
     });
 
@@ -349,9 +344,9 @@ window.switchStatPredictionTab = function(setup, tabName) {
     const panels = container.querySelectorAll('.stat-pred-panel');
     panels.forEach(panel => {
         if (panel.id === `stat-pred-panel-${setup}-${tabName}`) {
-            panel.style.display = 'block';
+            panel.classList.add('active');
         } else {
-            panel.style.display = 'none';
+            panel.classList.remove('active');
         }
     });
 };
