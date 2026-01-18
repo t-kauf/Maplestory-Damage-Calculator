@@ -384,7 +384,6 @@
 
 /* Base equipped state */
 .weapon-card.equipped {
-    background: var(--wl-surface-equipped);
     transform: scale(1.02);
 }
 
