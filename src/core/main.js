@@ -38,6 +38,7 @@ import { initializeHeroPowerPresets, loadHeroPowerPresets} from '@ui/presets-ui.
 import { initializeWeapons, updateWeaponBonuses} from '@core/weapon-levels/weapons-ui.js';
 import { initializeEquipmentTab, migrateLegacyData } from '@ui/equipment/equipment-tab.js';
 import { initializeSlotComparison, getCurrentSlot } from '@ui/comparison/slot-comparison.js';
+import { initializeComparisonState } from '@core/comparison-state.js';
 import { displayResults } from '@ui/results-display.js';
 import { initializeCompanionsUI } from '@ui/companions-ui.js';
 import { refreshPresetsUI } from '@ui/companions-presets-ui.js';
@@ -353,7 +354,7 @@ export function switchBaseStatsSubTab(subTabName) {
     }
 
     // Update button states - get the parent container's buttons
-    const buttons = document.querySelectorAll('#setup-base-stats .tab-button');
+    const buttons = document.querySelectorAll('#setup-base-stats .tab-button, #setup-base-stats .optimization-sub-tab-button');
     buttons.forEach(button => {
         button.classList.remove('active');
     });
@@ -591,6 +592,7 @@ window.onload = function () {
     initializeScrollingAnalysis();
     initializeArtifactPotential();
     initializeEquipmentTab();
+    initializeComparisonState(); // Initialize comparison state manager before UI
     initializeSlotComparison();
     migrateLegacyData();
     initializeArtifacts();

@@ -368,11 +368,10 @@ function restoreTabState(pageName, tabName) {
         // Update button states      
         allTabButtons.forEach(button => {
             button.classList.remove('active');
-            const onclickAttr = button.getAttribute('data-tab');
-            if (onclickAttr &&
-                onclickAttr.includes(`${targetTab}`)) {
-                button.classList.add('active');
-            }
+             const onclickAttr = button.getAttribute('onclick');
+        if (onclickAttr && onclickAttr.includes(`${tabName}`)) {
+            button.classList.add('active');
+        }
         });
 
         // Reset sub-tabs to their default state

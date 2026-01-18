@@ -97,6 +97,8 @@
     font-family: var(--opt-font-display);
 }
 
+#character-setup-card,
+#stat-damage-predictions-card,
 #character-optimization-card {
     background: var(--opt-glass-bg);
     backdrop-filter: var(--opt-glass-blur);
@@ -108,6 +110,8 @@
 }
 
 /* Subtle animated gradient border effect */
+#character-setup-card::before,
+#stat-damage-predictions-card::before,
 #character-optimization-card::before {
     content: '';
     position: absolute;

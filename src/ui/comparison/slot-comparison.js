@@ -90,43 +90,60 @@ window.checkPendingSlotNavigation = checkPendingSlotNavigation;
 
 /**
  * Switch to a different slot
+ * FIXED: Now properly handles persistence without race conditions
  */
-export function switchComparisonSlot(slotId) {
-    // Save current slot items
-    window.saveCurrentSlotItems();
+export async function switchComparisonSlot(slotId) {
+    try {
+        console.log(`[SlotComparison] Switching from ${currentSlot} to ${slotId}`);
 
-    // Clear current items
-    const tabsContainer = document.getElementById('comparison-tabs-container');
-    const itemsContainer = document.getElementById('comparison-items-container');
-    if (tabsContainer) {
-        // Clone the add button before clearing to preserve it
-        const addButton = tabsContainer.querySelector('button[onclick="addComparisonItem()"]');
-        const addButtonClone = addButton ? addButton.cloneNode(true) : null;
-        tabsContainer.innerHTML = '';
-        if (addButtonClone) tabsContainer.appendChild(addButtonClone);
+        // Save current slot selection BEFORE any DOM changes
+        localStorage.setItem('lastSelectedComparisonSlot', slotId);
+
+        // Update the selector immediately to reflect the change
+        const selector = document.getElementById('comparison-slot-selector');
+        if (selector) {
+            selector.value = slotId;
+        }
+
+        // The state manager handles persistence automatically
+        // We don't need to manually save before clearing DOM
+        // because loadSlotItems() will load the persisted data
+
+        // Clear UI containers
+        const tabsContainer = document.getElementById('comparison-tabs-container');
+        const itemsContainer = document.getElementById('comparison-items-container');
+
+        if (tabsContainer) {
+            // Clone the add button before clearing to preserve it
+            const addButton = tabsContainer.querySelector('button[data-type="add-button"]');
+            const addButtonClone = addButton ? addButton.cloneNode(true) : null;
+            tabsContainer.innerHTML = '';
+            if (addButtonClone) {
+                tabsContainer.appendChild(addButtonClone);
+            }
+        }
+
+        if (itemsContainer) {
+            itemsContainer.innerHTML = '';
+        }
+
+        // Change slot state
+        currentSlot = slotId;
+
+        // Update equipped display
+        updateEquippedItemDisplay(slotId);
+
+        // Load items for new slot (this loads from state manager)
+        await window.loadSlotItems(slotId);
+
+        // Update header
+        updateSlotHeader(EQUIPMENT_SLOTS[slotId].name);
+
+        console.log(`[SlotComparison] Successfully switched to ${slotId}`);
+
+    } catch (error) {
+        console.error(`[SlotComparison] Failed to switch slot:`, error);
     }
-    if (itemsContainer) {
-        itemsContainer.innerHTML = '';
-    }
-
-    // Change slot
-    currentSlot = slotId;
-
-    // Save to localStorage so it persists on refresh
-    localStorage.setItem('lastSelectedComparisonSlot', slotId);
-
-    // Update selector
-    const selector = document.getElementById('comparison-slot-selector');
-    if (selector) selector.value = currentSlot;
-
-    // Update equipped display
-    updateEquippedItemDisplay(slotId);
-
-    // Load items for new slot
-    window.loadSlotItems(slotId);
-
-    // Update header
-    updateSlotHeader(EQUIPMENT_SLOTS[slotId].name);
 }
 
 /**

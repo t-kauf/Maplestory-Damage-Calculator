@@ -9,24 +9,15 @@ import { rarities, tiers } from '@core/constants.js';
 window.toggleTheme = toggleTheme;
 
 export function toggleTheme() {
+    // Dark mode only - light theme disabled
+    // Ensure dark mode is always active
     const html = document.documentElement;
-    const themeToggle = document.getElementById('theme-toggle');
-    const themeToggleSidebar = document.getElementById('theme-icon-sidebar');
-    const isDark = html.classList.contains('dark');
-
-    if (isDark) {
-        html.classList.remove('dark');
-        if (themeToggle) themeToggle.textContent = '🌙';
-        if (themeToggleSidebar) themeToggleSidebar.textContent = '🌙';
-        localStorage.setItem('theme', 'light');
-    } else {
+    if (!html.classList.contains('dark')) {
         html.classList.add('dark');
-        if (themeToggle) themeToggle.textContent = '☀️';
-        if (themeToggleSidebar) themeToggleSidebar.textContent = '☀️';
-        localStorage.setItem('theme', 'dark');
     }
+    localStorage.setItem('theme', 'dark');
 
-    // Re-initialize weapons to update Normal rarity color based on theme
+    // Re-initialize weapons to update Normal rarity color (dark mode only)
     const savedData = localStorage.getItem('damageCalculatorData');
     initializeWeapons();
 
@@ -78,18 +69,14 @@ export function toggleTheme() {
 }
 
 export function loadTheme() {
-    const savedTheme = localStorage.getItem('theme') || 'dark';
+    // Dark mode only - ignore saved theme and force dark mode
     const html = document.documentElement;
     const themeToggle = document.getElementById('theme-toggle');
     const themeToggleSidebar = document.getElementById('theme-icon-sidebar');
 
-    if (savedTheme === 'dark') {
-        html.classList.add('dark');
-        if (themeToggle) themeToggle.textContent = '☀️';
-        if (themeToggleSidebar) themeToggleSidebar.textContent = '☀️';
-    } else {
-        html.classList.remove('dark');
-        if (themeToggle) themeToggle.textContent = '🌙';
-        if (themeToggleSidebar) themeToggleSidebar.textContent = '🌙';
-    }
+    html.classList.add('dark');
+    localStorage.setItem('theme', 'dark');
+
+    if (themeToggle) themeToggle.textContent = '☀️';
+    if (themeToggleSidebar) themeToggleSidebar.textContent = '☀️';
 }

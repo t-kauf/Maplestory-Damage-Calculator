@@ -330,7 +330,7 @@ export function switchInnerAbilityTab(tabName) {
     // This works both when called from a click event and during initialization    
     allSubTabButtons.forEach(btn => {
         const onclickAttr = btn.getAttribute('onclick');
-        if (onclickAttr && onclickAttr.includes(`'${tabName}'`)) {
+        if (onclickAttr && onclickAttr.includes(`${tabName}`)) {
             btn.classList.add('active');
         }
     });

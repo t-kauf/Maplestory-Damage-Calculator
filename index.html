@@ -36,13 +36,11 @@
         }
     </script>
 
-    <!-- Load theme immediately to prevent flash -->
+    <!-- Force dark mode - light theme disabled -->
     <script>
         (function() {
-            const savedTheme = localStorage.getItem('theme') || 'dark';
-                if (savedTheme === 'dark') {
-                    document.documentElement.classList.add('dark');
-                }
+            document.documentElement.classList.add('dark');
+            localStorage.setItem('theme', 'dark');
             })();
     </script>
 
@@ -123,7 +121,7 @@
                 <span class="sidebar-dps-label">Current DPS</span>
                 <span id="sidebar-dps-value" class="sidebar-dps-value">-</span>
             </div>
-            <button onclick="toggleTheme()" id="theme-toggle-sidebar" class="sidebar-footer-btn">
+            <button onclick="toggleTheme()" id="theme-toggle-sidebar" class="sidebar-footer-btn" style="display: none !important;">
                 <span id="theme-icon-sidebar">🌙</span>
                 <span>Toggle Theme</span>
             </button>
@@ -168,18 +166,20 @@
         <!-- Page: Loadout -->
         <div id="page-setup" class="page-container">
         <!-- Loadout Content -->
-        <div id="character-setup-card" class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-2xl p-3 shadow-lg mb-3" style="position: relative;">
-            <div class="text-2xl mb-2 text-center text-blue-600 dark:text-blue-400 font-semibold">Loadout</div>
-            <div class="flex flex-wrap gap-2.5 mb-3 border-b-2 border-gray-200/50 dark:border-gray-700/50 pb-0">
-                <button class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTabAndUpdateURL('setup', 'base-stats', event)">Base Stats</button>
-                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTabAndUpdateURL('setup', 'equipment', event)">Equipment</button>
-                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTabAndUpdateURL('setup', 'weapon-levels', event)">Weapon Levels</button>
-                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTabAndUpdateURL('setup', 'companions', event)">Companions</button>
-                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTabAndUpdateURL('setup', 'artifacts', event)">Artifacts</button>
+        <div id="character-setup-card">
+            <div class="optimization-page-header">
+                <h1 class="optimization-page-title">Loadout</h1>
+            </div>
+            <div class="optimization-main-tabs">
+                <button class="setup-tab-button optimization-tab-button active" data-tab="base-stats" onclick="switchTabAndUpdateURL('setup', 'base-stats', event)">Base Stats</button>
+                <button class="setup-tab-button optimization-tab-button" data-tab="equipment" onclick="switchTabAndUpdateURL('setup', 'equipment', event)">Equipment</button>
+                <button class="setup-tab-button optimization-tab-button" data-tab="weapon-levels" onclick="switchTabAndUpdateURL('setup', 'weapon-levels', event)">Weapon Levels</button>
+                <button class="setup-tab-button optimization-tab-button" data-tab="companions" onclick="switchTabAndUpdateURL('setup', 'companions', event)">Companions</button>
+                <button style="display: none;" class="setup-tab-button optimization-tab-button" data-tab="artifacts" onclick="switchTabAndUpdateURL('setup', 'artifacts', event)">Artifacts</button>
             </div>
 
             <!-- Base Stats Tab -->
-            <div id="setup-base-stats" class="tab-content active">
+            <div id="setup-base-stats" class="setup-tab-content optimization-tab-content tab-content active">
                 <div class="bg-transparent p-2">
                     <!-- Class Selector -->
                     <div style="margin-bottom: 8px; padding: 8px; background: var(--background); border: 1px solid var(--border-color); border-radius: 8px;">
@@ -246,10 +246,10 @@
                     </div>
 
                     <!-- Sub-tabs for Stats and Skill Mastery -->
-                    <div class="flex flex-wrap gap-2.5 mb-2 border-b-2 border-gray-200/50 dark:border-gray-700/50 pb-0" style="display: none;">
-                        <button class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchBaseStatsSubTab('character-stats')">Stats</button>
-                        <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchBaseStatsSubTab('skill-mastery')">Skill Mastery</button>
-                        <button style="display: none;" class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchBaseStatsSubTab('skill-details')">Skill Details</button>
+                    <div class="optimization-sub-tabs" style="display: none;">
+                        <button class="optimization-sub-tab-button active" onclick="switchBaseStatsSubTab('character-stats')">Stats</button>
+                        <button class="optimization-sub-tab-button" onclick="switchBaseStatsSubTab('skill-mastery')">Skill Mastery</button>
+                        <button style="display: none;" class="optimization-sub-tab-button" onclick="switchBaseStatsSubTab('skill-details')">Skill Details</button>
                     </div>
 
                     <!-- Character Stats Sub-tab -->
@@ -643,7 +643,7 @@
             </div>
 
             <!-- Equipment Tab -->
-            <div id="setup-equipment" class="tab-content">
+            <div id="setup-equipment" class="setup-tab-content optimization-tab-content tab-content">
                 <!-- Summary Section -->
                 <div id="equipment-summary" style="background: linear-gradient(135deg, rgba(52, 199, 89, 0.1), rgba(0, 122, 255, 0.05)); border: 2px solid var(--accent-primary); border-radius: 12px; padding: 15px; margin-bottom: 20px; box-shadow: 0 4px 16px var(--shadow);">
                     <h3 style="color: var(--accent-primary); margin: 0 0 10px 0; font-size: 1em; font-weight: 700;">Total Equipment Stats</h3>
@@ -659,7 +659,7 @@
             </div>
 
             <!-- Weapon Levels Tab -->
-            <div id="setup-weapon-levels" class="tab-content">
+            <div id="setup-weapon-levels" class="setup-tab-content optimization-tab-content tab-content">
                 <div style="background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.05)); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px var(--shadow);">
                     <div style="color: var(--text-primary); font-size: 0.9em; line-height: 1.5;">
                         <strong style="color: var(--accent-primary);">Instructions:</strong> Click stars to set star rating, enter weapon level. Check the "E" button to equip a weapon. The given inventory attack gain % is how much you'd expect if you spent 10k shards on the given weapon.
@@ -761,7 +761,7 @@
             </div>
 
             <!-- Companions Tab -->
-            <div id="setup-companions" class="tab-content">
+            <div id="setup-companions" class="setup-tab-content optimization-tab-content tab-content">
                 <div style="background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.05)); border: 1px solid var(--border-color); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px var(--shadow);">
                     <div style="color: var(--text-primary); font-size: 0.9em; line-height: 1.5;">
                         <strong style="color: var(--accent-primary);">Instructions:</strong> Click on a companion to unlock/activate it. Enter the level for each companion. Unlocked companions provide inventory effects (always active), and you can equip companions for additional equip effects. Worth noting that the active abilities or passives that occur when a companion is summoned is not accounted for in any of the values below when providing % gains in DPS. 
@@ -785,7 +785,7 @@
             </div>
 
             <!-- Artifacts Tab -->
-            <div id="setup-artifacts" class="tab-content">
+            <div id="setup-artifacts" class="setup-tab-content optimization-tab-content tab-content">
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; min-height: 600px;">
                     <!-- Left Panel: Equipped Artifacts -->
                     <div id="artifacts-equipped-panel" style="background: var(--background); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; overflow-y: auto;">
@@ -890,7 +890,7 @@
                         <h3 class="comparison-column-header comparison-column-header--comparison">Comparison Items</h3>
                         <!-- Tab Navigation with Enhanced Accessibility -->
                         <div id="comparison-tabs-container" class="comparison-tabs-container" role="tablist" aria-label="Comparison item tabs">
-                            <button class="comparison-add-tab-btn" onclick="addComparisonItem()" aria-label="Add new comparison item">
+                            <button class="comparison-add-tab-btn" data-type="add-button" onclick="addComparisonItem()" aria-label="Add new comparison item">
                                 <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                                     <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                                 </svg>
@@ -996,10 +996,10 @@
                 </div>
 
                 <!-- Main Tab Navigation -->
-                <div id="tab-container-main" class="flex flex-wrap gap-2.5 mb-3 border-b-2 border-gray-200/50 dark:border-gray-700/50 pb-0">
-                    <button id="cube-main-tab-selected" class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg">Selected Slot</button>
-                    <button id="cube-main-tab-summary" class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg">Summary</button>
-                    <button id="cube-main-tab-simulation" class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg">Simulation</button>
+                <div id="tab-container-main" class="optimization-sub-tabs">
+                    <button id="cube-main-tab-selected" class="optimization-sub-tab-button active">Selected Slot</button>
+                    <button id="cube-main-tab-summary" class="optimization-sub-tab-button">Summary</button>
+                    <button id="cube-main-tab-simulation" class="optimization-sub-tab-button">Simulation</button>
                 </div>
 
                 <!-- Summary Main Tab Content -->
@@ -1048,9 +1048,9 @@
                     </div>
 
                     <!-- Selected Slot Sub-Tab Navigation -->
-                    <div class="flex flex-wrap gap-2.5 mb-3 border-b-2 border-gray-200/50 dark:border-gray-700/50 pb-0">
-                    <button id="cube-tab-comparison" class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg">Comparison</button>
-                    <button id="cube-tab-rankings" class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg">Slot Theoretical Best</button>
+                    <div class="optimization-sub-tabs">
+                    <button id="cube-tab-comparison" class="optimization-sub-tab-button active">Comparison</button>
+                    <button id="cube-tab-rankings" class="optimization-sub-tab-button">Slot Theoretical Best</button>
                     </div>
 
                     <!-- Comparison Tab Content -->
@@ -1168,23 +1168,25 @@
         <!-- Page: Stat Hub -->
         <div id="page-predictions" class="page-container" style="display: none;">
         <!-- Stat Hub Content -->
-        <div id="stat-damage-predictions-card" class="bg-white/70 dark:bg-gray-800/70 backdrop-blur-sm border border-gray-200 dark:border-gray-700 rounded-2xl p-3 shadow-lg mb-3">
-            <div class="text-2xl mb-2 text-center font-semibold">
-                <span class="stat-hub-logo-large">Stat<span class="stat-hub-highlight-large">Hub</span></span>
+        <div id="stat-damage-predictions-card">
+            <div class="optimization-page-header">
+                <h1 class="optimization-page-title">
+                    <span class="stat-hub-logo-large">Stat<span class="stat-hub-highlight-large">Hub</span></span>
+                </h1>
             </div>
 
-            <div class="flex flex-wrap gap-2.5 mb-3 border-b-2 border-gray-200/50 dark:border-gray-700/50 pb-0">
-                <button class="tab-button active px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTabAndUpdateURL('predictions', 'stat-tables', event)">Stat Predictions</button>
-                <button class="tab-button px-6 py-3 text-base font-semibold cursor-pointer transition-all duration-300 border-b-[3px] border-transparent -mb-0.5 rounded-t-lg" onclick="switchTabAndUpdateURL('predictions', 'equivalency', event)">Stat Equivalency</button>
+            <div class="optimization-main-tabs">
+                <button class="predictions-tab-button optimization-tab-button active" data-tab="stat-tables" onclick="switchTabAndUpdateURL('predictions', 'stat-tables', event)">Stat Predictions</button>
+                <button class="predictions-tab-button optimization-tab-button" data-tab="equivalency" onclick="switchTabAndUpdateURL('predictions', 'equivalency', event)">Stat Equivalency</button>
             </div>
 
             <!-- Stat Predictions Tab -->
-            <div id="predictions-stat-tables" class="tab-content active">
+            <div id="predictions-stat-tables" class="predictions-tab-content optimization-tab-content active">
                 <div id="stat-weights-base"></div>
             </div>
 
             <!-- Stat Equivalency Tab -->
-            <div id="predictions-equivalency" class="tab-content">
+            <div id="predictions-equivalency" class="predictions-tab-content optimization-tab-content">
                 <div style="margin-bottom: 20px;">
                     <h3 style="color: var(--accent-primary); margin-bottom: 10px; font-size: 1.2em; font-weight: 600;">
                         ✨ Stat Equivalency Calculator
