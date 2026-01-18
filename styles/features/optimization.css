@@ -214,6 +214,8 @@
 }
 
 /* Tab-specific accent colors */
+.optimization-tab-button[data-tab="base-stats"].active,
+.optimization-tab-button[data-tab="stat-tables"].active,
 .optimization-tab-button[data-tab="item-comparison"].active {
     background: linear-gradient(135deg,
         rgba(59, 130, 246, 0.15),
@@ -223,10 +225,14 @@
     box-shadow: 0 0 20px rgba(59, 130, 246, 0.2),
                 0 2px 8px rgba(0, 0, 0, 0.2);
 }
+.optimization-tab-button[data-tab="base-stats"].active::after,
+.optimization-tab-button[data-tab="stat-tables"].active::after,
 .optimization-tab-button[data-tab="item-comparison"].active::after {
     background: var(--opt-gradient-item-comparison);
 }
 
+.optimization-tab-button[data-tab="equipment"].active,
+.optimization-tab-button[data-tab="equivalency"].active,
 .optimization-tab-button[data-tab="inner-ability"].active {
     background: linear-gradient(135deg,
         rgba(236, 72, 153, 0.15),
@@ -236,10 +242,13 @@
     box-shadow: 0 0 20px rgba(236, 72, 153, 0.2),
                 0 2px 8px rgba(0, 0, 0, 0.2);
 }
+.optimization-tab-button[data-tab="equipment"].active::after,
+.optimization-tab-button[data-tab="equivalency"].active::after,
 .optimization-tab-button[data-tab="inner-ability"].active::after {
     background: var(--opt-gradient-inner-ability);
 }
 
+.optimization-tab-button[data-tab="weapon-levels"].active,
 .optimization-tab-button[data-tab="artifact-potential"].active {
     background: linear-gradient(135deg,
         rgba(245, 158, 11, 0.15),
@@ -249,10 +258,12 @@
     box-shadow: 0 0 20px rgba(245, 158, 11, 0.2),
                 0 2px 8px rgba(0, 0, 0, 0.2);
 }
+.optimization-tab-button[data-tab="weapon-levels"].active::after,
 .optimization-tab-button[data-tab="artifact-potential"].active::after {
     background: var(--opt-gradient-artifact);
 }
 
+.optimization-tab-button[data-tab="scompanions"].active,
 .optimization-tab-button[data-tab="scroll-optimizer"].active {
     background: linear-gradient(135deg,
         rgba(20, 184, 166, 0.15),
@@ -262,6 +273,7 @@
     box-shadow: 0 0 20px rgba(20, 184, 166, 0.2),
                 0 2px 8px rgba(0, 0, 0, 0.2);
 }
+.optimization-tab-button[data-tab="companions"].active::after,
 .optimization-tab-button[data-tab="scroll-optimizer"].active::after {
     background: var(--opt-gradient-scrolling);
 }

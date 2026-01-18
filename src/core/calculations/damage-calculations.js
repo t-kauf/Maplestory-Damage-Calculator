@@ -177,10 +177,10 @@ export function calculateStatWeights(setup, stats) {
     // ========== TABLE 1: FLAT STAT INCREASES ==========
     html += '<div style="margin-bottom: 30px;">';
     html += '<h3 style="color: var(--accent-primary); margin-bottom: 15px; font-size: 1.1em; font-weight: 600;">Flat Stat Increases</h3>';
-    html += '<table class="stat-weight-table">';
+    html += '<table class="table">';
     html += '<thead><tr><th>Stat</th>';
     for (let i = 0; i < 6; i++) {
-        html += `<th>Increase</th>`;
+        html += `<th style="text-align:right;">Increase</th>`;
     }
     html += '</tr></thead><tbody>';
 
@@ -242,10 +242,10 @@ export function calculateStatWeights(setup, stats) {
     // ========== TABLE 2: PERCENTAGE STAT INCREASES ==========
     html += '<div style="margin-bottom: 30px;">';
     html += '<h3 style="color: var(--accent-primary); margin-bottom: 15px; font-size: 1.1em; font-weight: 600;">Percentage Stat Increases</h3>';
-    html += '<table class="stat-weight-table">';
+    html += '<table class="table">';
     html += '<thead><tr><th>Stat</th>';
     for (let i = 0; i < 6; i++) {
-        html += `<th>Increase</th>`;
+        html += `<th style="text-align:right;">Increase</th>`;
     }
     html += '</tr></thead><tbody>';
 
@@ -537,7 +537,7 @@ export function calculateStatEquivalency(sourceStat) {
     html += '</div>';
     html += '</div>';
 
-    html += '<table class="stat-weight-table" style="margin: 0;">';
+    html += '<table class="table" style="margin: 0;">';
     html += '<thead><tr>';
     html += '<th style="text-align: left; font-size: 1em;">Equivalent Stat</th>';
     html += '<th style="text-align: right; font-size: 1em;">Required Amount</th>';
