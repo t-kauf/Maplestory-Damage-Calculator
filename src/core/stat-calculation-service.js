@@ -165,6 +165,65 @@ export class StatCalculationService {
     }
 
     /**
+     * Subtract a multiplicative stat (like Final Damage)
+     * Uses formula: newValue = ((1 + old/100) / (1 + value/100) - 1) * 100
+     * This reverses the addition of a multiplicative stat
+     * @param {string} statKey - The stat key
+     * @param {number} value - Value to subtract (the multiplicative contribution to remove)
+     * @returns {StatCalculationService} Returns this for chaining
+     */
+    subtractMultiplicativeStat(statKey, value) {
+        const oldValue = this.stats[statKey] || 0;
+        const newValue = (((1 + oldValue / 100) / (1 + value / 100)) - 1) * 100;
+        this.stats[statKey] = newValue;
+        return this;
+    }
+
+    /**
+     * Add defense with Dark Knight conversion to main stat
+     * For Dark Knight: defense converts to main stat (but is NOT affected by main stat %)
+     * Conversion rate: 1 defense = 0.127 main stat
+     * Then converted to stat damage: 100 main stat = 1% stat damage
+     * @param {number} value - Defense value to add
+     * @returns {StatCalculationService} Returns this for chaining
+     */
+    addDefense(value) {
+        // Add the defense value itself
+        this.stats.defense = (this.stats.defense || 0) + value;
+
+        // For Dark Knight: convert defense to main stat, then to stat damage
+        if (this.context.selectedClass === 'dark-knight') {
+            const mainStatFromDefense = value * 0.127;
+            const statDamageIncrease = mainStatFromDefense / 100;
+            this.stats.statDamage += statDamageIncrease;
+        }
+
+        return this;
+    }
+
+    /**
+     * Subtract defense with Dark Knight conversion to main stat
+     * For Dark Knight: defense converts to main stat (but is NOT affected by main stat %)
+     * Conversion rate: 1 defense = 0.127 main stat
+     * Then converted to stat damage: 100 main stat = 1% stat damage
+     * @param {number} value - Defense value to subtract
+     * @returns {StatCalculationService} Returns this for chaining
+     */
+    subtractDefense(value) {
+        // Subtract the defense value itself
+        this.stats.defense = (this.stats.defense || 0) - value;
+
+        // For Dark Knight: convert defense to main stat, then to stat damage
+        if (this.context.selectedClass === 'dark-knight') {
+            const mainStatFromDefense = value * 0.127;
+            const statDamageDecrease = mainStatFromDefense / 100;
+            this.stats.statDamage -= statDamageDecrease;
+        }
+
+        return this;
+    }
+
+    /**
      * Set a stat to a specific value
      * @param {string} statKey - The stat key
      * @param {number} value - Value to set
