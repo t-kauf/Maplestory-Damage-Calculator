@@ -6,7 +6,7 @@
     "start": "python -m http.server 8000 || python3 -m http.server 8000 || npx http-server -p 8000",
     "test": "playwright test",
     "test:nav": "playwright test navigation.spec.js",
-    "test:base-stats": "playwright test base-stats-*.spec.js",
+    "test:base-stats": "playwright test \"base-stats-.*\"",
     "test:base-stats:main": "playwright test base-stats-main.spec.js",
     "test:base-stats:mastery": "playwright test base-stats-mastery.spec.js",
     "test:base-stats:target": "playwright test base-stats-target-content.spec.js",
