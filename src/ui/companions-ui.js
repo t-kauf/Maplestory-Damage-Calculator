@@ -305,11 +305,7 @@ function formatStat(stat) {
         'mainstat': 'Main Stat',
         'attack': 'Attack'
     };
-
-    if(stats[stat.toLowerCase()] == undefined)
-    {
-        console.log(stat);
-    }
+    
     return stats[stat.toLowerCase()];
 }
 

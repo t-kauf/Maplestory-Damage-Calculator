@@ -125,7 +125,6 @@ export function updateItem(slotId, guid, data) {
             // Trigger debounced persist
             schedulePersist(slotId);
 
-            console.log(`[ComparisonState] Updated item ${guid} in slot ${slotId} (v${newVersion})`);
             return true;
 
         } catch (error) {
@@ -157,7 +156,6 @@ export function removeItem(slotId, guid) {
             // Trigger immediate persist (no debounce for deletions)
             await persistSlot(slotId);
 
-            console.log(`[ComparisonState] Removed item ${guid} from slot ${slotId}`);
             return true;
 
         } catch (error) {
@@ -180,7 +178,6 @@ export function clearSlot(slotId) {
 
             await persistSlot(slotId);
 
-            console.log(`[ComparisonState] Cleared slot ${slotId}`);
             return true;
 
         } catch (error) {
@@ -238,7 +235,6 @@ async function persistSlot(slotId) {
 
         localStorage.setItem(storageKey, data);
 
-        console.log(`[ComparisonState] Persisted ${items.length} items for slot ${slotId}`);
         return true;
 
     } catch (error) {
@@ -275,7 +271,6 @@ export async function loadSlot(slotId) {
         const stored = localStorage.getItem(storageKey);
 
         if (!stored) {
-            console.log(`[ComparisonState] No saved data for slot ${slotId}`);
             return [];
         }
 
@@ -301,7 +296,6 @@ export async function loadSlot(slotId) {
             }
         });
 
-        console.log(`[ComparisonState] Loaded ${items.length} items for slot ${slotId}`);
         return items;
 
     } catch (error) {
@@ -315,7 +309,6 @@ export async function loadSlot(slotId) {
  * @returns {Promise<boolean>} True if all successful
  */
 export async function persistAll() {
-    console.log('[ComparisonState] Persisting all slots...');
 
     const slotIds = Object.keys(comparisonState);
     const results = await Promise.all(
@@ -323,7 +316,6 @@ export async function persistAll() {
     );
 
     const success = results.every(r => r === true);
-    console.log(`[ComparisonState] Persist all ${success ? 'succeeded' : 'failed'}`);
 
     return success;
 }
@@ -396,8 +388,6 @@ export async function migrateLegacyData() {
             return true; // Nothing to migrate
         }
 
-        console.log('[ComparisonState] Found legacy data, migrating...');
-
         const items = JSON.parse(legacyData);
 
         // Migration strategy: put legacy items in 'head' slot
@@ -425,8 +415,6 @@ export async function migrateLegacyData() {
         localStorage.setItem(`${oldKey}.backup`, legacyData);
         localStorage.removeItem(oldKey);
 
-        console.log('[ComparisonState] Migration complete');
-
         return true;
 
     } catch (error) {
@@ -445,8 +433,6 @@ export async function migrateLegacyData() {
  * @returns {Promise<boolean>} True if initialization succeeded
  */
 export async function initializeComparisonState() {
-    console.log('[ComparisonState] Initializing...');
-
     try {
         // Run migration if needed
         await migrateLegacyData();
@@ -462,8 +448,6 @@ export async function initializeComparisonState() {
                 persistAll();
             }
         });
-
-        console.log('[ComparisonState] Initialized successfully');
         return true;
 
     } catch (error) {

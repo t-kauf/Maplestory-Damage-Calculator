@@ -30,7 +30,6 @@ export function getCompanionEffects(className, rarity, level) {
   // Get the companion data
   const classData = COMPANION_DATA.data[className];
   if (!classData || !classData[rarity]) {
-    console.warn(`No data found for ${className} (${rarity})`);
     return null;
   }
 

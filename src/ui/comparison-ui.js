@@ -126,10 +126,8 @@ async function saveSlotItemData(guid) {
         // Update state (this handles queuing and persistence)
         const success = await updateItem(currentSlot, guid, itemData);
 
-        if (success) {
-            console.log(`[ComparisonUI] Saved item ${guid} in slot ${currentSlot}`);
-        } else {
-            console.error(`[ComparisonUI] Failed to save item ${guid}`);
+        if (!success) {
+             console.error(`[ComparisonUI] Failed to save item ${guid}`);
         }
 
         return success;
@@ -156,8 +154,6 @@ window.saveSlotItemData = function(guid) {
  */
 window.loadSlotItems = async function(slotId) {
     try {
-        console.log(`[ComparisonUI] Loading items for slot ${slotId}`);
-
         // Clear current mapping
         currentItemMapping.clear();
 
@@ -235,7 +231,6 @@ window.loadSlotItems = async function(slotId) {
             }
         });
 
-        console.log(`[ComparisonUI] Loaded ${items.length} items for slot ${slotId}`);
         return true;
 
     } catch (error) {
@@ -438,8 +433,6 @@ export async function addComparisonItem() {
         const itemId = getSlotItemCount() + 1;
         const guid = generateGuid();
 
-        console.log(`[ComparisonUI] Adding new item ${guid} to slot ${currentSlot}`);
-
         hideEmptyComparisonState();
 
         // Create UI
@@ -483,8 +476,6 @@ export async function removeComparisonItem(itemId) {
             console.error(`[ComparisonUI] Could not find guid for item ${itemId}`);
             return;
         }
-
-        console.log(`[ComparisonUI] Removing item ${guid} from slot ${currentSlot}`);
 
         const item = document.getElementById(`comparison-item-${currentSlot}-${itemId}`);
         const tab = document.getElementById(`comparison-tab-${currentSlot}-${itemId}`);

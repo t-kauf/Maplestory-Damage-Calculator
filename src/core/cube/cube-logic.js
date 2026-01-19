@@ -168,6 +168,11 @@ export function calculateComparison(cubeSlotData, currentCubeSlot, currentPotent
         return;
     }
 
+    if(Object.keys(cubeSlotData).length === 0)
+    {
+        return;
+    }
+
     const slotData = cubeSlotData[currentCubeSlot][currentPotentialType];
     const currentStats = getStats('base'); // User's current stats (includes all equipped potential)
     const rarity = slotData.rarity;

@@ -457,8 +457,7 @@ export function loadFromLocalStorage() {
         if (data.lockedMainForOptimalNormal !== undefined) {
             setLockedMainCompanion('optimal-normal', data.lockedMainForOptimalNormal);
         }
-
-        console.log(data.unlockableStats);
+        
         // Load Special Stats
         if (data.unlockableStats) {
             setUnlockableStatsState(data.unlockableStats);
@@ -516,12 +515,40 @@ export function finalizeContributedStatsAfterInit() {
     }
 }
 
+/**
+ * Export comparison items from all equipment slots
+ * @returns {Object} Object mapping slot IDs to their items arrays
+ */
+function exportComparisonItems() {
+    const EQUIPMENT_SLOTS = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck', 'eye-accessory'];
+    const comparisonItems = {};
+
+    EQUIPMENT_SLOTS.forEach(slotId => {
+        const storageKey = `comparisonItems.${slotId}`;
+        const data = localStorage.getItem(storageKey);
+
+        if (data) {
+            try {
+                comparisonItems[slotId] = JSON.parse(data);
+            } catch (e) {
+                console.warn(`Failed to parse comparison items for ${slotId}:`, e);
+                comparisonItems[slotId] = null;
+            }
+        } else {
+            comparisonItems[slotId] = null;
+        }
+    });
+
+    return comparisonItems;
+}
+
 // Export all local storage data to clipboard
 export function exportData() {
     const allData = {
         damageCalculatorData: localStorage.getItem('damageCalculatorData'),
         heroPowerPresets: localStorage.getItem('heroPowerPresets'),
         cubePotentialData: localStorage.getItem('cubePotentialData'),
+        comparisonItems: exportComparisonItems(),
         selectedClass: localStorage.getItem('selectedClass'),
         selectedJobTier: localStorage.getItem('selectedJobTier'),
         theme: localStorage.getItem('theme')
@@ -548,6 +575,51 @@ export function exportData() {
     });
 }
 
+/**
+ * Import comparison items for all equipment slots
+ * @param {Object} comparisonItems - Object mapping slot IDs to their items arrays
+ */
+function importComparisonItems(comparisonItems) {
+    const EQUIPMENT_SLOTS = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck', 'eye-accessory'];
+
+    EQUIPMENT_SLOTS.forEach(slotId => {
+        const storageKey = `comparisonItems.${slotId}`;
+
+        // Clear existing comparison items for this slot
+        localStorage.removeItem(storageKey);
+
+        // Import new data if it exists
+        if (comparisonItems && comparisonItems[slotId]) {
+            try {
+                const items = comparisonItems[slotId];
+
+                // Validate it's an array
+                if (!Array.isArray(items)) {
+                    console.warn(`Invalid comparison items format for ${slotId}: expected array`);
+                    return;
+                }
+
+                // Validate each item has required fields
+                const validItems = items.filter(item => {
+                    return item &&
+                           typeof item === 'object' &&
+                           item.guid &&
+                           typeof item.version === 'number' &&
+                           item.name !== undefined &&
+                           typeof item.attack === 'number' &&
+                           Array.isArray(item.stats);
+                });
+
+                if (validItems.length > 0) {
+                    localStorage.setItem(storageKey, JSON.stringify(validItems));
+                }
+            } catch (e) {
+                console.error(`Failed to import comparison items for ${slotId}:`, e);
+            }
+        }
+    });
+}
+
 // Import data from clipboard to local storage
 export function importData() {
     navigator.clipboard.readText().then(text => {
@@ -555,7 +627,7 @@ export function importData() {
             const data = JSON.parse(text);
 
             // Validate the data structure
-            if (!data.damageCalculatorData && !data.heroPowerPresets && !data.cubePotentialData) {
+            if (!data.damageCalculatorData && !data.heroPowerPresets && !data.cubePotentialData && !data.comparisonItems) {
                 throw new Error('Invalid data format');
             }
 
@@ -582,6 +654,9 @@ export function importData() {
                     ? data.cubePotentialData
                     : JSON.stringify(data.cubePotentialData);
                 localStorage.setItem('cubePotentialData', dataString);
+            }
+            if (data.comparisonItems) {
+                importComparisonItems(data.comparisonItems);
             }
             if (data.selectedClass) {
                 localStorage.setItem('selectedClass', data.selectedClass);

@@ -264,14 +264,12 @@ const GUILD_BONUS_CONFIGS = {
 export function getGuildBonusConfigs() { return GUILD_BONUS_CONFIGS; }
 export function getGuildBonusesState() { return guildBonusesState; }
 export function setGuildBonusesState(state) {
-    console.log("setGuildBonusesState " + state);
     guildBonusesState = state || {};
 }
 export function getGuildBonus(bonusKey) {
     return guildBonusesState[bonusKey] || { unlocked: false, level: 0 };
 }
 export function updateGuildBonus(bonusKey, data) {
-    console.log("updateGuildBonus " + bonusKey + " : " + data);
     guildBonusesState[bonusKey] = data;
 }
 
