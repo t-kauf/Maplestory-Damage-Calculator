@@ -44,7 +44,7 @@ import { initializeCompanionsUI } from '@ui/companions-ui.js';
 import { refreshPresetsUI } from '@ui/companions-presets-ui.js';
 import { initializeStatBreakdown, updateStatBreakdown } from '@ui/stat-breakdown-ui.js';
 import { updateMasteryBonuses } from './base-stats/mastery-bonus.js';
-import { getStatType, isDexMainStatClass, isIntMainStatClass, isLukMainStatClass, isStrMainStatClass, loadSelectedClass, loadSelectedJobTier, selectClass, selectJobTier } from './base-stats/class-select.js';
+import { getStatType, isDexMainStatClass, isIntMainStatClass, isLukMainStatClass, isStrMainStatClass, loadSelectedClass, loadSelectedJobTier, selectClass, selectJobTier, selectMasteryTab } from './base-stats/class-select.js';
 import { updateSkillCoefficient } from './base-stats/base-stats.js';
 import '@utils/tabs.js';
 import '@utils/stat-chart.js';
@@ -696,6 +696,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.showSkillDescription = showSkillDescription;
 window.selectClass = selectClass;
 window.selectJobTier = selectJobTier;
+window.selectMasteryTab = selectMasteryTab;
 window.updateMasteryBonuses = updateMasteryBonuses;
 window.updateSkillCoefficient = updateSkillCoefficient;
 window.switchBaseStatsSubTab = switchBaseStatsSubTab;

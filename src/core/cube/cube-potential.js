@@ -65,8 +65,8 @@ export function clearCubeRankingsCache() {
     }
 
     // If summary tab is visible, update summary
-    const summaryContent = document.getElementById('cube-main-summary-content');
-    if (summaryContent && summaryContent.style.display !== 'none') {
+    const summaryTab = document.getElementById('cube-main-tab-summary');
+    if (summaryTab && summaryTab.classList.contains('active')) {
         displayAllSlotsSummary();
     }
 }
@@ -181,8 +181,8 @@ export function calculateComparisonOrchestrator() {
     }
 
     // If summary tab is visible, update it
-    const summaryContent = document.getElementById('cube-main-summary-content');
-    if (summaryContent && summaryContent.style.display !== 'none') {
+    const summaryTab = document.getElementById('cube-main-tab-summary');
+    if (summaryTab && summaryTab.classList.contains('active')) {
         displayAllSlotsSummary();
     }
 }

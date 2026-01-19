@@ -994,8 +994,9 @@ export async function loadAllRankingsForSummary() {
     }
 
     // Update summary display after all rankings are calculated
-    const summaryContent = document.getElementById('cube-main-summary-content');
-    if (summaryContent && summaryContent.style.display !== 'none') {
+    const summaryContent = document.getElementById('cube-summary-content');
+    const summaryTab = document.getElementById('cube-main-tab-summary');
+    if (summaryContent && summaryTab && summaryTab.classList.contains('active')) {
         displayAllSlotsSummary();
     }
 
@@ -1021,6 +1022,7 @@ export function changeRankingsPage(newPage) {
     currentRankingsPage = newPage;
     displayRankings(rankings, rarity);
 }
+window.changeRankingsPage = changeRankingsPage;
 
 // Format slot details for display
 export function formatSlotDetails(slots) {
@@ -1506,20 +1508,141 @@ export function displayAllSlotsSummary() {
     const totalGain = ((currentDPS - baselineDPS) / baselineDPS * 100);
 
     html += `
-        <div style="background: linear-gradient(135deg, rgba(0, 122, 255, 0.1), rgba(88, 86, 214, 0.05)); border: 2px solid rgba(0, 122, 255, 0.3); border-radius: 12px; padding: 20px; margin-top: 20px;">
-            <h4 style="color: var(--accent-primary); margin-bottom: 15px; font-size: 1.1em; font-weight: 600;">
-                Total Potential DPS Gain
-            </h4>
-            <div style="text-align: center; padding: 20px; background: rgba(255, 255, 255, 0.5); border-radius: 8px;">
-                <div style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 8px;">
-                    Combined DPS gain from all Regular & Bonus Potential lines
+        <div style="
+            margin-top: 28px;
+            padding: 24px;
+            background: linear-gradient(135deg, rgba(17, 24, 39, 0.6) 0%, rgba(31, 41, 55, 0.8) 100%);
+            border-radius: 16px;
+            border: 1px solid rgba(59, 130, 246, 0.15);
+            box-shadow:
+                0 4px 24px rgba(0, 0, 0, 0.3),
+                inset 0 1px 0 rgba(255, 255, 255, 0.03);
+        ">
+            <!-- Header -->
+            <div style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                margin-bottom: 20px;
+            ">
+                <div>
+                    <div style="
+                        font-size: 0.7rem;
+                        text-transform: uppercase;
+                        letter-spacing: 1.5px;
+                        color: rgba(148, 163, 184, 0.7);
+                        font-weight: 600;
+                        margin-bottom: 4px;
+                    ">Total Potential Power</div>
+                    <div style="
+                        font-size: 1.1rem;
+                        font-weight: 600;
+                        color: #e2e8f0;
+                    ">Combined DPS Gain</div>
                 </div>
-                <div style="font-size: 2.5em; font-weight: 700; color: ${totalGain >= 0 ? 'var(--accent-success)' : '#f87171'};">
-                    ${totalGain >= 0 ? '+' : ''}${totalGain.toFixed(2)}%
+
+                <!-- Hero metric -->
+                <div style="text-align: right;">
+                    <div style="
+                        font-size: 2.5rem;
+                        font-weight: 800;
+                        color: ${totalGain >= 0 ? '#22c55e' : '#ef4444'};
+                        line-height: 1;
+                        letter-spacing: -0.02em;
+                    ">
+                        ${totalGain >= 0 ? '+' : ''}${totalGain.toFixed(2)}%
+                    </div>
+                    <div style="
+                        font-size: 0.7rem;
+                        color: rgba(148, 163, 184, 0.7);
+                        margin-top: 2px;
+                    ">total increase</div>
                 </div>
-                <div style="margin-top: 15px; font-size: 0.85em; color: var(--text-secondary); line-height: 1.6;">
-                    This represents the total DPS increase from all current potential lines across all equipment slots,
-                    calculated from your base stats (without any potential lines applied).
+            </div>
+
+            <!-- DPS comparison -->
+            <div style="
+                display: grid;
+                grid-template-columns: 1fr auto 1fr;
+                gap: 16px;
+                align-items: center;
+                padding: 16px;
+                background: rgba(0, 0, 0, 0.2);
+                border-radius: 12px;
+                border: 1px solid rgba(148, 163, 184, 0.08);
+            ">
+                <!-- Baseline -->
+                <div style="text-align: center;">
+                    <div style="
+                        font-size: 0.65rem;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        color: rgba(148, 163, 184, 0.6);
+                        margin-bottom: 6px;
+                    ">Without Potentials</div>
+                    <div style="
+                        font-size: 1.1rem;
+                        font-weight: 700;
+                        color: #94a3b8;
+                        font-family: 'Courier New', monospace;
+                    ">${baselineDPS.toLocaleString('en-US', {maximumFractionDigits: 0})}</div>
+                    <div style="
+                        font-size: 0.6rem;
+                        color: rgba(148, 163, 184, 0.5);
+                        margin-top: 2px;
+                    ">baseline DPS</div>
+                </div>
+
+                <!-- Arrow indicator -->
+                <div style="
+                    flex-shrink: 0;
+                    width: 32px;
+                    height: 32px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    background: ${totalGain >= 0 ? 'rgba(34, 197, 94, 0.1)' : 'rgba(239, 68, 68, 0.1)'};
+                    border-radius: 50%;
+                    color: ${totalGain >= 0 ? '#22c55e' : '#ef4444'};
+                    font-size: 1rem;
+                ">→</div>
+
+                <!-- Current -->
+                <div style="text-align: center;">
+                    <div style="
+                        font-size: 0.65rem;
+                        text-transform: uppercase;
+                        letter-spacing: 1px;
+                        color: ${totalGain >= 0 ? 'rgba(74, 222, 128, 0.7)' : 'rgba(248, 113, 113, 0.7)'};
+                        margin-bottom: 6px;
+                    ">With All Potentials</div>
+                    <div style="
+                        font-size: 1.1rem;
+                        font-weight: 700;
+                        color: ${totalGain >= 0 ? '#22c55e' : '#ef4444'};
+                        font-family: 'Courier New', monospace;
+                    ">${currentDPS.toLocaleString('en-US', {maximumFractionDigits: 0})}</div>
+                    <div style="
+                        font-size: 0.6rem;
+                        color: ${totalGain >= 0 ? 'rgba(74, 222, 128, 0.6)' : 'rgba(248, 113, 113, 0.6)'};
+                        margin-top: 2px;
+                    ">current DPS</div>
+                </div>
+            </div>
+
+            <!-- Context footer -->
+            <div style="
+                margin-top: 16px;
+                padding-top: 14px;
+                border-top: 1px solid rgba(148, 163, 184, 0.08);
+                text-align: center;
+            ">
+                <div style="
+                    font-size: 0.75rem;
+                    color: rgba(148, 163, 184, 0.8);
+                    line-height: 1.4;
+                ">
+                    Combined gain from all Regular + Bonus potential lines across all gear slots
                 </div>
             </div>
         </div>

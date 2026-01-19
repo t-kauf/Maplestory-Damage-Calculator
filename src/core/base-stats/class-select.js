@@ -87,7 +87,7 @@ export function loadSelectedJobTier() {
     }
 }
 export function selectJobTier(tier, skipSave = false) {
-    document.querySelectorAll('.job-tier-btn').forEach(el => {
+    document.querySelectorAll('.bgstats-tier-btn').forEach(el => {
         el.classList.remove('active');
     });
 
@@ -108,6 +108,16 @@ export function selectJobTier(tier, skipSave = false) {
                 mastery3rdTable.style.display = 'none';
                 mastery4thTable.style.display = 'block';
             }
+        }
+
+        // Update mastery tabs to match the selected tier
+        document.querySelectorAll('.bgstats-mastery-tab').forEach(el => {
+            el.classList.remove('active');
+        });
+
+        const masteryTab = document.getElementById(`mastery-tab-${tier}`);
+        if (masteryTab) {
+            masteryTab.classList.add('active');
         }
 
         // Update skill coefficient for the new tier
@@ -230,4 +240,36 @@ export function getStatType(className, statId) {
     }
     return null;
 }
+
+/**
+ * Switch between mastery tabs (3rd Job / 4th Job)
+ * This function handles the new premium mastery table tabs
+ * @param {string} tier - '3rd' or '4th'
+ */
+export function selectMasteryTab(tier) {
+    // Update tab button states
+    document.querySelectorAll('.bgstats-mastery-tab').forEach(el => {
+        el.classList.remove('active');
+    });
+
+    const tabElement = document.getElementById(`mastery-tab-${tier}`);
+    if (tabElement) {
+        tabElement.classList.add('active');
+    }
+
+    // Show/hide appropriate mastery table
+    const mastery3rdTable = document.getElementById('mastery-table-3rd');
+    const mastery4thTable = document.getElementById('mastery-table-4th');
+
+    if (mastery3rdTable && mastery4thTable) {
+        if (tier === '3rd') {
+            mastery3rdTable.style.display = 'block';
+            mastery4thTable.style.display = 'none';
+        } else if (tier === '4th') {
+            mastery3rdTable.style.display = 'none';
+            mastery4thTable.style.display = 'block';
+        }
+    }
+}
+
 
