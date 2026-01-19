@@ -356,12 +356,12 @@ test.describe('Base Stats - Content Type Switching', () => {
     await page.click(CONTENT_TYPE_SELECTORS.stageHunt);
     await page.waitForTimeout(100);
 
-    // Assert - Chapter 5 selection preserved
-    await expect(page.locator(TARGET_DROPDOWNS.subcategory)).toHaveValue('chapter-5');
+    // Assert - Chapter selection resets to default (chapter-1)
+    await expect(page.locator(TARGET_DROPDOWNS.subcategory)).toHaveValue('chapter-1');
 
-    // Assert - localStorage preserved
-    const subcategory = await page.evaluate(() => localStorage.getItem('targetSubcategory'));
-    expect(subcategory).toBe('chapter-5');
+    // Assert - localStorage shows reset
+    const savedData = await getTargetContentData(page);
+    expect(savedData.subcategory).toBe('chapter-1');
   });
 });
 
