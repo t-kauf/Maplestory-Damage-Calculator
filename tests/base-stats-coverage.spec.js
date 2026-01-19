@@ -388,14 +388,23 @@ test.describe('Base Stats - State Validation and Persistence', () => {
   });
 
   test('class stat rows visibility updates correctly on reload', async ({ page }) => {
-    // Arrange - Configure as mage
-    await applyBaseStatsFixture(page, ARCH_MAGE_IL_LEVEL_60);
+    // Arrange - Configure as mage manually to ensure localStorage is set
+    await page.click(CLASS_SELECTORS.archMageIL);
+    await page.waitForTimeout(300); // Wait for localStorage to save
+
+    // Verify class was saved to localStorage
+    const savedClass = await page.evaluate(() => localStorage.getItem('selectedClass'));
+    expect(savedClass).toBe('arch-mage-il');
 
     // Act - Reload
     await page.reload();
     await page.waitForTimeout(300);
 
-    // Assert - Correct stat rows visible
+    // Assert - localStorage preserved
+    const reloadedClass = await page.evaluate(() => localStorage.getItem('selectedClass'));
+    expect(reloadedClass).toBe('arch-mage-il');
+
+    // Assert - Correct stat rows visible based on saved class
     await expect(page.locator(STAT_ROWS.int)).toBeVisible();
     await expect(page.locator(STAT_ROWS.luk)).toBeVisible();
     await expect(page.locator(STAT_ROWS.str)).toBeHidden();
