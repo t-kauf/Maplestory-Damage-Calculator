@@ -1,10 +1,9 @@
 // Scroll Optimizer - Level 65 and Level 85 Scrolls
 // This module simulates different scrolling strategies and calculates damage gains
 
-import { calculateDamage } from '@core/calculations/damage-calculations.js';
 import { formatNumber } from '@utils/formatters.js';
 import { getStats } from '@core/main.js';
-import { getWeaponAttackBonus } from '@core/state.js';
+import { StatCalculationService } from '@core/stat-calculation-service.js';
 
 window.runScrollSimulation = runScrollSimulation;
 window.switchScrollStrategyTab = switchScrollStrategyTab;
@@ -596,18 +595,17 @@ export function createL85Strategies() {
 // Calculate damage gain from scroll results
 export function calculateScrollDamageGain(avgAttack, avgDamageAmp) {
     const baseStats = getStats('base');
-    const baseDPS = calculateDamage(baseStats, 'boss').dps;
 
-    // Apply scroll bonuses to stats
-    const weaponAttackBonus = getWeaponAttackBonus().totalAttack;
-    const effectiveAttackIncrease = avgAttack * (1 + weaponAttackBonus / 100);
+    // Use StatCalculationService to apply scroll bonuses (auto-fetches weaponAttackBonus)
+    const service = new StatCalculationService(baseStats);
+    service.addAttack(avgAttack);
+    service.addPercentageStat('damageAmp', avgDamageAmp);
 
-    const modifiedStats = { ...baseStats };
-    modifiedStats.attack += effectiveAttackIncrease;
-    modifiedStats.damageAmp += avgDamageAmp;
-
-    const newDPS = calculateDamage(modifiedStats, 'boss').dps;
+    const baseDPS = service.baseBossDPS;
+    const newDPS = service.computeDPS('boss');
     const dpsGain = ((newDPS - baseDPS) / baseDPS * 100);
+    const weaponAttackBonus = service.weaponAttackBonus;
+    const effectiveAttackIncrease = avgAttack * (1 + weaponAttackBonus / 100);
 
     return {
         baseDPS,

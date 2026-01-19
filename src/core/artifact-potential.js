@@ -1,77 +1,46 @@
 // Artifact Potential stat mapping and calculations
 
 import { artifactPotentialData } from '@data/artifact-potential-data.js';
-import { calculateDamage } from '@core/calculations/damage-calculations.js';
 import { formatNumber } from '@utils/formatters.js';
 import { getStats } from '@core/main.js';
-import { getSelectedClass } from '@core/state.js';
+import { StatCalculationService } from '@core/stat-calculation-service.js';
 
 window.sortArtifactTable = sortArtifactTable;
 
 // Map artifact potential stat to base stat properties
 export function mapArtifactStat(statName, value, baseStats) {
-    const modifiedStats = { ...baseStats };
-
     // Remove "(prime)" suffix if present for mapping
     const cleanStatName = statName.replace(' (prime)', '');
 
+    // Use StatCalculationService for consistent stat manipulation
+    const service = new StatCalculationService(baseStats);
+
     switch (cleanStatName) {
         case 'Main Stat %':
-        {
-            // Main stat % bonuses are additive with each other
-            // Primary Main Stat already includes current main stat % bonuses
-            const primaryMainStat = parseFloat(document.getElementById('primary-main-stat-base')?.value) || 0;
-            const mainStatPct = parseFloat(document.getElementById('main-stat-pct-base')?.value) || 0;
-            let currentTotalMainStat = primaryMainStat;
-            let defenseToMainStat = 0;
-
-            // Dark Knight: 12.7% of defense is converted to main stat but doesn't scale with Main Stat %
-            if (getSelectedClass() === 'dark-knight') {
-                const defense = parseFloat(document.getElementById('defense-base')?.value) || 0;
-                defenseToMainStat = defense * 0.127;
-            }
-
-            // Calculate the affected portion (total minus defense conversion for DK)
-            const affectedPortion = currentTotalMainStat - defenseToMainStat;
-
-            // Calculate ratio of new multiplier to current multiplier
-            const currentMultiplier = 1 + mainStatPct / 100;
-            const newMultiplier = 1 + (mainStatPct + value) / 100;
-            const ratio = newMultiplier / currentMultiplier;
-
-            // Apply ratio to affected portion, then add back defense portion
-            const newAffectedPortion = affectedPortion * ratio;
-            const newTotalMainStat = newAffectedPortion + defenseToMainStat;
-
-            // Convert to stat damage (100 main stat = 1% stat damage)
-            const currentStatDamageFromMainStat = currentTotalMainStat / 100;
-            const newStatDamageFromMainStat = newTotalMainStat / 100;
-
-            // Calculate the gain in stat damage and apply it
-            const statDamageBonus = newStatDamageFromMainStat - currentStatDamageFromMainStat;
-            modifiedStats.statDamage += statDamageBonus;
+            // StatCalculationService handles complex main stat % calculations including Dark Knight
+            service.addMainStatPct(value);
             break;
-        }
         case 'Critical Rate %':
-            modifiedStats.critRate += value;
+            service.addPercentageStat('critRate', value);
             break;
         case 'Min Damage Multiplier %':
-            modifiedStats.minDamage += value;
+            service.addPercentageStat('minDamage', value);
             break;
         case 'Max Damage Multiplier %':
-            modifiedStats.maxDamage += value;
+            service.addPercentageStat('maxDamage', value);
             break;
         case 'Boss Monster Damage %':
-            modifiedStats.bossDamage += value;
+            service.addPercentageStat('bossDamage', value);
             break;
         case 'Normal Monster Damage %':
-            modifiedStats.normalDamage += value;
+            service.addPercentageStat('normalDamage', value);
             break;
         case 'Damage %':
-            modifiedStats.damage += value;
+            service.addPercentageStat('damage', value);
             break;
         case 'Defense Penetration %':
-            modifiedStats.defPen += value;
+            // Defense Penetration uses diminishing returns with factor 100
+            service.addDiminishingReturnStat('defPen', value, 100);
             break;
         // Ignored stats: Damage Taken Decrease %, Defense %, Accuracy, Status Effect Damage %
         default:
@@ -79,14 +48,17 @@ export function mapArtifactStat(statName, value, baseStats) {
             break;
     }
 
-    return modifiedStats;
+    return service.getStats();
 }
 
 // Calculate all possible artifact potential rolls and rank them
 export function calculateArtifactPotentialRankings() {
     const baseStats = getStats('base');
-    const baselineBossDamage = calculateDamage(baseStats, 'boss');
-    const baselineNormalDamage = calculateDamage(baseStats, 'normal');
+
+    // Calculate baseline damage using StatCalculationService
+    const baselineService = new StatCalculationService(baseStats);
+    const baselineBossDamage = baselineService.compute('boss');
+    const baselineNormalDamage = baselineService.compute('normal');
 
     const results = [];
 
@@ -111,8 +83,9 @@ export function calculateArtifactPotentialRankings() {
 
             // Apply this stat and calculate DPS gains
             const modifiedStats = mapArtifactStat(statName, value, baseStats);
-            const bossDamage = calculateDamage(modifiedStats, 'boss');
-            const normalDamage = calculateDamage(modifiedStats, 'normal');
+            const testService = new StatCalculationService(modifiedStats);
+            const bossDamage = testService.compute('boss');
+            const normalDamage = testService.compute('normal');
 
             const bossDPSGain = bossDamage.dps - baselineBossDamage.dps;
             const normalDPSGain = normalDamage.dps - baselineNormalDamage.dps;

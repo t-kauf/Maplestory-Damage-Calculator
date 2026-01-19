@@ -50,7 +50,9 @@ export function getStats(setup) {
         skillMastery: parseFloat(document.getElementById(`skill-mastery-${setup}`).value) || 0,
         skillMasteryBoss: parseFloat(document.getElementById(`skill-mastery-boss-${setup}`).value) || 0,
         minDamage: parseFloat(document.getElementById(`min-damage-${setup}`).value) || 0,
-        maxDamage: parseFloat(document.getElementById(`max-damage-${setup}`).value) || 0
+        maxDamage: parseFloat(document.getElementById(`max-damage-${setup}`).value) || 0,
+        defense: parseFloat(document.getElementById('defense-base').value) || 0,
+        mainStatPct: parseFloat(document.getElementById('main-stat-pct-base').value) || 0
     };
 }
 
@@ -240,13 +242,11 @@ const UNLOCKABLE_STAT_CONFIGS = {
 export function getUnlockableStatConfigs() { return UNLOCKABLE_STAT_CONFIGS; }
 export function getUnlockableStatsState() { return unlockableStatsState; }
 export function setUnlockableStatsState(state) { 
-    console.log("setUnlockableStatsState " + state);
     unlockableStatsState = state || {}; }
 export function getUnlockableStat(statKey) {
     return unlockableStatsState[statKey] || { unlocked: false, level: 0 };
 }
 export function updateUnlockableStat(statKey, data) {
-    console.log("updateUnlockableStat " + statKey + " : " + data);
     unlockableStatsState[statKey] = data;
 }
 

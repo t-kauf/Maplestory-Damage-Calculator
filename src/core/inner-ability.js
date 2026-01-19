@@ -1,9 +1,9 @@
 // Inner Ability stat mapping and calculations
 
 import { innerAbilitiesData } from '@data/inner-ability-data.js';
-import { calculateDamage } from '@core/calculations/damage-calculations.js';
 import { formatNumber } from '@utils/formatters.js';
 import { getStats } from '@core/main.js';
+import { StatCalculationService } from '@core/stat-calculation-service.js';
 
 window.switchInnerAbilityTab = switchInnerAbilityTab;
 window.toggleLineBreakdown = toggleLineBreakdown;
@@ -14,38 +14,40 @@ window.applyInnerAbilityLines = applyInnerAbilityLines;
 
 // Map inner ability stats to base stat properties
 export function mapInnerAbilityStat(statName, value, baseStats) {
-    const modifiedStats = { ...baseStats };
+    // Use StatCalculationService for consistent stat manipulation
+    const service = new StatCalculationService(baseStats);
 
     switch (statName) {
         case 'Attack Speed':
-            modifiedStats.attackSpeed += value;
+            // Attack Speed uses diminishing returns with factor 150
+            service.addDiminishingReturnStat('attackSpeed', value, 150);
             break;
         case 'Boss Monster Damage':
-            modifiedStats.bossDamage += value;
+            service.addPercentageStat('bossDamage', value);
             break;
         case 'Critical Rate':
-            modifiedStats.critRate += value;
+            service.addPercentageStat('critRate', value);
             break;
         case 'Damage':
-            modifiedStats.damage += value;
+            service.addPercentageStat('damage', value);
             break;
         case 'Defense Penetration':
-            modifiedStats.defPen += value;
+            // Defense Penetration uses diminishing returns with factor 100
+            service.addDiminishingReturnStat('defPen', value, 100);
             break;
         case 'Min Damage Multiplier':
-            modifiedStats.minDamage += value;
+            service.addPercentageStat('minDamage', value);
             break;
         case 'Max Damage Multiplier':
-            modifiedStats.maxDamage += value;
+            service.addPercentageStat('maxDamage', value);
             break;
         case 'Normal Monster Damage':
-            modifiedStats.normalDamage += value;
+            service.addPercentageStat('normalDamage', value);
             break;
         case 'Main Stat':
         {
             // Convert Main Stat to Stat Damage % at 100:1 ratio
-            const statDamageBonus = value / 100;
-            modifiedStats.statDamage += statDamageBonus;
+            service.addMainStat(value);
             break;
         }
         // Ignored stats: Max HP, Max MP, Accuracy, Evasion, MP Recovery Per Sec,
@@ -56,7 +58,7 @@ export function mapInnerAbilityStat(statName, value, baseStats) {
             break;
     }
 
-    return modifiedStats;
+    return service.getStats();
 }
 
 // Apply multiple inner ability lines to base stats
@@ -124,9 +126,10 @@ export function calculatePresetComparisons() {
     // Calculate baseline (base stats without equipped IA)
     let baseline = getBaselineStats();
 
-    // Calculate baseline damage
-    const baselineBossDamage = calculateDamage(baseline, 'boss');
-    const baselineNormalDamage = calculateDamage(baseline, 'normal');
+    // Calculate baseline damage using StatCalculationService
+    const baselineService = new StatCalculationService(baseline);
+    const baselineBossDamage = baselineService.compute('boss');
+    const baselineNormalDamage = baselineService.compute('normal');
 
     const comparisons = [];
 
@@ -134,9 +137,10 @@ export function calculatePresetComparisons() {
         // Apply this preset's stats to baseline
         const presetStats = applyInnerAbilityLines(baseline, preset.lines);
 
-        // Calculate damage with this preset
-        const presetBossDamage = calculateDamage(presetStats, 'boss');
-        const presetNormalDamage = calculateDamage(presetStats, 'normal');
+        // Calculate damage with this preset using StatCalculationService
+        const presetService = new StatCalculationService(presetStats);
+        const presetBossDamage = presetService.compute('boss');
+        const presetNormalDamage = presetService.compute('normal');
 
         // Calculate DPS gains
         const bossDPSGain = presetBossDamage.dps - baselineBossDamage.dps;
@@ -147,11 +151,13 @@ export function calculatePresetComparisons() {
             // Calculate damage without this line
             const linesWithoutCurrent = preset.lines.filter((_, i) => i !== index);
             const statsWithoutLine = applyInnerAbilityLines(baseline, linesWithoutCurrent);
-            const damageWithoutLine = calculateDamage(statsWithoutLine, 'boss');
+            const withoutLineService = new StatCalculationService(statsWithoutLine);
+            const damageWithoutLine = withoutLineService.compute('boss');
 
             // Calculate damage with this line
             const statsWithLine = applyInnerAbilityLines(baseline, [...linesWithoutCurrent, line]);
-            const damageWithLine = calculateDamage(statsWithLine, 'boss');
+            const withLineService = new StatCalculationService(statsWithLine);
+            const damageWithLine = withLineService.compute('boss');
 
             const contribution = damageWithLine.dps - damageWithoutLine.dps;
 
@@ -185,8 +191,9 @@ export function calculateTheoreticalBest() {
     // Get equipped preset to subtract from base
     const baseline = getBaselineStats();
 
-    // Calculate baseline damage
-    const baselineBossDamage = calculateDamage(baseline, 'boss');
+    // Calculate baseline damage using StatCalculationService
+    const baselineService = new StatCalculationService(baseline);
+    const baselineBossDamage = baselineService.compute('boss');
 
     // Iterate through each rarity and stat
     Object.entries(innerAbilitiesData).forEach(([rarity, stats]) => {
@@ -202,7 +209,8 @@ export function calculateTheoreticalBest() {
                 { roll: 'Max', value: max }
             ].forEach(({ roll, value }) => {
                 const modifiedStats = mapInnerAbilityStat(statName, value, baseline);
-                const damage = calculateDamage(modifiedStats, 'boss');
+                const testService = new StatCalculationService(modifiedStats);
+                const damage = testService.compute('boss');
                 const dpsGain = damage.dps - baselineBossDamage.dps;
                 const percentIncrease = dpsGain / baselineBossDamage.dps * 100;
 
@@ -229,7 +237,9 @@ export function calculateTheoreticalBest() {
 export function calculateBestCombinations() {
     const baseline = getBaselineStats();
 
-    const baselineBossDamage = calculateDamage(baseline, 'boss');
+    // Calculate baseline damage using StatCalculationService
+    const baselineService = new StatCalculationService(baseline);
+    const baselineBossDamage = baselineService.compute('boss');
 
     // Get all possible stats with their max values
     const allPossibleStats = [];
@@ -259,8 +269,10 @@ export function calculateBestCombinations() {
             // Test each possible stat to see which gives the best gain
             candidateStats.forEach(candidate => {
                 const testStats = mapInnerAbilityStat(candidate.stat, candidate.value, currentStats);
-                const testDamage = calculateDamage(testStats, 'boss');
-                const currentDamage = calculateDamage(currentStats, 'boss');
+                const testService = new StatCalculationService(testStats);
+                const currentService = new StatCalculationService(currentStats);
+                const testDamage = testService.compute('boss');
+                const currentDamage = currentService.compute('boss');
                 const dpsGain = testDamage.dps - currentDamage.dps;
 
                 if (dpsGain > bestDPSGain) {
@@ -276,8 +288,9 @@ export function calculateBestCombinations() {
             }
         }
 
-        // Calculate total DPS
-        const finalDamage = calculateDamage(currentStats, 'boss');
+        // Calculate total DPS using StatCalculationService
+        const finalService = new StatCalculationService(currentStats);
+        const finalDamage = finalService.compute('boss');
         const totalDPS = finalDamage.dps - baselineBossDamage.dps;
 
         return { lines: selectedLines, totalDPS };
@@ -447,7 +460,9 @@ export function renderTheoreticalBest() {
     const results = calculateTheoreticalBest();
     const combinations = calculateBestCombinations();
 
-    const baselineBossDamage = calculateDamage(getBaselineStats(), 'boss');
+    // Calculate baseline damage using StatCalculationService
+    const baselineService = new StatCalculationService(getBaselineStats());
+    const baselineBossDamage = baselineService.compute('boss');
     const baselineBossDps = baselineBossDamage.dps;
     // Apply sorting based on current column and direction
     if (theoreticalSortColumn === 2) {

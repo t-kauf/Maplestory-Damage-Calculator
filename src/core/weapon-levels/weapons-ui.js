@@ -1,7 +1,7 @@
 // Weapons UI functionality
 
 import { calculateWeaponAttacks, getMaxLevelForStars, getUpgradeCost, calculateUpgradeGain } from '@core/weapon-levels/weapon-calculations.js';
-import { calculateDamage } from '@core/calculations/damage-calculations.js';
+import { StatCalculationService } from '@core/stat-calculation-service.js';
 import { saveToLocalStorage } from '@core/storage.js';
 import { getStats, calculate } from '@core/main.js';
 import { getWeaponAttackBonus } from '@core/state.js';
@@ -464,7 +464,7 @@ export function updateUpgradePriorityChain() {
                 const maxLevel = getMaxLevelForStars(stars);
 
                 // Only include weapons that can be upgraded (level > 0 and not at max)
-                if (level > 0 && level < maxLevel) {
+                if (level > 0 && level <= maxLevel) {
                     weaponStates.push({
                         rarity,
                         tier,
@@ -579,6 +579,36 @@ export function updateUpgradePriorityChain() {
     priorityChain.innerHTML = html;
 }
 
+/**
+ * Helper function to calculate weapon attack bonus from weapon levels
+ * @param {Object} weaponLevels - Object mapping rarity-tier keys to levels
+ * @returns {number} Total weapon attack bonus
+ */
+function calculateWeaponAttackBonusFromLevels(weaponLevels) {
+    let totalBonus = 0;
+    let equippedBonus = 0;
+
+    rarities.forEach(rarity => {
+        tiers.forEach(tier => {
+            const key = `${rarity}-${tier}`;
+            const level = weaponLevels[key] || 0;
+
+            if (level === 0) return;
+
+            const { inventoryAttack, equippedAttack } = calculateWeaponAttacks(rarity, tier, level);
+            totalBonus += inventoryAttack;
+
+            // Check if this weapon is equipped
+            const equippedDisplay = document.getElementById(`equipped-label-${rarity}-${tier}`);
+            if (equippedDisplay && equippedDisplay.style.display !== 'none') {
+                equippedBonus = equippedAttack;
+            }
+        });
+    });
+
+    return totalBonus + equippedBonus;
+}
+
 export function calculateCurrencyUpgrades() {
     const currencyInput = document.getElementById('upgrade-currency-input');
     const resultsDiv = document.getElementById('currency-upgrade-results');
@@ -611,7 +641,7 @@ export function calculateCurrencyUpgrades() {
                 const key = `${rarity}-${tier}`;
                 initialWeaponLevels[key] = level;
 
-                if (level > 0 && level < maxLevel) {
+                if (level > 0 && level <= maxLevel) {
                     weaponStates.push({
                         rarity,
                         tier,
@@ -629,9 +659,11 @@ export function calculateCurrencyUpgrades() {
         return;
     }
 
-    // Calculate initial DPS
+    // Calculate initial DPS using StatCalculationService
+    // We pass 0 for weaponAttackBonus since it's already included in the stats from state
     const baseStats = getStats('base');
-    const initialDPS = calculateDamage(baseStats, 'boss').dps;
+    const initialStatService = new StatCalculationService(baseStats);
+    const initialDPS = initialStatService.computeDPS('boss');
 
     // Simulate spending currency
     const upgradeSequence = [];
@@ -721,40 +753,17 @@ export function calculateCurrencyUpgrades() {
         return;
     }
 
-    // Calculate weapon attack bonus with simulated upgraded levels
-    let newWeaponAttackBonus = 0;
-    let equippedBonus = 0;
-
-    rarities.forEach(rarity => {
-        tiers.forEach(tier => {
-            const key = `${rarity}-${tier}`;
-            const newLevel = weaponLevels[key] || initialWeaponLevels[key] || 0;
-
-            if (newLevel === 0) return;
-
-            const { inventoryAttack, equippedAttack } = calculateWeaponAttacks(rarity, tier, newLevel);
-            newWeaponAttackBonus += inventoryAttack;
-
-            // Check if this weapon is equipped
-            const equippedDisplay = document.getElementById(`equipped-display-${rarity}-${tier}`);
-            if (equippedDisplay && equippedDisplay.style.display !== 'none') {
-                equippedBonus = equippedAttack;
-            }
-        });
-    });
-
-    newWeaponAttackBonus += equippedBonus;
-
-    // Calculate new DPS with new weapon attack bonus
-    const newStats = { ...baseStats };
-    const currentWeaponBonus = getWeaponAttackBonus().totalAttack;
+    // Calculate weapon attack bonus with simulated upgraded levels using helper
+    const newWeaponAttackBonus = calculateWeaponAttackBonusFromLevels(weaponLevels);
 
     // Apply the weapon attack bonus difference to attack
     // Weapon attack bonus is a % that multiplies base attack
-    const baseAttackWithoutWeaponBonus = baseStats.attack / (1 + currentWeaponBonus / 100);
-    newStats.attack = baseAttackWithoutWeaponBonus * (1 + newWeaponAttackBonus / 100);
+    const baseAttackWithoutWeaponBonus = baseStats.attack / (1 + initialStatService.weaponAttackBonus / 100);
+    const newStats = { ...baseStats, attack: baseAttackWithoutWeaponBonus * (1 + newWeaponAttackBonus / 100) };
 
-    const newDPS = calculateDamage(newStats, 'boss').dps;
+    // Pass 0 for weaponAttackBonus since we've manually applied it to the attack stat
+    const newStatService = new StatCalculationService(newStats, newWeaponAttackBonus);
+    const newDPS = newStatService.computeDPS('boss');
     const dpsGainPct = ((newDPS - initialDPS) / initialDPS * 100);
 
     // Collate all upgrades by weapon type (not just consecutive)

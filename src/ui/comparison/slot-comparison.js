@@ -94,7 +94,6 @@ window.checkPendingSlotNavigation = checkPendingSlotNavigation;
  */
 export async function switchComparisonSlot(slotId) {
     try {
-        console.log(`[SlotComparison] Switching from ${currentSlot} to ${slotId}`);
 
         // Save current slot selection BEFORE any DOM changes
         localStorage.setItem('lastSelectedComparisonSlot', slotId);
@@ -139,7 +138,6 @@ export async function switchComparisonSlot(slotId) {
         // Update header
         updateSlotHeader(EQUIPMENT_SLOTS[slotId].name);
 
-        console.log(`[SlotComparison] Successfully switched to ${slotId}`);
 
     } catch (error) {
         console.error(`[SlotComparison] Failed to switch slot:`, error);

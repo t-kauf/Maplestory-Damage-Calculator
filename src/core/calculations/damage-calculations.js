@@ -1,8 +1,5 @@
 import { getSelectedStageDefense } from '@core/state.js';
 import { formatNumber } from '@utils/formatters.js';
-import { getWeaponAttackBonus, getSelectedJobTier, getSelectedClass } from '@core/state.js';
-import { calculateMainStatPercentGain } from '@core/calculations/stat-calculations.js';
-import { calculate3rdJobSkillCoefficient, calculate4thJobSkillCoefficient } from '@core/skill-coefficient.js';
 import { StatCalculationService } from '@core/stat-calculation-service.js';
 
 window.calculateStatEquivalency = calculateStatEquivalency;
@@ -27,7 +24,6 @@ export function calculateDamage(stats, monsterType) {
     const damageReduction = 6000 / (6000 + effectiveDefense);
 
     const monsterDamage = monsterType === 'boss' ? stats.bossDamage : stats.normalDamage;
-    console.log(monsterDamage);
 
     const finalDamageMultiplier = 1 + (stats.finalDamage / 100);
 
@@ -83,23 +79,10 @@ export function calculateDamage(stats, monsterType) {
 // Calculate stat weights - generates HTML for stat damage predictions
 // ULTRA-COMPACT REDESIGN: Horizontal tabbed dashboard with minimal vertical footprint
 export function calculateStatWeights(setup, stats) {
-    const baseBossDPS = calculateDamage(stats, 'boss').dps;
-    const baseNormalDPS = calculateDamage(stats, 'normal').dps;
-    const weaponAttackBonus = getWeaponAttackBonus().totalAttack;
-
-    // Get main stat % and related values for proper main stat % calculations
-    const mainStatPct = parseFloat(document.getElementById('main-stat-pct-base')?.value) || 0;
-    const primaryMainStat = parseFloat(document.getElementById('primary-main-stat-base')?.value) || 0;
-    const defense = parseFloat(document.getElementById('defense-base')?.value) || 0;
-    const selectedClass = getSelectedClass();
-
-    // Create context for StatCalculationService
-    const serviceContext = {
-        mainStatPct,
-        primaryMainStat,
-        defense,
-        selectedClass
-    };
+    // Create base service to get base DPS values (calculated once in constructor, auto-fetches weaponAttackBonus)
+    const baseService = new StatCalculationService(stats);
+    const baseBossDPS = baseService.baseBossDPS;
+    const baseNormalDPS = baseService.baseNormalDPS;
 
     // Flat attack increases
     const attackIncreases = [500, 1000, 2500, 5000, 10000, 15000];
@@ -160,11 +143,11 @@ export function calculateStatWeights(setup, stats) {
     // Attack row
     html += `<tr><td><button onclick="toggleStatChart('${setup}', 'attack', 'Attack', true)" title="Toggle graph" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">📊</button>Attack</td>`;
     attackIncreases.forEach(increase => {
-        const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+        const service = new StatCalculationService(stats);
         const oldValue = stats.attack;
-        const effectiveIncrease = increase * (1 + weaponAttackBonus / 100);
+        const effectiveIncrease = increase * (1 + service.weaponAttackBonus / 100);
 
-        const newDPS = service.addAttack(increase).calculateDPS('boss');
+        const newDPS = service.addAttack(increase).computeDPS('boss');
         const newValue = service.getStats().attack;
         const gain = ((newDPS - baseBossDPS) / baseBossDPS * 100).toFixed(2);
 
@@ -184,10 +167,10 @@ export function calculateStatWeights(setup, stats) {
     // Main Stat row
     html += `<tr><td><button onclick="toggleStatChart('${setup}', 'mainStat', 'Main Stat', true)" title="Toggle graph" onmouseover="this.style.opacity='1'" onmouseout="this.style.opacity='0.7'">📊</button>Main Stat</td>`;
     mainStatIncreases.forEach(increase => {
-        const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+        const service = new StatCalculationService(stats);
         const statDamageIncrease = increase / 100;
 
-        const newDPS = service.addMainStat(increase).calculateDPS('boss');
+        const newDPS = service.addMainStat(increase).computeDPS('boss');
         const gain = ((newDPS - baseBossDPS) / baseBossDPS * 100).toFixed(2);
 
         const tooltip = `+${formatNumber(increase)} Main Stat\n+${statDamageIncrease.toFixed(2)}% Stat Damage\nGain: ${gain}%`;
@@ -224,7 +207,7 @@ export function calculateStatWeights(setup, stats) {
 
         percentIncreases.forEach(increase => {
             // Simple flat addition for table values
-            const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+            const service = new StatCalculationService(stats);
             const baseDPS = stat.key === "normalDamage" ? baseNormalDPS : baseBossDPS;
 
             // Apply the full increase at once (not in steps)
@@ -240,7 +223,7 @@ export function calculateStatWeights(setup, stats) {
             }
 
             const monsterType = stat.key === "normalDamage" ? 'normal' : 'boss';
-            const newDPS = service.calculateDPS(monsterType);
+            const newDPS = service.computeDPS(monsterType);
             const gain = ((newDPS - baseDPS) / baseDPS * 100).toFixed(2);
 
             const newValue = service.getStats()[stat.key];
@@ -381,25 +364,14 @@ export function calculateStatEquivalency(sourceStat) {
         skillMasteryBoss: parseFloat(document.getElementById('skill-mastery-boss-base').value),
         minDamage: parseFloat(document.getElementById('min-damage-base').value),
         maxDamage: parseFloat(document.getElementById('max-damage-base').value),
-        finalDamage: parseFloat(document.getElementById('final-damage-base').value)
+        finalDamage: parseFloat(document.getElementById('final-damage-base').value),
+        defense: parseFloat(document.getElementById('defense-base')?.value) || 0,
+        mainStatPct: parseFloat(document.getElementById('main-stat-pct-base')?.value) || 0
     };
 
-    const baseBossDPS = calculateDamage(stats, 'boss').dps;
-    const weaponAttackBonus = getWeaponAttackBonus().totalAttack;
-
-    // Get main stat context for proper calculations
-    const mainStatPct = parseFloat(document.getElementById('main-stat-pct-base')?.value) || 0;
-    const primaryMainStat = parseFloat(document.getElementById('primary-main-stat-base')?.value) || 0;
-    const defense = parseFloat(document.getElementById('defense-base')?.value) || 0;
-    const selectedClass = getSelectedClass();
-
-    // Create context for StatCalculationService
-    const serviceContext = {
-        mainStatPct,
-        primaryMainStat,
-        defense,
-        selectedClass
-    };
+    // Create base service to get base DPS value (calculated once in constructor, auto-fetches weaponAttackBonus)
+    const baseService = new StatCalculationService(stats);
+    const baseBossDPS = baseService.baseBossDPS;
 
     // Map of stat IDs to their properties (ordered to match Stat Predictions tables)
     const statMapping = {
@@ -407,7 +379,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Attack',
             getValue: () => parseFloat(document.getElementById('equiv-attack').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 service.addAttack(value);
                 return service.getStats();
             },
@@ -417,7 +389,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Main Stat',
             getValue: () => parseFloat(document.getElementById('equiv-main-stat').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 service.addMainStat(value);
                 return service.getStats();
             },
@@ -427,7 +399,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Main Stat %',
             getValue: () => parseFloat(document.getElementById('equiv-main-stat-pct').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 service.addMainStatPct(value);
                 return service.getStats();
             },
@@ -437,7 +409,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Skill Coefficient',
             getValue: () => parseFloat(document.getElementById('equiv-skill-coeff').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 service.addPercentageStat('skillCoeff', value);
                 return service.getStats();
             },
@@ -448,7 +420,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Skill Mastery',
             getValue: () => parseFloat(document.getElementById('equiv-skill-mastery').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 service.addPercentageStat('skillMastery', value);
                 return service.getStats();
             },
@@ -459,7 +431,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Damage',
             getValue: () => parseFloat(document.getElementById('equiv-damage').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 service.addPercentageStat('damage', value);
                 return service.getStats();
             },
@@ -470,7 +442,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Final Damage',
             getValue: () => parseFloat(document.getElementById('equiv-final-damage').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 service.addMultiplicativeStat('finalDamage', value);
                 return service.getStats();
             },
@@ -482,7 +454,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Boss Damage',
             getValue: () => parseFloat(document.getElementById('equiv-boss-damage').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 service.addPercentageStat('bossDamage', value);
                 return service.getStats();
             },
@@ -493,7 +465,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Monster Damage',
             getValue: () => parseFloat(document.getElementById('equiv-normal-damage').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 service.addPercentageStat('normalDamage', value);
                 return service.getStats();
             },
@@ -504,7 +476,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Main Stat %',
             getValue: () => parseFloat(document.getElementById('equiv-stat-damage').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 service.addPercentageStat('statDamage', value);
                 return service.getStats();
             },
@@ -515,7 +487,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Damage Amplification',
             getValue: () => parseFloat(document.getElementById('equiv-damage-amp').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 service.addPercentageStat('damageAmp', value);
                 return service.getStats();
             },
@@ -526,7 +498,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Min Damage Multiplier',
             getValue: () => parseFloat(document.getElementById('equiv-min-damage').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 service.addPercentageStat('minDamage', value);
                 return service.getStats();
             },
@@ -537,7 +509,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Max Damage Multiplier',
             getValue: () => parseFloat(document.getElementById('equiv-max-damage').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 service.addPercentageStat('maxDamage', value);
                 return service.getStats();
             },
@@ -548,7 +520,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Critical Rate',
             getValue: () => parseFloat(document.getElementById('equiv-crit-rate').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 service.addPercentageStat('critRate', value);
                 return service.getStats();
             },
@@ -559,7 +531,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Critical Damage',
             getValue: () => parseFloat(document.getElementById('equiv-crit-damage').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 service.addPercentageStat('critDamage', value);
                 return service.getStats();
             },
@@ -570,7 +542,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Attack Speed',
             getValue: () => parseFloat(document.getElementById('equiv-attack-speed').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 service.addDiminishingReturnStat('attackSpeed', value, 150);
                 return service.getStats();
             },
@@ -582,7 +554,7 @@ export function calculateStatEquivalency(sourceStat) {
             label: 'Defense Penetration',
             getValue: () => parseFloat(document.getElementById('equiv-def-pen').value) || 0,
             applyToStats: (stats, value) => {
-                const service = new StatCalculationService(stats, weaponAttackBonus, serviceContext);
+                const service = new StatCalculationService(stats);
                 // defPen uses diminishing returns with factor 100
                 service.addDiminishingReturnStat('defPen', value, 100);
                 return service.getStats();
@@ -603,9 +575,10 @@ export function calculateStatEquivalency(sourceStat) {
         return;
     }
 
-    const baseDPS = calculateDamage(stats, targetType).dps;
+    const baseDPS = baseService.baseBossDPS;
     const modifiedStats = statMapping[sourceStat].applyToStats(stats, sourceValue);
-    const newDPS = calculateDamage(modifiedStats, targetType).dps;
+    const modifiedService = new StatCalculationService(modifiedStats);
+    const newDPS = modifiedService.computeDPS(targetType);
     const targetDPSGain = ((newDPS - baseDPS) / baseDPS * 100);
 
     // Build HTML for results
@@ -675,7 +648,8 @@ export function calculateStatEquivalency(sourceStat) {
         while (iterations < maxIterations && high - low > tolerance) {
             const mid = (low + high) / 2;
             const testStats = statConfig.applyToStats(stats, mid);
-            const testDPS = calculateDamage(testStats, targetType).dps;
+            const testService = new StatCalculationService(testStats);
+            const testDPS = testService.computeDPS(targetType);
             const actualGain = ((testDPS - baseDPS) / baseDPS * 100);
 
             if (Math.abs(actualGain - targetDPSGain) < tolerance) {
@@ -693,7 +667,8 @@ export function calculateStatEquivalency(sourceStat) {
 
         // Check if we hit the cap and still can't reach target gain
         const verifyStats = statConfig.applyToStats(stats, equivalentValue);
-        const verifyDPS = calculateDamage(verifyStats, targetType).dps;
+        const verifyService = new StatCalculationService(verifyStats);
+        const verifyDPS = verifyService.computeDPS(targetType);
         const verifyGain = ((verifyDPS - baseDPS) / baseDPS * 100);
 
         // If we're at the cap and still below target gain, show as unable to match

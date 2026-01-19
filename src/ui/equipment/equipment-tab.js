@@ -435,7 +435,6 @@ export function migrateLegacyData() {
 
             // Save back to main storage
             localStorage.setItem('damageCalculatorData', JSON.stringify(data));
-            console.log('Migrated legacy comparison items to main storage');
         } catch (e) {
             console.error('Failed to migrate comparison items:', e);
         }

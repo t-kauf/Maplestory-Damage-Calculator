@@ -1,8 +1,7 @@
 // Results display functionality
 
 import { formatNumber } from '@utils/formatters.js';
-import { calculateDamage } from '@core/calculations/damage-calculations.js';
-import { getWeaponAttackBonus } from '@core/state.js';
+import { StatCalculationService } from '@core/stat-calculation-service.js';
 import { getStats } from '@core/state.js';
 
 window.calculateEquipmentSlotDPS = calculateEquipmentSlotDPS;
@@ -10,8 +9,10 @@ window.toggleSubDetails = toggleSubDetails;
 window.toggleDetails = toggleDetails;
 
 export function displayResults(itemName, stats, uniqueId, isEquipped = false, equippedDamageValues = null) {
-    const bossResults = calculateDamage(stats, 'boss');
-    const normalResults = calculateDamage(stats, 'normal');
+    // Use StatCalculationService for consistent damage calculation
+    const service = new StatCalculationService(stats);
+    const bossResults = service.compute('boss');
+    const normalResults = service.compute('normal');
 
     const itemClass = isEquipped ? 'equipped-item' : 'comparison-item';
 
@@ -324,10 +325,10 @@ export function toggleDetails(id) {
 export function calculateEquipmentSlotDPS() {
     const baseStats = getStats('base');
     const slotNames = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck', 'eye-accessory'];
-    const weaponAttackBonus = getWeaponAttackBonus().totalAttack;
 
-    // Calculate baseline DPS (with all slots)
-    const baselineDPS = calculateDamage(baseStats, 'boss').dps;
+    // Use StatCalculationService for consistent calculations (auto-fetches weaponAttackBonus from state)
+    const baseService = new StatCalculationService(baseStats);
+    const baselineDPS = baseService.computeDPS('boss');
 
     // Track total stats from all slots for total DPS calculation
     let totalAttackFromSlots = 0;
@@ -343,25 +344,21 @@ export function calculateEquipmentSlotDPS() {
         const slotMainStat = parseFloat(mainStatInput?.value) || 0;
         const slotDamageAmp = parseFloat(damageAmpInput?.value) || 0;
 
-        // Calculate weapon attack bonus (same as scrolling tab)
-        const effectiveAttackIncrease = slotAttack * (1 + weaponAttackBonus / 100);
-
         // Convert main stat to stat damage (100:1 ratio)
         const statDamageFromMainStat = slotMainStat / 100;
 
         // Add to totals
-        totalAttackFromSlots += effectiveAttackIncrease;
+        totalAttackFromSlots += slotAttack;
         totalStatDamageFromSlots += statDamageFromMainStat;
         totalDamageAmpFromSlots += slotDamageAmp;
 
-        // Remove this slot's stats from base to see DPS without it
-        const statsWithoutSlot = { ...baseStats };
-        statsWithoutSlot.attack -= effectiveAttackIncrease;
-        statsWithoutSlot.statDamage -= statDamageFromMainStat;
-        statsWithoutSlot.damageAmp -= slotDamageAmp;
-
-        // Calculate DPS without this slot
-        const withoutSlotDPS = calculateDamage(statsWithoutSlot, 'boss').dps;
+        // Use StatCalculationService chaining API to calculate DPS without this slot
+        // The service handles weapon attack bonus automatically
+        const withoutSlotDPS = new StatCalculationService(baseStats)
+            .subtractAttack(slotAttack, true)  // applyWeaponBonus = true
+            .subtractStat('statDamage', statDamageFromMainStat)
+            .subtractStat('damageAmp', slotDamageAmp)
+            .computeDPS('boss');
 
         // Calculate percentage gain
         const dpsGainPct = ((baselineDPS - withoutSlotDPS) / baselineDPS * 100);
@@ -371,13 +368,13 @@ export function calculateEquipmentSlotDPS() {
         if (dpsDisplay) dpsDisplay.textContent = `+${dpsGainPct.toFixed(2)}%`;
     });
 
-    // Calculate total DPS gain from all slots
-    const statsWithoutAllSlots = { ...baseStats };
-    statsWithoutAllSlots.attack -= totalAttackFromSlots;
-    statsWithoutAllSlots.statDamage -= totalStatDamageFromSlots;
-    statsWithoutAllSlots.damageAmp -= totalDamageAmpFromSlots;
+    // Calculate total DPS gain from all slots using chaining API
+    const withoutAllSlotsDPS = new StatCalculationService(baseStats)
+        .subtractAttack(totalAttackFromSlots, true)  // applyWeaponBonus = true
+        .subtractStat('statDamage', totalStatDamageFromSlots)
+        .subtractStat('damageAmp', totalDamageAmpFromSlots)
+        .computeDPS('boss');
 
-    const withoutAllSlotsDPS = calculateDamage(statsWithoutAllSlots, 'boss').dps;
     const totalDPSGainPct = ((baselineDPS - withoutAllSlotsDPS) / baselineDPS * 100);
 
     // Display total DPS gain

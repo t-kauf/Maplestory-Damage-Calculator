@@ -730,34 +730,6 @@ export function getAllDarkKnightSkills(level) {
 // ============================================================================
 
 /**
- * Mapping of skill effect property names to calculator stat names
- * This maps the property names in DARK_KNIGHT_SKILLS to the stat names expected by calculateDamage()
- */
-const SKILL_EFFECT_TO_CALCULATOR_STAT = {
-    // Attack speed
-    'attackSpeed': 'attackSpeed',
-
-    // Min/Max damage
-    'minDamageRatio': 'minDamage',
-    'maxDamageRatio': 'maxDamage',
-
-    // Critical stats
-    'criticalRate': 'critRate',
-    'criticalDamage': 'critDamage',
-
-    // Main stat (STR conversion)
-    'strFromDefense': 'mainStat',  // Special: needs defense value for calculation
-
-    // Damage types - not directly mappable, need special handling
-    'attackBonus': null,  // Buff skill, not passive
-    'defenseBonus': null,  // Not DPS relevant
-    'damageTakenIncrease': null,  // Not DPS relevant
-    'toughnessBonus': null,  // Not DPS relevant
-    'hpRecovery': null,  // Not DPS relevant
-    'debuffTolerance': null  // Not DPS relevant
-};
-
-/**
  * Get DPS-relevant passives from generated class skills by job tier
  * Works with the new format from all-class-skills.js
  * @param {object} classSkills - The skill data object for a class (e.g., HERO_SKILLS)
