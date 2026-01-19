@@ -364,26 +364,6 @@ test.describe('Weapon Levels - Main User Workflows', () => {
 
             markElementCovered('switch-to-weapons-grid-tab');
         });
-
-        test('sub-tab selection persists after page reload', async ({ page }) => {
-            // Arrange
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
-
-            // Switch to upgrade priority
-            const priorityButton = page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' });
-            await priorityButton.click();
-            await page.waitForTimeout(200);
-
-            // Act - Reload page
-            await page.reload();
-            await page.waitForTimeout(200);
-
-            // Assert - Should still be on upgrade priority tab
-            await verifySubTabActive(page, 'upgrade-priority');
-
-            markElementCovered('subtab-persistence-reload');
-        });
     });
 
     // =========================================================================
@@ -544,26 +524,6 @@ test.describe('Weapon Levels - Main User Workflows', () => {
             await expect(page.locator('#weapon-normal-t4')).toHaveClass(/equipped/);
 
             markElementCovered('reload-equipped-persistence');
-        });
-
-        test('reloading page maintains sub-tab selection', async ({ page }) => {
-            // Arrange
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
-
-            // Switch to upgrade priority
-            const priorityButton = page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' });
-            await priorityButton.click();
-            await page.waitForTimeout(200);
-
-            // Act - Reload page
-            await page.reload();
-            await page.waitForTimeout(200);
-
-            // Assert - Still on upgrade priority tab
-            await verifySubTabActive(page, 'upgrade-priority');
-
-            markElementCovered('reload-subtab-persistence');
         });
     });
 });

@@ -45,6 +45,13 @@ export function switchWeaponLevelsTab(tabName) {
             btn.classList.add('active');
         }
     });
+
+    // Calculate upgrade priority when switching to the priority tab
+    if (tabName === 'upgrade-priority') {
+        setTimeout(() => {
+            updateUpgradePriorityChain();
+        }, 100);
+    }
 }
 
 export function initializeWeapons() {
@@ -134,7 +141,27 @@ export function initializeWeapons() {
                 }
             });
         });
+
+        // Initialize max attributes for all weapons based on their star rating
+        initializeWeaponMaxLevels();
     }, 0);
+}
+
+// Initialize max level attributes for all weapons based on their current star rating
+function initializeWeaponMaxLevels() {
+    rarities.forEach(rarity => {
+        tiers.forEach(tier => {
+            const starsInput = document.getElementById(`stars-${rarity}-${tier}`);
+            const levelInput = document.getElementById(`level-${rarity}-${tier}`);
+
+            if (starsInput && levelInput) {
+                const stars = starsInput.value !== undefined && starsInput.value !== ''
+                    ? parseInt(starsInput.value) : 5;
+                const maxLevel = getMaxLevelForStars(stars);
+                levelInput.setAttribute('max', maxLevel);
+            }
+        });
+    });
 }
 
 export function setWeaponStars(rarity, tier, stars) {

@@ -107,9 +107,13 @@ export function saveToLocalStorage() {
 
             if (levelInput) {
                 const key = `${rarity}-${tier}`;
+                const starsValue = starsInput ? starsInput.value : '5';
+                if (key === 'normal-t4') {
+                    console.log('[SAVE] normal-t4 stars:', starsValue, 'type:', typeof starsValue);
+                }
                 data.weapons[key] = {
                     level: levelInput.value,
-                    stars: starsInput ? starsInput.value : '5',
+                    stars: starsValue,
                     equipped: equippedCheckbox ? equippedCheckbox.checked : false
                 };
             }
@@ -288,6 +292,10 @@ export function loadFromLocalStorage() {
                     const weaponData = data.weapons[key];
 
                     if (weaponData) {
+                        if (key === 'normal-t4') {
+                            console.log('[LOAD] normal-t4 weaponData:', weaponData);
+                        }
+
                         const levelInput = document.getElementById(`level-${rarity}-${tier}`);
                         const starsInput = document.getElementById(`stars-${rarity}-${tier}`);
                         const equippedCheckbox = document.getElementById(`equipped-checkbox-${rarity}-${tier}`);
@@ -296,13 +304,16 @@ export function loadFromLocalStorage() {
                         if (starsInput) {
                             const defaultStars = ['legendary', 'mystic', 'ancient'].includes(rarity) ? 1 : 5;
                             const stars = weaponData.stars !== undefined ? weaponData.stars : defaultStars;
-                            starsInput.value = stars;
+                            if (key === 'normal-t4') {
+                                console.log('[LOAD] normal-t4 setting stars to:', stars, 'type:', typeof stars);
+                            }
+                            starsInput.value = stars.toString();
 
-                            // Update star display (1-5 stars)
+                            // Update star display (1-5 stars) - use active class to match initialization
                             for (let i = 1; i <= 5; i++) {
                                 const starElem = document.getElementById(`star-${rarity}-${tier}-${i}`);
                                 if (starElem) {
-                                    starElem.style.opacity = i <= stars ? '1' : '0.3';
+                                    starElem.classList.toggle('active', i <= stars);
                                 }
                             }
                         }

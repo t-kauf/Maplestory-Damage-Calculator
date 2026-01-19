@@ -229,10 +229,23 @@ export async function applyWeaponLevelsFixture(page, fixture) {
         const levelInput = page.locator(`#level-${rarity}-${tier}`);
         await levelInput.fill(weaponData.level.toString());
 
-        // Set stars by clicking the appropriate star
-        if (weaponData.stars > 0) {
-            const starElement = page.locator(`#star-${rarity}-${tier}-${weaponData.stars}`);
-            await starElement.click();
+        // Set stars by directly setting the hidden input value
+        // We don't click the star element because that triggers toggle behavior
+        // which would set stars to 0 if the current value equals the clicked star
+        const starsInput = page.locator(`#stars-${rarity}-${tier}`);
+        await starsInput.evaluate((el, val) => { el.value = val; }, weaponData.stars.toString());
+
+        // Update the star display classes to match the new stars value
+        for (let i = 1; i <= 5; i++) {
+            const starElement = page.locator(`#star-${rarity}-${tier}-${i}`);
+            const isActive = i <= weaponData.stars;
+            await starElement.evaluate((el, active) => {
+                if (active) {
+                    el.classList.add('active');
+                } else {
+                    el.classList.remove('active');
+                }
+            }, isActive);
         }
     }
 

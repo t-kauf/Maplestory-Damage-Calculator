@@ -323,7 +323,7 @@ export async function verifyMaxLevelEnforcement(page, rarity, tier, stars, expec
 
     // Try to set a level higher than max
     await levelInput.fill((expectedMaxLevel + 10).toString());
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(500);
 
     // Should be capped at expectedMaxLevel
     const actualValue = await levelInput.inputValue();

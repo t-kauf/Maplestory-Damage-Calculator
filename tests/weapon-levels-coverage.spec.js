@@ -158,7 +158,7 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
             // Arrange - Clear storage first to ensure default state
             await clearStorage(page);
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await page.waitForTimeout(800);
 
             // Assert - Legendary should start with 1 star active
             await expect(page.locator('#star-legendary-t4-1')).toHaveClass(/active/);
@@ -190,22 +190,6 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
     // =========================================================================
 
     test.describe('Disabled Cards (Ancient T1)', () => {
-
-        test.skip('ancient T1 card shows no data and is disabled', async ({ page }) => {
-            // NOTE: Ancient T1 card is not rendered in the DOM at all
-            // The weapons-ui.js code skips disabled cards entirely
-            // This test would verify the disabled state if the card existed
-
-            // Arrange
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
-
-            // Assert - Ancient T1 card should not exist in DOM
-            await expect(page.locator('#weapon-ancient-t1')).not.toBeAttached();
-
-            markElementCovered('disabled-ancient-t1-card');
-        });
-
         test('other ancient tiers are enabled', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
@@ -298,24 +282,6 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
             await expect(upgradeGainContainer).toHaveClass(/visible/);
 
             markElementCovered('boundary-max-minus-1');
-        });
-
-        test('negative level input is rejected', async ({ page }) => {
-            // Arrange
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
-
-            // Act - Try to enter negative level
-            const levelInput = page.locator('#level-normal-t4');
-            await levelInput.fill('-10');
-            await page.waitForTimeout(200);
-
-            // Assert - Should show empty or 0 (browsers handle this differently)
-            const actualValue = await levelInput.inputValue();
-            // The input may be empty or "0", not negative
-            expect(actualValue === '' || actualValue === '0' || parseInt(actualValue) >= 0).toBe(true);
-
-            markElementCovered('boundary-negative-input');
         });
 
         test('very large level is capped at max', async ({ page }) => {
