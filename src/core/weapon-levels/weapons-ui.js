@@ -45,9 +45,6 @@ export function switchWeaponLevelsTab(tabName) {
             btn.classList.add('active');
         }
     });
-
-    // Save the active sub-tab to localStorage
-    saveToLocalStorage();
 }
 
 export function initializeWeapons() {
