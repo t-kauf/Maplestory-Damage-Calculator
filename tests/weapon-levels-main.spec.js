@@ -198,10 +198,10 @@ test.describe('Weapon Levels - Main User Workflows', () => {
             await expect(page.locator('#star-normal-t4-4')).not.toHaveClass(/active/);
             await expect(page.locator('#star-normal-t4-5')).not.toHaveClass(/active/);
 
-            // Assert - Max level should be 0 (no stars)
+            // Assert - Max level should be 100 (0 stars defaults to max level 100)
             const levelInput = page.locator('#level-normal-t4');
             const maxAttr = await levelInput.getAttribute('max');
-            expect(parseInt(maxAttr)).toBe(0);
+            expect(parseInt(maxAttr)).toBe(100);
 
             markElementCovered('star-toggle-behavior');
         });
