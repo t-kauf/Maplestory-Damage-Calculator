@@ -1,55 +1,77 @@
-// Stat Comparison Service
-// Provides reusable functions for calculating stat differences and DPS comparisons
-// Used by: Item Comparison, Preset Switching, Preset DPS Comparison
+// Companion Logic
+// Provides reusable functions for calculating companion preset DPS differences and optimizations
+// Used by: Companion Presets UI
 
-import { calculateDamage } from '@core/calculations/damage-calculations.js';
+import { StatCalculationService } from '@core/stat-calculation-service.js';
 import { getStats } from '@core/state.js';
 
-// Mapping from companion effect keys to stats object keys
-const EFFECT_KEY_TO_STAT_KEY = {
-    'MaxHpR': 'maxHpR',
-    'MaxHp': 'maxHp',
-    'AttackPower': 'damage',
-    'MaxDamageRatio': 'maxDamage',
-    'AttackPowerExcludeBoss': 'normalDamage',
-    'CriticalChance': 'critRate',
-    'AttackSpeed': 'attackSpeed',
-    'AttackPowerToBoss': 'bossDamage',
-    'MinDamageRatio': 'minDamage',
-    'MainStat': 'mainStat',
-    'Attack': 'attack'
-};
-
 /**
- * Apply stat changes to base stats (remove old, add new)
- * @param {Object} baseStats - The base stats object
- * @param {Object} removeEffects - Effects to subtract (key-value pairs)
- * @param {Object} addEffects - Effects to add (key-value pairs)
- * @returns {Object} Modified stats copy
+ * Smart routing helper to apply effects to a StatCalculationService
+ * Intelligently routes each stat key to the correct chainable method based on stat type
+ *
+ * @param {StatCalculationService} service - The service instance
+ * @param {Object} effects - Effects object with stat-value pairs
+ * @param {boolean} isRemoving - If true, subtract the effects (for removing current effects)
+ * @returns {StatCalculationService} Returns the service for chaining
  */
-export function applyStatDiff(baseStats, removeEffects = {}, addEffects = {}) {
-    const newStats = { ...baseStats };
+function applyEffectsToService(service, effects, isRemoving = false) {
+    if (!effects) return service;
 
-    // Helper to map effect key to stat key
-    const getStatKey = (effectKey) => EFFECT_KEY_TO_STAT_KEY[effectKey] || effectKey;
+    // Stat type mappings for proper routing to chainable methods
+    const statTypes = {
+        // Flat attack - applies weapon attack bonus
+        attack: (value) => isRemoving
+            ? service.subtractAttack(Math.abs(value), true)
+            : service.addAttack(value, true),
 
-    // Subtract removeEffects
-    Object.entries(removeEffects).forEach(([effectKey, value]) => {
-        const statKey = getStatKey(effectKey);
-        if (newStats[statKey] !== undefined && value !== 0) {
-            newStats[statKey] -= value;
+        // Flat main stat - converts to stat damage (100 main stat = 1% stat damage)
+        mainStat: (value) => service.addMainStat(isRemoving ? -Math.abs(value) : value),
+
+        // Main stat % with diminishing returns
+        statDamage: (value) => service.addMainStatPct(isRemoving ? -Math.abs(value) : value),
+
+        // Multiplicative stat (Final Damage) - for removal, we need special handling
+        // Since multiplicative stats can't be easily reversed, we use subtractStat for removal
+        finalDamage: (value) => {
+            if (isRemoving) {
+                service.subtractStat('finalDamage', value);
+            } else {
+                service.addMultiplicativeStat('finalDamage', value);
+            }
+        },
+
+        // Diminishing returns stats - for removal, use subtractStat
+        attackSpeed: (value) => {
+            if (isRemoving) {
+                service.subtractStat('attackSpeed', value);
+            } else {
+                service.addDiminishingReturnStat('attackSpeed', value, 150);
+            }
+        },
+        defPenMultiplier: (value) => {
+            if (isRemoving) {
+                service.subtractStat('defPenMultiplier', value);
+            } else {
+                service.addDiminishingReturnStat('defPenMultiplier', value, 100);
+            }
+        }
+    };
+
+    // Apply each effect using the appropriate method
+    Object.entries(effects).forEach(([statKey, value]) => {
+        if (value === 0 || value === undefined || value === null) return;
+
+        // Use type-specific handler if available, otherwise default to percentage stat
+        if (statTypes[statKey]) {
+            statTypes[statKey](value);
+        } else {
+            // Default: treat as additive percentage stat
+            const adjustedValue = isRemoving ? -Math.abs(value) : value;
+            service.addPercentageStat(statKey, adjustedValue);
         }
     });
 
-    // Add addEffects
-    Object.entries(addEffects).forEach(([effectKey, value]) => {
-        const statKey = getStatKey(effectKey);
-        if (newStats[statKey] !== undefined && value !== 0) {
-            newStats[statKey] += value;
-        }
-    });
-
-    return newStats;
+    return service;
 }
 
 /**
@@ -64,15 +86,21 @@ export function calculateDpsDifference(currentEffects, newEffects, monsterType =
     const baseStats = getStats('base');
 
     // Calculate stats without current effects (clean baseline)
-    const statsWithoutCurrent = applyStatDiff(baseStats, currentEffects, {});
+    // Start from baseStats and remove current effects
+    const baselineService = new StatCalculationService(baseStats, null);
+    applyEffectsToService(baselineService, currentEffects, true); // true = removing
+    const baselineDps = baselineService.computeDPS(monsterType);
+
+    // Calculate current preset DPS (baseStats already include current effects)
+    const currentService = new StatCalculationService(baseStats, null);
+    const currentPresetDps = currentService.computeDPS(monsterType);
 
     // Calculate stats with new effects
-    const statsWithNew = applyStatDiff(statsWithoutCurrent, {}, newEffects);
-
-    // Calculate DPS for baseline (no preset), current preset, and new preset
-    const baselineDps = calculateDamage(statsWithoutCurrent, monsterType).dps;
-    const currentPresetDps = calculateDamage(baseStats, monsterType).dps;
-    const newPresetDps = calculateDamage(statsWithNew, monsterType).dps;
+    // Start from baseline (no effects) and add new effects
+    const newService = new StatCalculationService(baseStats, null);
+    applyEffectsToService(newService, currentEffects, true); // Remove current first
+    applyEffectsToService(newService, newEffects, false);    // Then add new
+    const newPresetDps = newService.computeDPS(monsterType);
 
     // Calculate gains relative to baseline
     const currentPresetGain = currentPresetDps - baselineDps;
@@ -123,7 +151,7 @@ export function presetHasAnyCompanion(preset) {
 /**
  * Calculate the total value of a specific stat across all companions in a preset
  * @param {Object} preset - Preset object
- * @param {string} targetStat - The stat to sum (e.g., 'AttackPowerToBoss', 'AttackPowerExcludeBoss')
+ * @param {string} targetStat - The stat to sum (e.g., 'bossDamage', 'normalDamage')
  * @param {Function} getCompanionEffects - Function to get companion effects
  * @param {Function} getCompanion - Function to get companion data
  * @returns {number} Total value of the target stat
@@ -155,7 +183,7 @@ export function calculatePresetStatValue(preset, targetStat, getCompanionEffects
 
 /**
  * Generate optimal preset for a specific target by calculating actual DPS
- * @param {string} targetStat - The stat to maximize ('AttackPowerToBoss' or 'AttackPowerExcludeBoss')
+ * @param {string} targetStat - The stat to maximize ('bossDamage' or 'normalDamage')
  * @param {Object} getCompanionEffects - Function to get companion effects
  * @param {Object} getCompanion - Function to get companion data
  * @param {number} maxLevel - Max companion level
@@ -167,7 +195,7 @@ export function generateOptimalPreset(targetStat, getCompanionEffects, getCompan
     const rarities = ['Legendary', 'Unique', 'Epic'];
 
     // Determine monster type from target stat
-    const monsterType = targetStat === 'AttackPowerToBoss' ? 'boss' : 'normal';
+    const monsterType = targetStat === 'bossDamage' ? 'boss' : 'normal';
 
     // Collect all unlocked companions with their data
     const unlockedCompanions = [];
@@ -255,9 +283,9 @@ export function generateOptimalPreset(targetStat, getCompanionEffects, getCompan
             });
 
             // Apply effects to base stats and calculate DPS
-            const statsWithEffects = applyStatDiff(baseStats, {}, totalEffects);
-            const dpsResult = calculateDamage(statsWithEffects, monsterType);
-            const dps = dpsResult.dps;
+            const service = new StatCalculationService(baseStats, null);
+            applyEffectsToService(service, totalEffects, false);
+            const dps = service.computeDPS(monsterType);
 
             // Track best
             if (dps > bestDps) {
@@ -302,9 +330,9 @@ export function generateOptimalPreset(targetStat, getCompanionEffects, getCompan
             });
 
             // Apply effects to base stats and calculate DPS
-            const statsWithEffects = applyStatDiff(baseStats, {}, totalEffects);
-            const dpsResult = calculateDamage(statsWithEffects, monsterType);
-            const dps = dpsResult.dps;
+            const service = new StatCalculationService(baseStats, null);
+            applyEffectsToService(service, totalEffects, false);
+            const dps = service.computeDPS(monsterType);
 
             // Track best
             if (dps > bestDps) {

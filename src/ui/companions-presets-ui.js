@@ -2,7 +2,7 @@ import { getPresets, getPreset, setPresetSlot, clearPresetSlot, getSelectedSlotI
 import { saveToLocalStorage } from '@core/storage.js';
 import { getCompanionEffects, getMaxCompanionLevel } from '@core/companions/index.js';
 import { addStat, subtractStat, Stat } from '@core/stat-inputs-service.js';
-import { calculateBothDpsDifferences, presetHasAnyCompanion, generateOptimalPreset } from '@core/stat-comparison-service.js';
+import { calculateBothDpsDifferences, presetHasAnyCompanion, generateOptimalPreset } from '@core/companions/companion-logic.js';
 
 // Rarity configurations - same as in companions-ui.js
 const RARITY_CONFIG = {
@@ -37,8 +37,8 @@ function renderPresetsPanel() {
     const currentPresetEffects = getPresetEquipEffects(equippedPresetId);
 
     // Generate optimal presets for boss and normal damage
-    const maxBossDpsPreset = generateOptimalPreset('AttackPowerToBoss', getCompanionEffects, getCompanion, getMaxCompanionLevel, getLockedMainCompanion('optimal-boss'));
-    const maxNormalDpsPreset = generateOptimalPreset('AttackPowerExcludeBoss', getCompanionEffects, getCompanion, getMaxCompanionLevel, getLockedMainCompanion('optimal-normal'));
+    const maxBossDpsPreset = generateOptimalPreset('bossDamage', getCompanionEffects, getCompanion, getMaxCompanionLevel, getLockedMainCompanion('optimal-boss'));
+    const maxNormalDpsPreset = generateOptimalPreset('normalDamage', getCompanionEffects, getCompanion, getMaxCompanionLevel, getLockedMainCompanion('optimal-normal'));
 
     let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
 
@@ -971,19 +971,18 @@ export function updateContributedStatsForPreset(presetId) {
  */
 function formatStat(stat) {
     const stats = {
-        'MaxHpR': 'Max HP',
-        'MaxHp': 'Max HP',
-        'AttackPower': 'Damage',
-        'MaxDamageRatio': 'Max Damage Multiplier',
-        'HitChance': 'Accuracy',
-        'AttackPowerExcludeBoss': 'Normal Monster Damage',
-        'CriticalChance': 'Critical Rate',
-        'AttackSpeed': 'Attack Speed',
-        'AttackPowerInCc': 'Status Effect Damage',
-        'AttackPowerToBoss': 'Boss Monster Damage',
-        'MinDamageRatio': 'Min Damage Multiplier',
-        'MainStat': 'Main Stat',
-        'Attack': 'Attack'
+        'maxHpR': 'Max HP %',
+        'maxHp': 'Max HP',
+        'damage': 'Damage',
+        'maxDamage': 'Max Damage Multiplier',
+        'hitChance': 'Accuracy',
+        'normalDamage': 'Normal Monster Damage',
+        'critRate': 'Critical Rate',
+        'attackSpeed': 'Attack Speed',
+        'bossDamage': 'Boss Monster Damage',
+        'minDamage': 'Min Damage Multiplier',
+        'mainStat': 'Main Stat',
+        'attack': 'Attack'
     };
     return stats[stat] || stat;
 }
@@ -1011,9 +1010,9 @@ function createStatComparisonTable(currentEffects, newEffects) {
         const newValue = newEffects[stat] || 0;
 
         // Determine if this stat displays as a percentage
-        // Raw value stats (not divided by 10): HitChance, MaxHp, Attack, MainStat
+        // Raw value stats (not divided by 10): hitChance, maxHp, attack, mainStat
         // Note: Values are now pre-formatted in companion-data.js
-        const isPercentage = !["HitChance", 'MaxHp', 'Attack', 'MainStat'].includes(stat);
+        const isPercentage = !["hitChance", 'maxHp', 'attack', 'mainStat'].includes(stat);
 
         const formatValue = (val) => {
             if (val === 0) return '-';
