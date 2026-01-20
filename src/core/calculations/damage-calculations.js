@@ -561,20 +561,18 @@ export function calculateStatEquivalency(sourceStat) {
         }
     };
 
-    // Determine target type based on source stat
-    const targetType = sourceStat === 'normal-damage' ? 'normal' : 'boss';
-
-    // Get the source stat value and calculate target DPS gain
+    // Get the source stat value and calculate target DPS gain (using boss as default)
     const sourceValue = statMapping[sourceStat].getValue();
     if (sourceValue === 0) {
         document.getElementById('equivalency-results').innerHTML = '';
         return;
     }
 
+    // Use boss DPS as the baseline for display
     const baseDPS = baseService.baseBossDPS;
     const modifiedStats = statMapping[sourceStat].applyToStats(stats, sourceValue);
     const modifiedService = new StatCalculationService(modifiedStats);
-    const newDPS = modifiedService.computeDPS(targetType);
+    const newDPS = modifiedService.computeDPS('boss');
     const targetDPSGain = ((newDPS - baseDPS) / baseDPS * 100);
 
     // Build HTML for results
@@ -584,7 +582,7 @@ export function calculateStatEquivalency(sourceStat) {
     html += `${statMapping[sourceStat].formatValue(sourceValue)} ${statMapping[sourceStat].label}`;
     html += '</div>';
     html += `<div style="font-size: 1.1em; color: var(--accent-success); font-weight: 600;">`;
-    html += `= ${targetDPSGain.toFixed(2)}% DPS Gain (${targetType === 'boss' ? 'Boss' : 'Monster'} Target)`;
+    html += `= ${targetDPSGain.toFixed(2)}% DPS Gain`;
     html += '</div>';
     html += '</div>';
 
@@ -612,12 +610,49 @@ export function calculateStatEquivalency(sourceStat) {
         'skill-mastery': 100, // Reasonable max
         'attack': 100000, // Very high but finite
         'main-stat': 500000, // Very high but finite,
+        'main-stat-pct': 1000, // Very high but finite,
         'def-pen': 100
     };
 
     // Calculate equivalents for all other stats
     Object.entries(statMapping).forEach(([statId, statConfig]) => {
         if (statId === sourceStat) return; // Skip the source stat
+
+        // Cross-stat incompatibility: boss damage doesn't work on normal monsters and vice versa
+        if (sourceStat === 'boss-damage' && statId === 'normal-damage') {
+            let icon = '';
+            html += '<tr>';
+            html += `<td style="font-weight: 600;">${statConfig.label}${icon}</td>`;
+            html += `<td style="text-align: right; font-size: 1.05em; color: var(--text-secondary); font-style: italic;">-</td>`;
+            html += `<td style="text-align: right; color: var(--text-secondary); font-style: italic;">Ineffective (Boss DMG ≠ Monster target)</td>`;
+            html += '</tr>';
+            return;
+        }
+
+        if (sourceStat === 'normal-damage' && statId === 'boss-damage') {
+            let icon = '';
+            html += '<tr>';
+            html += `<td style="font-weight: 600;">${statConfig.label}${icon}</td>`;
+            html += `<td style="text-align: right; font-size: 1.05em; color: var(--text-secondary); font-style: italic;">-</td>`;
+            html += `<td style="text-align: right; color: var(--text-secondary); font-style: italic;">Ineffective (Monster DMG ≠ Boss target)</td>`;
+            html += '</tr>';
+            return;
+        }
+
+        // Determine target type for this stat row
+        // boss-damage row calculates for boss targets
+        // normal-damage row calculates for normal monster targets
+        // all other rows use boss as target
+        let rowTargetType = 'boss';
+        let rowBaseDPS = baseService.baseBossDPS;
+
+        if (statId === 'normal-damage') {
+            rowTargetType = 'normal';
+            rowBaseDPS = baseService.baseNormalDPS;
+        } else if (statId === 'boss-damage') {
+            rowTargetType = 'boss';
+            rowBaseDPS = baseService.baseBossDPS;
+        }
 
         // Get the max value for this stat (if capped)
         let maxValue = statMaximums[statId];
@@ -645,8 +680,8 @@ export function calculateStatEquivalency(sourceStat) {
             const mid = (low + high) / 2;
             const testStats = statConfig.applyToStats(stats, mid);
             const testService = new StatCalculationService(testStats);
-            const testDPS = testService.computeDPS(targetType);
-            const actualGain = ((testDPS - baseDPS) / baseDPS * 100);
+            const testDPS = testService.computeDPS(rowTargetType);
+            const actualGain = ((testDPS - rowBaseDPS) / rowBaseDPS * 100);
 
             if (Math.abs(actualGain - targetDPSGain) < tolerance) {
                 break;
@@ -664,8 +699,8 @@ export function calculateStatEquivalency(sourceStat) {
         // Check if we hit the cap and still can't reach target gain
         const verifyStats = statConfig.applyToStats(stats, equivalentValue);
         const verifyService = new StatCalculationService(verifyStats);
-        const verifyDPS = verifyService.computeDPS(targetType);
-        const verifyGain = ((verifyDPS - baseDPS) / baseDPS * 100);
+        const verifyDPS = verifyService.computeDPS(rowTargetType);
+        const verifyGain = ((verifyDPS - rowBaseDPS) / rowBaseDPS * 100);
 
         // If we're at the cap and still below target gain, show as unable to match
         // Use relative tolerance for small caps

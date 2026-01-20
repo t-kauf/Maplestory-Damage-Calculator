@@ -521,6 +521,74 @@ export function createL85Strategies() {
         shouldReset: () => false
     });
 
+    // Base strategy: Slot 1 and 2 15% Lock-In
+    strategies.push({
+        id: 'L85_slot12_15_lock',
+        name: 'Slot 1+2 15% Lock-In',
+        description: '15% L85 on slot 1 and 2, reset until success on both. Then 15% on slots 5&10, 70% on others. No resets after slot 2 succeeds.',
+        selectScroll: (slot) => {
+            if (slot === 1) return 'L85_15';
+            if (slot === 2) return 'L85_15';
+            if (slot === 5 || slot === 10) return 'L85_15';
+            return 'L85_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot) => {
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
+            }
+
+            if (currentSlot === 2 && slotResults.length >= 2) {
+                const slot2 = slotResults[1];
+                if (!slot2.success && !slot2.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: () => false
+    });
+
+    // Base strategy: Slot 1 and 2 and 3 15% Lock-In
+    strategies.push({
+        id: 'L85_slot123_15_lock',
+        name: 'Slot 1+2+3 15% Lock-In',
+        description: '15% L85 on slot 1, 2 and 3, reset until success on all. Then 15% on slots 5&10, 70% on others. No resets after slot 2 succeeds.',
+        selectScroll: (slot) => {
+            if (slot === 1) return 'L85_15';
+            if (slot === 2) return 'L85_15';
+            if (slot === 3) return 'L85_15';
+            if (slot === 5 || slot === 10) return 'L85_15';
+            return 'L85_70';
+        },
+        shouldResetEarly: (slotResults, currentSlot) => {
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
+            }
+
+            if (currentSlot === 2 && slotResults.length >= 2) {
+                const slot2 = slotResults[1];
+                if (!slot2.success && !slot2.unfunded) {
+                    return true;
+                }
+            }
+
+             if (currentSlot === 3 && slotResults.length >= 3) {
+                const slot3 = slotResults[2];
+                if (!slot3.success && !slot3.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: () => false
+    });
+
     // Slot 1 Lock + All 30%
     strategies.push({
         id: 'L85_slot1_lock_then_30',
