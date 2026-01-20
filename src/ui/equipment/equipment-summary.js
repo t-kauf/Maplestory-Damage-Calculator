@@ -118,8 +118,10 @@ function updateSummaryDisplay(totals) {
 
     statConfigs.forEach(config => {
         const value = totals[config.key];
-        if (value > 0) {
-            const formattedValue = config.isPercent ? `${value}%` : value;
+        // Round to 1 decimal place using Math.round
+        const roundedValue = Math.round(value * 10) / 10;
+        if (roundedValue > 0) {
+            const formattedValue = config.isPercent ? `${roundedValue}%` : roundedValue;
             parts.push(`
                 <span class="equipment-summary-stat">
                     <span class="equipment-summary-stat-value">+${formattedValue}</span>

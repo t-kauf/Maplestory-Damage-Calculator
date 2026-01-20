@@ -1,5 +1,22 @@
 // Weapon Levels Edge Cases & Coverage Tests
-// Tests edge cases, disabled cards, and element inventory
+//
+// PURPOSE: Tests edge cases, boundary conditions, and disabled elements
+// COVERAGE:
+//   - Max level enforcement based on star count
+//   - Disabled cards (Ancient T1)
+//   - Boundary values (0, 1, max-1, max level)
+//   - Star interaction edge cases (toggle, rapid clicking, hover)
+//   - Equipped weapon edge cases
+//   - Element coverage inventory (all UI elements)
+//   - Rarity-specific default behaviors
+//
+// User workflow tests are in:
+//   - weapon-levels-main.spec.js
+// Algorithm functionality tests are in:
+//   - weapon-levels-priority.spec.js
+// Regression tests are in:
+//   - weapon-levels-regression.spec.js
+//
 // Run with: npm test weapon-levels-coverage.spec.js
 
 import { test, expect } from '@playwright/test';
@@ -9,11 +26,20 @@ import {
     markElementCovered,
     WEAPON_LEVELS_ELEMENTS,
     getAllWeaponCombinations,
-    getEdgeCaseWeapons
+    getEdgeCaseWeapons,
+    switchToSubTab,
+    setupWeapon,
+    waitForCalculations,
+    verifyUpgradeGainVisible,
+    setStars,
+    setWeaponLevel,
+    verifyStarStates
 } from './helpers/weapon-levels-helpers.js';
 import {
     WEAPON_LEVELS_MAXED,
-    WEAPON_LEVELS_DISABLED_TEST
+    WEAPON_LEVELS_DISABLED_TEST,
+    WEAPON_LEVELS_HIGH_STARS_LOW_LEVEL,
+    WEAPON_LEVELS_SINGLE
 } from './fixtures/weapon-levels.fixtures.js';
 
 const BASE_URL = 'http://localhost:8000';
@@ -29,124 +55,58 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
 
     test.describe('Max Level Enforcement Based on Stars', () => {
 
-        test('5 stars allows max level 200', async ({ page }) => {
-            // Arrange
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+        // Parameterized test for max level enforcement
+        const maxLevelCases = [
+            { stars: 5, maxLevel: 200, description: '5 stars allows max level 200' },
+            { stars: 4, maxLevel: 180, description: '4 stars allows max level 180' },
+            { stars: 3, maxLevel: 160, description: '3 stars allows max level 160' },
+            { stars: 2, maxLevel: 140, description: '2 stars allows max level 140' },
+            { stars: 1, maxLevel: 120, description: '1 star allows max level 120' },
+            { stars: 0, maxLevel: 100, description: '0 stars allows max level 100' }
+        ];
 
-            // Act - Ensure 5 stars (Normal T4 defaults to 5, so verify it's set)
-            // First click star 3 to change from default, then click star 5 to set back to 5
-            await page.locator('#star-normal-t4-3').click();
-            await page.waitForTimeout(200);
-            await page.locator('#star-normal-t4-5').click();
-            await page.waitForTimeout(200);
+        for (const testCase of maxLevelCases) {
+            test(testCase.description, async ({ page }) => {
+                // Arrange
+                await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
+                await waitForCalculations(page, 200);
 
-            // Assert - Max level should be 200
-            await verifyMaxLevelEnforcement(page, 'normal', 't4', 5, 200);
+                // Act - Set specific star count
+                if (testCase.stars === 0) {
+                    // Toggle to 0 stars
+                    await setStars(page, 'normal', 't4', 3);
+                    await setStars(page, 'normal', 't4', 0);
+                } else {
+                    await setStars(page, 'normal', 't4', testCase.stars);
+                }
 
-            // Test actual level can reach 200
-            const levelInput = page.locator('#level-normal-t4');
-            await levelInput.fill('200');
-            await expect(levelInput).toHaveValue('200');
+                // Assert - Max level should match expected
+                if (testCase.stars === 0) {
+                    // Special case for 0 stars - just check max attribute
+                    const levelInput = page.locator('#level-normal-t4');
+                    const maxAttr = await levelInput.getAttribute('max');
+                    expect(parseInt(maxAttr)).toBe(testCase.maxLevel);
+                } else {
+                    await verifyMaxLevelEnforcement(page, 'normal', 't4', testCase.stars, testCase.maxLevel);
+                }
 
-            markElementCovered('max-level-5-stars');
-        });
-
-        test('4 stars allows max level 180', async ({ page }) => {
-            // Arrange
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
-
-            // Act - Set 4 stars
-            await page.locator('#star-normal-t4-4').click();
-            await page.waitForTimeout(200);
-
-            // Assert - Max level should be 180
-            await verifyMaxLevelEnforcement(page, 'normal', 't4', 4, 180);
-
-            markElementCovered('max-level-4-stars');
-        });
-
-        test('3 stars allows max level 160', async ({ page }) => {
-            // Arrange
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
-
-            // Act - Set 3 stars
-            await page.locator('#star-normal-t4-3').click();
-            await page.waitForTimeout(200);
-
-            // Assert - Max level should be 160
-            await verifyMaxLevelEnforcement(page, 'normal', 't4', 3, 160);
-
-            markElementCovered('max-level-3-stars');
-        });
-
-        test('2 stars allows max level 140', async ({ page }) => {
-            // Arrange
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
-
-            // Act - Set 2 stars
-            await page.locator('#star-normal-t4-2').click();
-            await page.waitForTimeout(200);
-
-            // Assert - Max level should be 140
-            await verifyMaxLevelEnforcement(page, 'normal', 't4', 2, 140);
-
-            markElementCovered('max-level-2-stars');
-        });
-
-        test('1 star allows max level 120', async ({ page }) => {
-            // Arrange
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
-
-            // Act - Set 1 star
-            await page.locator('#star-normal-t4-1').click();
-            await page.waitForTimeout(200);
-
-            // Assert - Max level should be 120
-            await verifyMaxLevelEnforcement(page, 'normal', 't4', 1, 120);
-
-            markElementCovered('max-level-1-star');
-        });
-
-        test('0 stars allows max level 100', async ({ page }) => {
-            // Arrange
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
-
-            // Act - Set 3 stars, then click again to toggle to 0
-            await page.locator('#star-normal-t4-3').click();
-            await page.waitForTimeout(200);
-            await page.locator('#star-normal-t4-3').click();
-            await page.waitForTimeout(200);
-
-            // Assert - Max level should be 100 (0 stars defaults to 100)
-            const levelInput = page.locator('#level-normal-t4');
-            const maxAttr = await levelInput.getAttribute('max');
-            expect(parseInt(maxAttr)).toBe(100);
-
-            markElementCovered('max-level-0-stars');
-        });
+                markElementCovered(`max-level-${testCase.stars}-stars`);
+            });
+        }
 
         test('level auto-corrects when stars decrease', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
-            // Set 5 stars and high level (Normal T4 defaults to 5, so toggle to ensure it's set)
-            await page.locator('#star-normal-t4-3').click();
-            await page.waitForTimeout(200);
-            await page.locator('#star-normal-t4-5').click();
-            await page.locator('#level-normal-t4').fill('200');
-            await page.waitForTimeout(200);
+            // Set 5 stars and high level using new helper
+            await setStars(page, 'normal', 't4', 5);
+            await setWeaponLevel(page, 'normal', 't4', 200);
+            await waitForCalculations(page, 200);
             await expect(page.locator('#level-normal-t4')).toHaveValue('200');
 
             // Act - Reduce to 1 star (max level 120)
-            await page.locator('#star-normal-t4-1').click();
-            await page.waitForTimeout(200);
+            await setStars(page, 'normal', 't4', 1);
 
             // Assert - Level should auto-correct to 120
             await expect(page.locator('#level-normal-t4')).toHaveValue('120');
@@ -158,7 +118,7 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
             // Arrange - Clear storage first to ensure default state
             await clearStorage(page);
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(800);
+            await waitForCalculations(page, 800);
 
             // Assert - Legendary should start with 1 star active
             await expect(page.locator('#star-legendary-t4-1')).toHaveClass(/active/);
@@ -175,7 +135,7 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
         test('ancient weapon defaults to 1 star', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Assert - Ancient should start with 1 star active
             await expect(page.locator('#star-ancient-t4-1')).toHaveClass(/active/);
@@ -217,16 +177,13 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
         test('level 0 hides upgrade gain display', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Set up stars but level 0
-            await page.locator('#star-normal-t4-5').click();
-            await page.locator('#level-normal-t4').fill('0');
-            await page.waitForTimeout(300);
+            await setupWeapon(page, 'normal', 't4', 0, 5);
 
             // Assert - Upgrade gain should not be visible
-            const upgradeGainContainer = page.locator('#upgrade-gain-container-normal-t4');
-            await expect(upgradeGainContainer).not.toHaveClass(/visible/);
+            await verifyUpgradeGainVisible(page, 'normal', 't4', false);
 
             markElementCovered('boundary-level-0');
         });
@@ -234,16 +191,13 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
         test('level 1 shows upgrade gain', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Set to level 1
-            await page.locator('#star-normal-t4-5').click();
-            await page.locator('#level-normal-t4').fill('1');
-            await page.waitForTimeout(300);
+            await setupWeapon(page, 'normal', 't4', 1, 5);
 
             // Assert - Upgrade gain should be visible
-            const upgradeGainContainer = page.locator('#upgrade-gain-container-normal-t4');
-            await expect(upgradeGainContainer).toHaveClass(/visible/);
+            await verifyUpgradeGainVisible(page, 'normal', 't4', true);
 
             markElementCovered('boundary-level-1');
         });
@@ -251,16 +205,13 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
         test('max level (200) hides upgrade gain', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Set to max level
-            await page.locator('#star-normal-t4-5').click();
-            await page.locator('#level-normal-t4').fill('200');
-            await page.waitForTimeout(300);
+            await setupWeapon(page, 'normal', 't4', 200, 5);
 
             // Assert - Upgrade gain should not be visible
-            const upgradeGainContainer = page.locator('#upgrade-gain-container-normal-t4');
-            await expect(upgradeGainContainer).not.toHaveClass(/visible/);
+            await verifyUpgradeGainVisible(page, 'normal', 't4', false);
 
             markElementCovered('boundary-max-level');
         });
@@ -268,18 +219,13 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
         test('max level minus 1 shows upgrade gain', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
-            // Set to max level minus 1 (ensure 5 stars first)
-            await page.locator('#star-normal-t4-3').click();
-            await page.waitForTimeout(200);
-            await page.locator('#star-normal-t4-5').click();
-            await page.locator('#level-normal-t4').fill('199');
-            await page.waitForTimeout(300);
+            // Set to max level minus 1
+            await setupWeapon(page, 'normal', 't4', 199, 5);
 
             // Assert - Upgrade gain should be visible
-            const upgradeGainContainer = page.locator('#upgrade-gain-container-normal-t4');
-            await expect(upgradeGainContainer).toHaveClass(/visible/);
+            await verifyUpgradeGainVisible(page, 'normal', 't4', true);
 
             markElementCovered('boundary-max-minus-1');
         });
@@ -287,18 +233,15 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
         test('very large level is capped at max', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
-            // Set 5 stars (max level 200) - ensure it's actually set
-            await page.locator('#star-normal-t4-3').click();
-            await page.waitForTimeout(200);
-            await page.locator('#star-normal-t4-5').click();
-            await page.waitForTimeout(200);
+            // Set 5 stars (max level 200)
+            await setStars(page, 'normal', 't4', 5);
 
             // Act - Try to enter very large level
             const levelInput = page.locator('#level-normal-t4');
             await levelInput.fill('99999');
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Assert - Should be capped at 200
             await expect(levelInput).toHaveValue('200');
@@ -313,22 +256,77 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
 
     test.describe('Star Interaction Edge Cases', () => {
 
-        test('clicking star with level at max sets new max correctly', async ({ page }) => {
+        test('single click sets stars to clicked value', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
-            // Set 5 stars and max level (ensure 5 stars is actually set)
+            // Act - Click 3rd star
             await page.locator('#star-normal-t4-3').click();
-            await page.waitForTimeout(200);
-            await page.locator('#star-normal-t4-5').click();
-            await page.locator('#level-normal-t4').fill('200');
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
+
+            // Assert - Stars 1-3 should be active
+            await verifyStarStates(page, 'normal', 't4', 3);
+
+            markElementCovered('star-click-single');
+        });
+
+        test('clicking same star toggles to 0 stars', async ({ page }) => {
+            // Arrange
+            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
+            await waitForCalculations(page, 200);
+
+            // Set to 3 stars first
+            await setStars(page, 'normal', 't4', 3);
+            await verifyStarStates(page, 'normal', 't4', 3);
+
+            // Act - Click the same star (3rd) again to toggle to 0
+            await page.locator('#star-normal-t4-3').click();
+            await waitForCalculations(page, 200);
+
+            // Assert - All stars should be inactive
+            await verifyStarStates(page, 'normal', 't4', 0);
+
+            // Assert - Max level should be 100 (0 stars defaults to max level 100)
+            const levelInput = page.locator('#level-normal-t4');
+            const maxAttr = await levelInput.getAttribute('max');
+            expect(parseInt(maxAttr)).toBe(100);
+
+            markElementCovered('star-toggle-to-zero');
+        });
+
+        test('rapid star clicking settles on final value', async ({ page }) => {
+            // Arrange
+            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
+            await waitForCalculations(page, 200);
+
+            // Act - Rapidly set multiple stars
+            await setStars(page, 'normal', 't4', 1);
+            await setStars(page, 'normal', 't4', 3);
+            await setStars(page, 'normal', 't4', 5);
+            await waitForCalculations(page, 300);
+
+            // Assert - Should settle on final state (5 stars)
+            await verifyStarStates(page, 'normal', 't4', 5);
+
+            // Assert - Max level should be 200
+            const maxAttr = await page.locator('#level-normal-t4').getAttribute('max');
+            expect(parseInt(maxAttr)).toBe(200);
+
+            markElementCovered('rapid-star-clicking');
+        });
+
+        test('clicking star with level at max auto-corrects level', async ({ page }) => {
+            // Arrange
+            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
+            await waitForCalculations(page, 200);
+
+            // Set 5 stars and max level
+            await setupWeapon(page, 'normal', 't4', 200, 5);
             await expect(page.locator('#level-normal-t4')).toHaveValue('200');
 
             // Act - Change to 3 stars (max level 160)
-            await page.locator('#star-normal-t4-3').click();
-            await page.waitForTimeout(200);
+            await setStars(page, 'normal', 't4', 3);
 
             // Assert - Level should auto-correct to 160
             await expect(page.locator('#level-normal-t4')).toHaveValue('160');
@@ -341,36 +339,13 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
             markElementCovered('star-change-at-max-level');
         });
 
-        test('rapid star clicking handles correctly', async ({ page }) => {
-            // Arrange
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
-
-            // Act - Rapidly click multiple stars
-            await page.locator('#star-normal-t4-1').click();
-            await page.locator('#star-normal-t4-3').click();
-            await page.locator('#star-normal-t4-5').click();
-            await page.waitForTimeout(300);
-
-            // Assert - Should settle on final state (5 stars)
-            await expect(page.locator('#star-normal-t4-5')).toHaveClass(/active/);
-            await expect(page.locator('#star-normal-t4-1')).toHaveClass(/active/);
-
-            // Assert - Max level should be 200
-            const maxAttr = await page.locator('#level-normal-t4').getAttribute('max');
-            expect(parseInt(maxAttr)).toBe(200);
-
-            markElementCovered('rapid-star-clicking');
-        });
-
         test('star hover preview resets correctly', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Set to 2 stars
-            await page.locator('#star-normal-t4-2').click();
-            await page.waitForTimeout(200);
+            await setStars(page, 'normal', 't4', 2);
 
             // Act - Hover over 4th star
             const star4 = page.locator('#star-normal-t4-4');
@@ -385,9 +360,7 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
             await page.waitForTimeout(100);
 
             // Assert - Should still be at 2 stars
-            await expect(page.locator('#star-normal-t4-2')).toHaveClass(/active/);
-            await expect(page.locator('#star-normal-t4-3')).not.toHaveClass(/active/);
-            await expect(page.locator('#star-normal-t4-4')).not.toHaveClass(/active/);
+            await verifyStarStates(page, 'normal', 't4', 2);
 
             markElementCovered('star-hover-preview');
         });
@@ -485,19 +458,17 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
         test('all sub-tab buttons are present and interactive', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Assert - Both sub-tab buttons should exist
             const buttons = page.locator('#weapon-levels-subtab-button');
             await expect(buttons).toHaveCount(2);
 
-            // Assert - Should be able to click both
-            await buttons.filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(200);
+            // Assert - Should be able to click both using helper
+            await switchToSubTab(page, 'upgrade-priority');
             await expect(page.locator('#weapon-levels-upgrade-priority')).toBeVisible();
 
-            await buttons.filter({ hasText: 'Weapons Grid' }).click();
-            await page.waitForTimeout(200);
+            await switchToSubTab(page, 'weapons-grid');
             await expect(page.locator('#weapon-levels-weapons-grid')).toBeVisible();
 
             markElementCovered('subtab-buttons');
@@ -506,7 +477,7 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
         test('summary stat elements exist and update', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Assert - All summary stats should exist
             await expect(page.locator('#total-inventory-attack')).toBeVisible();
@@ -514,8 +485,8 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
             await expect(page.locator('#total-weapon-attack')).toBeVisible();
 
             // Act - Set a weapon level
-            await page.locator('#level-normal-t4').fill('50');
-            await page.waitForTimeout(300);
+            await setWeaponLevel(page, 'normal', 't4', 50);
+            await waitForCalculations(page, 300);
 
             // Assert - All should have non-zero values
             await expect(page.locator('#total-inventory-attack')).not.toHaveText('0%');
@@ -526,7 +497,7 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
         test('edge case weapon cards exist', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Assert - Key edge case cards should exist (Ancient T1 is not rendered)
             await expect(page.locator('#weapon-normal-t4')).toBeVisible();
@@ -540,7 +511,7 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
         test('edge case star ratings exist', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Assert - Edge case stars should exist
             await expect(page.locator('#star-normal-t4-1')).toBeVisible();
@@ -554,11 +525,10 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
         test('currency calculator elements exist', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
-            // Switch to priority tab
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(500);  // Increased wait for tab switch
+            // Switch to priority tab using helper
+            await switchToSubTab(page, 'upgrade-priority');
 
             // Assert - All calculator elements should exist
             await expect(page.locator('#upgrade-currency-input')).toBeVisible();
@@ -573,11 +543,10 @@ test.describe('Weapon Levels - Edge Cases & Coverage', () => {
         test('priority chain element exists', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
-            // Switch to priority tab
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(500);  // Increased wait for tab switch
+            // Switch to priority tab using helper
+            await switchToSubTab(page, 'upgrade-priority');
 
             // Assert - Priority chain should exist
             await expect(page.locator('#upgrade-priority-chain')).toBeVisible();

@@ -1,5 +1,18 @@
 // Weapon Levels Main Workflow Tests
-// Tests user workflows: first-time setup, adjustments, and cross-tab navigation
+//
+// PURPOSE: Tests core user workflows and happy-path scenarios
+// COVERAGE:
+//   - First-time user setup (setting levels, stars, equipping)
+//   - Adjustment workflows (changing existing values)
+//   - Sub-tab navigation and state persistence
+//   - Cross-tab navigation and data persistence
+//   - Page reload persistence
+//
+// Edge cases, boundary conditions, and algorithm testing are in:
+//   - weapon-levels-coverage.spec.js
+//   - weapon-levels-priority.spec.js
+//   - weapon-levels-regression.spec.js
+//
 // Run with: npm test weapon-levels-main.spec.js
 
 import { test, expect } from '@playwright/test';
@@ -11,7 +24,13 @@ import {
     getWeaponLevelFromStorage,
     getWeaponStarsFromStorage,
     getEquippedWeaponFromStorage,
-    markElementCovered
+    markElementCovered,
+    switchToSubTab,
+    setupWeapon,
+    testCrossTabPersistence,
+    waitForCalculations,
+    verifyUpgradeGainVisible,
+    verifyStarStates
 } from './helpers/weapon-levels-helpers.js';
 import {
     applyWeaponLevelsFixture,
@@ -37,7 +56,7 @@ test.describe('Weapon Levels - Main User Workflows', () => {
         test('should display empty state with all weapons at level 0', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 300);
 
             // Assert - Verify weapons grid sub-tab is active
             await verifySubTabActive(page, 'weapons-grid');
@@ -61,12 +80,12 @@ test.describe('Weapon Levels - Main User Workflows', () => {
         test('setting first weapon level updates inventory and summary stats', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 300);
 
             // Act - Set Normal T4 to level 25
             const levelInput = page.locator('#level-normal-t4');
             await levelInput.fill('25');
-            await page.waitForTimeout(300);
+            await waitForCalculations(page);
 
             // Assert - Direct state: inventory display shows correct attack
             const inventoryDisplay = page.locator('#inventory-display-normal-t4');
@@ -80,15 +99,15 @@ test.describe('Weapon Levels - Main User Workflows', () => {
             markElementCovered('set-weapon-level-normal-t4');
         });
 
-        test('clicking star rating updates visual state and enforces max level', async ({ page }) => {
+        test('clicking star rating updates visual state', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 300);
 
             // Act - Click 3rd star on Normal T4
             const star3 = page.locator('#star-normal-t4-3');
             await star3.click();
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 300);
 
             // Assert - Direct state: star is active
             await expect(star3).toHaveClass(/active/);
@@ -99,27 +118,22 @@ test.describe('Weapon Levels - Main User Workflows', () => {
             await expect(page.locator('#star-normal-t4-4')).not.toHaveClass(/active/);
             await expect(page.locator('#star-normal-t4-5')).not.toHaveClass(/active/);
 
-            // Assert - Max level enforced (3 stars = max level 160)
-            const levelInput = page.locator('#level-normal-t4');
-            const maxAttr = await levelInput.getAttribute('max');
-            expect(parseInt(maxAttr)).toBe(160);
-
             markElementCovered('star-rating-normal-t4');
         });
 
         test('equipping weapon shows equipped display and hides others', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 300);
 
             // Set up Normal T4 first
             await page.locator('#level-normal-t4').fill('50');
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 300);
 
             // Act - Check equipped checkbox (click the label since checkbox is hidden)
             const equippedLabel = page.locator('#equipped-label-normal-t4');
             await equippedLabel.click();
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 300);
 
             // Assert - Direct state: checkbox is checked
             const equippedCheckbox = page.locator('#equipped-checkbox-normal-t4');
@@ -150,15 +164,15 @@ test.describe('Weapon Levels - Main User Workflows', () => {
             // Set up and equip Normal T4
             await page.locator('#level-normal-t4').fill('50');
             await page.locator('#equipped-label-normal-t4').click();
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 300);
 
             // Set up Rare T4
             await page.locator('#level-rare-t4').fill('30');
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 300);
 
             // Act - Equip Rare T4
             await page.locator('#equipped-label-rare-t4').click();
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 300);
 
             // Assert - Direct state: new checkbox is checked
             await expect(page.locator('#equipped-checkbox-rare-t4')).toBeChecked();
@@ -177,34 +191,6 @@ test.describe('Weapon Levels - Main User Workflows', () => {
 
             markElementCovered('switch-equipped-weapon');
         });
-
-        test('star toggle behavior: clicking same star sets to 0', async ({ page }) => {
-            // Arrange
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-
-            // Set stars to 3
-            await page.locator('#star-normal-t4-3').click();
-            await page.waitForTimeout(200);
-            await expect(page.locator('#star-normal-t4-3')).toHaveClass(/active/);
-
-            // Act - Click the same star (3rd) again
-            await page.locator('#star-normal-t4-3').click();
-            await page.waitForTimeout(200);
-
-            // Assert - All stars should be inactive
-            await expect(page.locator('#star-normal-t4-1')).not.toHaveClass(/active/);
-            await expect(page.locator('#star-normal-t4-2')).not.toHaveClass(/active/);
-            await expect(page.locator('#star-normal-t4-3')).not.toHaveClass(/active/);
-            await expect(page.locator('#star-normal-t4-4')).not.toHaveClass(/active/);
-            await expect(page.locator('#star-normal-t4-5')).not.toHaveClass(/active/);
-
-            // Assert - Max level should be 100 (0 stars defaults to max level 100)
-            const levelInput = page.locator('#level-normal-t4');
-            const maxAttr = await levelInput.getAttribute('max');
-            expect(parseInt(maxAttr)).toBe(100);
-
-            markElementCovered('star-toggle-behavior');
-        });
     });
 
     // =========================================================================
@@ -221,7 +207,7 @@ test.describe('Weapon Levels - Main User Workflows', () => {
             // Act - Increase Normal T4 level from 25 to 50
             const levelInput = page.locator('#level-normal-t4');
             await levelInput.fill('50');
-            await page.waitForTimeout(300);
+            await waitForCalculations(page);
 
             // Assert - Direct state: input shows new value
             await expect(levelInput).toHaveValue('50');
@@ -233,66 +219,13 @@ test.describe('Weapon Levels - Main User Workflows', () => {
             markElementCovered('change-weapon-level');
         });
 
-        test('upgrade gain text shows when below max level', async ({ page }) => {
-            // Arrange
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-
-            // Set weapon to level 10 with 5 stars (max 200)
-            await page.locator('#star-normal-t4-5').click();
-            await page.locator('#level-normal-t4').fill('10');
-            await page.waitForTimeout(300);
-
-            // Assert - Upgrade gain container should be visible
-            const upgradeGainContainer = page.locator('#upgrade-gain-container-normal-t4');
-            await expect(upgradeGainContainer).toHaveClass(/visible/);
-
-            // Assert - Upgrade gain text should contain efficiency info
-            const upgradeGainText = page.locator('#upgrade-gain-normal-t4');
-            await expect(upgradeGainText).toBeVisible();
-            await expect(upgradeGainText).not.toHaveText('');
-
-            markElementCovered('upgrade-gain-display');
-        });
-
-        test('upgrade gain hides when at max level', async ({ page }) => {
-            // Arrange
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-
-            // Set weapon to max level (200) with 5 stars
-            await page.locator('#star-normal-t4-5').click();
-            await page.locator('#level-normal-t4').fill('200');
-            await page.waitForTimeout(300);
-
-            // Assert - Upgrade gain container should not be visible
-            const upgradeGainContainer = page.locator('#upgrade-gain-container-normal-t4');
-            await expect(upgradeGainContainer).not.toHaveClass(/visible/);
-
-            markElementCovered('upgrade-gain-max-level');
-        });
-
-        test('upgrade gain hides when level is 0', async ({ page }) => {
-            // Arrange
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
-
-            // Assert - At level 0, upgrade gain should not be visible
-            const upgradeGainContainer = page.locator('#upgrade-gain-container-normal-t4');
-            await expect(upgradeGainContainer).not.toHaveClass(/visible/);
-
-            markElementCovered('upgrade-gain-level-zero');
-        });
-
         test('color coding updates based on efficiency tier', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
 
             // Set up multiple weapons with different levels
-            await page.locator('#star-normal-t4-5').click();
-            await page.locator('#level-normal-t4').fill('50');
-
-            await page.locator('#star-rare-t4-5').click();
-            await page.locator('#level-rare-t4').fill('30');
-            await page.waitForTimeout(300);
+            await setupWeapon(page, 'normal', 't4', 50, 5);
+            await setupWeapon(page, 'rare', 't4', 30, 5);
 
             // Assert - Upgrade gain displays should have efficiency classes
             const normalUpgradeGain = page.locator('#upgrade-gain-normal-t4');
@@ -315,15 +248,13 @@ test.describe('Weapon Levels - Main User Workflows', () => {
         test('switching from weapons grid to upgrade priority', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 300);
 
             // Verify starting on weapons grid
             await verifySubTabActive(page, 'weapons-grid');
 
-            // Act - Click upgrade priority button
-            const priorityButton = page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' });
-            await priorityButton.click();
-            await page.waitForTimeout(200);
+            // Act - Switch to upgrade priority
+            await switchToSubTab(page, 'upgrade-priority');
 
             // Assert - Direct state: upgrade priority sub-tab is visible and active
             await verifySubTabActive(page, 'upgrade-priority');
@@ -342,18 +273,14 @@ test.describe('Weapon Levels - Main User Workflows', () => {
         test('switching from upgrade priority to weapons grid', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Switch to upgrade priority first
-            const priorityButton = page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' });
-            await priorityButton.click();
-            await page.waitForTimeout(200);
+            await switchToSubTab(page, 'upgrade-priority');
             await verifySubTabActive(page, 'upgrade-priority');
 
-            // Act - Click weapons grid button
-            const gridButton = page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Weapons Grid' });
-            await gridButton.click();
-            await page.waitForTimeout(200);
+            // Act - Switch to weapons grid
+            await switchToSubTab(page, 'weapons-grid');
 
             // Assert - Direct state: weapons grid sub-tab is visible and active
             await verifySubTabActive(page, 'weapons-grid');
@@ -376,24 +303,17 @@ test.describe('Weapon Levels - Main User Workflows', () => {
             // Arrange - Configure weapon levels
             await applyWeaponLevelsFixture(page, WEAPON_LEVELS_EARLY);
 
-            const initialTotal = await page.locator('#total-inventory-attack').textContent();
-            const initialEquipped = await page.locator('#equipped-weapon-attack-pct').textContent();
+            const initialLevel = '25';
+            const initialStats = await testCrossTabPersistence(
+                page,
+                `${BASE_URL}/#/setup/equipment`,
+                'page-setup'
+            );
 
-            // Act - Navigate to Equipment tab
-            await page.goto(`${BASE_URL}/#/setup/equipment`);
-            await page.waitForTimeout(200);
-
-            // Verify we're on equipment tab
-            await expect(page.locator('#page-setup')).toBeVisible();
-
-            // Act - Navigate back to Weapon Levels
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
-
-            // Assert - All data preserved
-            await expect(page.locator('#level-normal-t4')).toHaveValue('25');
-            await expect(page.locator('#total-inventory-attack')).toHaveText(initialTotal);
-            await expect(page.locator('#equipped-weapon-attack-pct')).toHaveText(initialEquipped);
+            // Assert - Specific weapon level preserved
+            await expect(page.locator('#level-normal-t4')).toHaveValue(initialLevel);
+            await expect(page.locator('#total-inventory-attack')).toHaveText(initialStats.totalInventory);
+            await expect(page.locator('#equipped-weapon-attack-pct')).toHaveText(initialStats.equipped);
 
             markElementCovered('cross-tab-equipment-persistence');
         });
@@ -402,21 +322,11 @@ test.describe('Weapon Levels - Main User Workflows', () => {
             // Arrange - Configure weapon levels
             await applyWeaponLevelsFixture(page, WEAPON_LEVELS_MID);
 
-            const initialTotal = await page.locator('#total-inventory-attack').textContent();
-
-            // Act - Navigate to Gear Lab (Inner Ability)
-            await page.goto(`${BASE_URL}/#/optimization/inner-ability`);
-            await page.waitForTimeout(200);
-
-            // Verify we're on optimization page
-            await expect(page.locator('#page-optimization')).toBeVisible();
-
-            // Act - Navigate back to Weapon Levels
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
-
-            // Assert - All data preserved
-            await expect(page.locator('#total-inventory-attack')).toHaveText(initialTotal);
+            await testCrossTabPersistence(
+                page,
+                `${BASE_URL}/#/optimization/inner-ability`,
+                'page-optimization'
+            );
 
             markElementCovered('cross-tab-gear-lab-persistence');
         });
@@ -425,21 +335,11 @@ test.describe('Weapon Levels - Main User Workflows', () => {
             // Arrange - Configure weapon levels
             await applyWeaponLevelsFixture(page, WEAPON_LEVELS_EARLY);
 
-            const initialTotal = await page.locator('#total-inventory-attack').textContent();
-
-            // Act - Navigate to StatHub
-            await page.goto(`${BASE_URL}/#/predictions/stat-tables`);
-            await page.waitForTimeout(200);
-
-            // Verify we're on predictions page
-            await expect(page.locator('#page-predictions')).toBeVisible();
-
-            // Act - Navigate back to Weapon Levels
-            await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
-
-            // Assert - All data preserved
-            await expect(page.locator('#total-inventory-attack')).toHaveText(initialTotal);
+            await testCrossTabPersistence(
+                page,
+                `${BASE_URL}/#/predictions/stat-tables`,
+                'page-predictions'
+            );
 
             markElementCovered('cross-tab-stathub-persistence');
         });
@@ -454,17 +354,17 @@ test.describe('Weapon Levels - Main User Workflows', () => {
 
             // Act - Navigate through multiple tabs
             await page.goto(`${BASE_URL}/#/setup/equipment`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             await page.goto(`${BASE_URL}/#/optimization/item-comparison`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             await page.goto(`${BASE_URL}/#/predictions/stat-equivalency`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Act - Return to weapon levels
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Assert - All data preserved after full journey
             await expect(page.locator('#level-normal-t4')).toHaveValue(originalLevel);
@@ -491,7 +391,7 @@ test.describe('Weapon Levels - Main User Workflows', () => {
 
             // Act - Reload page
             await page.reload();
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 300);
 
             // Assert - All values restored
             await expect(page.locator('#level-normal-t4')).toHaveValue(originalLevel);
@@ -514,7 +414,7 @@ test.describe('Weapon Levels - Main User Workflows', () => {
 
             // Act - Reload page
             await page.reload();
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 300);
 
             // Assert - Equipped state restored
             await expect(equippedCheckbox).toBeChecked();

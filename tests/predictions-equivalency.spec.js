@@ -117,15 +117,6 @@ test.describe('Stat Equivalency - Input Field Presence and Validation', () => {
     await expect(page.locator(EQUIVALENCY_INPUTS.damageAmp)).toHaveValue('0');
   });
 
-  test('input fields can be filled with values', async ({ page }) => {
-    // Act - Fill input field
-    await page.fill(EQUIVALENCY_INPUTS.attack, '123');
-
-    // Assert - Value is accepted
-    const value = await page.inputValue(EQUIVALENCY_INPUTS.attack);
-    expect(value).toBe('123');
-  });
-
   test.afterAll(async () => {
     logPredictionsCoverageReport();
   });
@@ -151,7 +142,6 @@ test.describe('Stat Equivalency - Real-Time Calculation', () => {
     // Results should be calculated (not empty)
     expect(mainStatGain || mainStatGain === '0').toBeTruthy();
     expect(damageGain || damageGain === '0').toBeTruthy();
-
   });
 
   test('entering main stat value calculates equivalent attack', async ({ page }) => {
@@ -162,7 +152,6 @@ test.describe('Stat Equivalency - Real-Time Calculation', () => {
     // Assert - Attack equivalent calculated
     const attackGain = await page.inputValue(EQUIVALENCY_INPUTS.attack);
     expect(attackGain || attackGain === '0').toBeTruthy();
-
   });
 
   test('entering boss damage calculates equivalents for other stats', async ({ page }) => {
@@ -176,7 +165,6 @@ test.describe('Stat Equivalency - Real-Time Calculation', () => {
 
     expect(attackGain || attackGain === '0').toBeTruthy();
     expect(mainStatGain || mainStatGain === '0').toBeTruthy();
-
   });
 
   test('all inputs can be filled and updated', async ({ page }) => {
@@ -273,7 +261,7 @@ test.describe('Stat Equivalency - Cross-Stat Conversion', () => {
 
     const normalToAttack = await page.inputValue(EQUIVALENCY_INPUTS.attack);
 
-    // Assert - Boss damage should have higher attack equivalent (assuming boss target)
+    // Assert - Both should calculate (values may differ based on target content)
     expect(parseFloat(bossToAttack)).toBeGreaterThan(0);
     expect(parseFloat(normalToAttack)).toBeGreaterThan(0);
   });

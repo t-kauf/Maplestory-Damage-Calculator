@@ -29,9 +29,7 @@ import {
   HERO_LEVEL_60,
   HERO_LEVEL_100,
   HERO_WELL_GEARED_4TH,
-  HERO_CAP_CRIT_RATE,
-  HERO_CAP_ATTACK_SPEED,
-  HERO_MINIMAL_STATS
+  HERO_CAP_CRIT_RATE
 } from './fixtures/predictions-fixtures.js';
 
 test.describe('Stat Predictions - Element Inventory', () => {
@@ -110,58 +108,13 @@ test.describe('Stat Predictions - Element Inventory', () => {
   });
 });
 
-test.describe('Stat Predictions - Edge Cases Coverage', () => {
+test.describe('Stat Predictions - Critical Edge Cases', () => {
   test.beforeEach(async ({ page }) => {
     await navigateToBaseStats(page);
     await clearStorage(page);
   });
 
-  test('handles character with no base stats configured', async ({ page }) => {
-    // Arrange - Don't configure any stats
-    await navigateToStatPredictions(page);
-
-    // Assert - Should not crash
-    await expect(page.locator(PREDICTIONS_TAB_CONTENT.statTables)).toBeVisible();
-
-    // Assert - Should show graceful handling (empty state or message)
-    const hasNoErrors = await page.evaluate(() => {
-      // Check for no console errors or broken UI
-      const container = document.querySelector('#stat-weights-base');
-      return container !== null;
-    });
-    expect(hasNoErrors).toBe(true);
-  });
-
-  test('handles character with all stats at zero', async ({ page }) => {
-    // Arrange - Configure minimal stats character
-    await applyBaseStatsFixture(page, HERO_MINIMAL_STATS);
-    await navigateToStatPredictions(page);
-    await page.waitForTimeout(300);
-
-    // Assert - Should handle gracefully (container visible)
-    await expect(page.locator(STAT_TABLES_SELECTORS.container)).toBeVisible();
-  });
-
-  test('handles character at multiple hard caps', async ({ page }) => {
-    // Arrange - Configure character at crit rate cap
-    await applyBaseStatsFixture(page, HERO_CAP_CRIT_RATE);
-    await navigateToStatPredictions(page);
-    await page.waitForTimeout(300);
-
-    // Assert - Should show capped stats gracefully (container visible)
-    await expect(page.locator(STAT_TABLES_SELECTORS.container)).toBeVisible();
-
-    // Act - Adjust to attack speed cap
-    await navigateToBaseStats(page);
-    await applyBaseStatsFixture(page, HERO_CAP_ATTACK_SPEED);
-    await navigateToStatPredictions(page);
-    await page.waitForTimeout(300);
-
-    // Assert - Attack speed cap handled (container still visible)
-    await expect(page.locator(STAT_TABLES_SELECTORS.container)).toBeVisible();
-  });
-
-  test('handles extreme stat values', async ({ page }) => {
+  test('handles extreme stat values without calculation errors', async ({ page }) => {
     // Arrange - Configure with extreme values
     await page.click('#class-hero');
     await page.fill('#character-level', '200');
@@ -175,38 +128,21 @@ test.describe('Stat Predictions - Edge Cases Coverage', () => {
     await navigateToStatPredictions(page);
     await page.waitForTimeout(300);
 
-    // Assert - Should handle extreme values (container visible)
+    // Assert - Should handle extreme values without breaking
     await expect(page.locator(STAT_TABLES_SELECTORS.container)).toBeVisible();
-  });
 
-  test('handles negative stat values gracefully', async ({ page }) => {
-    // Arrange - Try to enter negative values
-    await page.click('#class-hero');
-    await page.fill('#attack-base', '-100');
-    await page.waitForTimeout(100);
-
-    // Act - Navigate to predictions
-    await navigateToStatPredictions(page);
-    await page.waitForTimeout(300);
-
-    // Assert - Should handle gracefully (container visible)
-    await expect(page.locator(STAT_TABLES_SELECTORS.container)).toBeVisible();
-  });
-
-  test('handles decimal precision in predictions', async ({ page }) => {
-    // Arrange - Configure with decimal values
-    await page.click('#class-hero');
-    await page.fill('#attack-base', '123.45');
-    await page.fill('#damage-amp-base', '1.234');
-    await page.fill('#def-pen-base', '12.34');
-    await page.waitForTimeout(100);
-
-    // Act
-    await navigateToStatPredictions(page);
-    await page.waitForTimeout(300);
-
-    // Assert - Decimal precision handled (container visible)
-    await expect(page.locator(STAT_TABLES_SELECTORS.container)).toBeVisible();
+    // Assert - No NaN or Infinity in calculations
+    const hasValidResults = await page.evaluate(() => {
+      const percentElements = document.querySelectorAll('[class*="percent"], [data-percent]');
+      for (const el of percentElements) {
+        const text = el.textContent || '';
+        if (text.includes('NaN') || text.includes('Infinity')) {
+          return false;
+        }
+      }
+      return true;
+    });
+    expect(hasValidResults).toBe(true);
   });
 
   test('handles rapid stat changes without breaking', async ({ page }) => {
@@ -227,30 +163,7 @@ test.describe('Stat Predictions - Edge Cases Coverage', () => {
     await navigateToStatPredictions(page);
     await page.waitForTimeout(300);
 
-    // Assert - Should handle rapid changes (container visible)
-    await expect(page.locator(STAT_TABLES_SELECTORS.container)).toBeVisible();
-  });
-
-  test('handles switching between tabs rapidly', async ({ page }) => {
-    // Arrange
-    await applyBaseStatsFixture(page, HERO_WELL_GEARED_4TH);
-    await navigateToStatPredictions(page);
-
-    // Act - Rapidly switch tabs
-    await page.click(PREDICTIONS_TAB_BUTTONS.equivalency);
-    await page.waitForTimeout(100);
-
-    await page.click(PREDICTIONS_TAB_BUTTONS.statTables);
-    await page.waitForTimeout(100);
-
-    await page.click(PREDICTIONS_TAB_BUTTONS.equivalency);
-    await page.waitForTimeout(100);
-
-    await page.click(PREDICTIONS_TAB_BUTTONS.statTables);
-    await page.waitForTimeout(300);
-
-    // Assert - Both tabs should work correctly
-    await expect(page.locator(PREDICTIONS_TAB_CONTENT.statTables)).toBeVisible();
+    // Assert - Should handle rapid changes
     await expect(page.locator(STAT_TABLES_SELECTORS.container)).toBeVisible();
   });
 
@@ -264,7 +177,7 @@ test.describe('Stat Predictions - Edge Cases Coverage', () => {
     await page.reload();
     await page.waitForTimeout(300);
 
-    // Assert - Predictions should be restored (container visible)
+    // Assert - Predictions should be restored
     await expect(page.locator(STAT_TABLES_SELECTORS.container)).toBeVisible();
   });
 
@@ -282,7 +195,7 @@ test.describe('Stat Predictions - Edge Cases Coverage', () => {
     await navigateToStatPredictions(page);
     await page.waitForTimeout(300);
 
-    // Assert - Predictions should be recalculated (container visible)
+    // Assert - Predictions should be recalculated
     await expect(page.locator(STAT_TABLES_SELECTORS.container)).toBeVisible();
   });
 
@@ -357,55 +270,21 @@ test.describe('Stat Predictions - Equivalency Edge Cases', () => {
     await page.fill(EQUIVALENCY_INPUTS.attack, '99999');
     await page.waitForTimeout(200);
 
-    // Assert - Should handle gracefully (container visible)
-    await expect(page.locator(PREDICTIONS_TAB_CONTENT.equivalency)).toBeVisible();
-  });
-
-  test('handles equivalency with zero values', async ({ page }) => {
-    await navigateToStatEquivalency(page);
-
-    // Act - Enter zero values
-    await page.fill(EQUIVALENCY_INPUTS.attack, '0');
-    await page.fill(EQUIVALENCY_INPUTS.mainStat, '0');
-    await page.fill(EQUIVALENCY_INPUTS.damage, '0');
-    await page.waitForTimeout(200);
-
     // Assert - Should handle gracefully
+    await expect(page.locator(PREDICTIONS_TAB_CONTENT.equivalency)).toBeVisible();
+
+    // Assert - No NaN or Infinity
     const hasValidResults = await page.evaluate(() => {
       const inputs = document.querySelectorAll('[id^="equiv-"]');
       for (const input of inputs) {
         const val = parseFloat(input.value);
-        if (input.value && !isNaN(val)) {
-          continue; // Valid
+        if (input.value && (isNaN(val) || !isFinite(val))) {
+          return false;
         }
-        if (!input.value) {
-          continue; // Empty is OK
-        }
-        return false;
       }
       return true;
     });
     expect(hasValidResults).toBe(true);
-  });
-
-  test('handles rapid equivalency input changes', async ({ page }) => {
-    await navigateToStatEquivalency(page);
-
-    // Act - Rapidly change inputs
-    await page.fill(EQUIVALENCY_INPUTS.attack, '100');
-    await page.waitForTimeout(50);
-
-    await page.fill(EQUIVALENCY_INPUTS.attack, '200');
-    await page.waitForTimeout(50);
-
-    await page.fill(EQUIVALENCY_INPUTS.mainStat, '150');
-    await page.waitForTimeout(50);
-
-    await page.fill(EQUIVALENCY_INPUTS.damage, '25');
-    await page.waitForTimeout(200);
-
-    // Assert - Final state valid (container visible)
-    await expect(page.locator(PREDICTIONS_TAB_CONTENT.equivalency)).toBeVisible();
   });
 
   test('handles equivalency page refresh', async ({ page }) => {

@@ -1,5 +1,19 @@
 // Weapon Levels Priority Algorithm Tests
-// Tests upgrade priority chain generation and currency calculator with DPS verification
+//
+// PURPOSE: Tests upgrade priority algorithm functionality and currency calculator
+// COVERAGE:
+//   - Priority chain generation and updates
+//   - Currency calculator (attack gain, DPS gain, upgrade path)
+//   - Apply upgrades functionality
+//   - Mathematical accuracy of efficiency calculations
+//
+// User workflow tests are in:
+//   - weapon-levels-main.spec.js
+// Edge case tests are in:
+//   - weapon-levels-coverage.spec.js
+// Regression tests are in:
+//   - weapon-levels-regression.spec.js
+//
 // Run with: npm test weapon-levels-priority.spec.js
 
 import { test, expect } from '@playwright/test';
@@ -8,7 +22,11 @@ import {
     verifySubTabActive,
     getPriorityChain,
     parsePriorityChain,
-    verifyCurrencyCalculator
+    verifyCurrencyCalculator,
+    switchToSubTab,
+    setupWeapon,
+    waitForCalculations,
+    setWeaponLevel
 } from './helpers/weapon-levels-helpers.js';
 import {
     applyWeaponLevelsFixture,
@@ -37,8 +55,7 @@ test.describe('Weapon Levels - Upgrade Priority Algorithm', () => {
             await page.waitForTimeout(200);
 
             // Switch to upgrade priority tab
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(200);
+            await switchToSubTab(page, 'upgrade-priority');
 
             // Assert - Should show "No weapons available to upgrade"
             const chainElement = page.locator('#upgrade-priority-chain');
@@ -54,8 +71,7 @@ test.describe('Weapon Levels - Upgrade Priority Algorithm', () => {
             await page.waitForTimeout(200);
 
             // Act - Switch to upgrade priority tab
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(300);
+            await switchToSubTab(page, 'upgrade-priority');
 
             // Assert - Priority chain should be generated
             const chainElement = page.locator('#upgrade-priority-chain');
@@ -72,8 +88,7 @@ test.describe('Weapon Levels - Upgrade Priority Algorithm', () => {
             await page.waitForTimeout(200);
 
             // Act - Switch to upgrade priority tab
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(300);
+            await switchToSubTab(page, 'upgrade-priority');
 
             // Assert - Parse and count upgrades
             const chainHTML = await getPriorityChain(page);
@@ -95,8 +110,7 @@ test.describe('Weapon Levels - Upgrade Priority Algorithm', () => {
             await page.waitForTimeout(200);
 
             // Act - Switch to upgrade priority tab
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(300);
+            await switchToSubTab(page, 'upgrade-priority');
 
             // Assert - Chain should have grouping indicators (xN format)
             const chainHTML = await getPriorityChain(page);
@@ -113,19 +127,16 @@ test.describe('Weapon Levels - Upgrade Priority Algorithm', () => {
             await page.waitForTimeout(200);
 
             // Switch to upgrade priority and get initial chain
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(300);
+            await switchToSubTab(page, 'upgrade-priority');
             const initialChain = await getPriorityChain(page);
 
             // Act - Change weapon level
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Weapons Grid' }).click();
-            await page.waitForTimeout(200);
-            await page.locator('#level-normal-t4').fill('50');
-            await page.waitForTimeout(300);
+            await switchToSubTab(page, 'weapons-grid');
+            await setWeaponLevel(page, 'normal', 't4', 50);
+            await waitForCalculations(page, 300);
 
             // Switch back to priority
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(300);
+            await switchToSubTab(page, 'upgrade-priority');
 
             // Assert - Chain should be different
             const newChain = await getPriorityChain(page);
@@ -135,19 +146,14 @@ test.describe('Weapon Levels - Upgrade Priority Algorithm', () => {
         test('priority chain prioritizes highest efficiency weapon', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Set up specific scenario: Normal T4 should be prioritized over Rare T3
-            await page.locator('#level-normal-t4').fill('10');
-            await page.locator('#star-normal-t4-5').click();
-
-            await page.locator('#level-rare-t3').fill('10');
-            await page.locator('#star-rare-t3-5').click();
-            await page.waitForTimeout(300);
+            await setupWeapon(page, 'normal', 't4', 10, 5);
+            await setupWeapon(page, 'rare', 't3', 10, 5);
 
             // Act - Switch to upgrade priority
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(300);
+            await switchToSubTab(page, 'upgrade-priority');
 
             // Assert - First upgrade should be Normal T4 (higher efficiency than Rare T3)
             const chainHTML = await getPriorityChain(page);
@@ -164,8 +170,7 @@ test.describe('Weapon Levels - Upgrade Priority Algorithm', () => {
             await page.waitForTimeout(200);
 
             // Act - Switch to upgrade priority
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(300);
+            await switchToSubTab(page, 'upgrade-priority');
 
             // Assert - Chain should have dividers (→) between weapon groups
             const chainElement = page.locator('#upgrade-priority-chain');
@@ -185,8 +190,7 @@ test.describe('Weapon Levels - Upgrade Priority Algorithm', () => {
             await page.waitForTimeout(200);
 
             // Switch to upgrade priority
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(200);
+            await switchToSubTab(page, 'upgrade-priority');
 
             // Act - Enter currency amount
             const currencyInput = page.locator('#upgrade-currency-input');
@@ -251,12 +255,10 @@ test.describe('Weapon Levels - Upgrade Priority Algorithm', () => {
         test('insufficient currency shows friendly message', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Set up a weapon with high upgrade cost
-            await page.locator('#level-ancient-t4').fill('180');
-            await page.locator('#star-ancient-t4-5').click();
-            await page.waitForTimeout(200);
+            await setupWeapon(page, 'ancient', 't4', 180, 5);
 
             await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
             await page.waitForTimeout(200);
@@ -369,15 +371,11 @@ test.describe('Weapon Levels - Upgrade Priority Algorithm', () => {
         test('priority algorithm efficiency matches weapon display efficiency', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Set up two weapons
-            await page.locator('#level-normal-t4').fill('10');
-            await page.locator('#star-normal-t4-5').click();
-
-            await page.locator('#level-rare-t4').fill('10');
-            await page.locator('#star-rare-t4-5').click();
-            await page.waitForTimeout(300);
+            await setupWeapon(page, 'normal', 't4', 10, 5);
+            await setupWeapon(page, 'rare', 't4', 10, 5);
 
             // Get efficiency from weapon display (upgrade gain text)
             const normalUpgradeGain = await page.locator('#upgrade-gain-normal-t4').textContent();
@@ -395,7 +393,7 @@ test.describe('Weapon Levels - Upgrade Priority Algorithm', () => {
 
             // Act - Check priority chain
             await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(300);
+            await waitForCalculations(page, 300);
 
             const chainHTML = await getPriorityChain(page);
             const upgrades = parsePriorityChain(chainHTML);
@@ -447,11 +445,10 @@ test.describe('Weapon Levels - Upgrade Priority Algorithm', () => {
         test('efficiency calculation accounts for equipped weapon bonus', async ({ page }) => {
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Set up a weapon and equip it
-            await page.locator('#level-normal-t4').fill('50');
-            await page.locator('#star-normal-t4-5').click();
+            await setupWeapon(page, 'normal', 't4', 50, 5);
             await page.locator('#equipped-label-normal-t4').click();
             await page.waitForTimeout(300);
 
@@ -468,15 +465,11 @@ test.describe('Weapon Levels - Upgrade Priority Algorithm', () => {
 
             // Arrange
             await page.goto(`${BASE_URL}/#/setup/weapon-levels`);
-            await page.waitForTimeout(200);
+            await waitForCalculations(page, 200);
 
             // Set up specific scenario
-            await page.locator('#level-normal-t4').fill('20');
-            await page.locator('#star-normal-t4-5').click();
-
-            await page.locator('#level-rare-t3').fill('20');
-            await page.locator('#star-rare-t3-5').click();
-            await page.waitForTimeout(300);
+            await setupWeapon(page, 'normal', 't4', 20, 5);
+            await setupWeapon(page, 'rare', 't3', 20, 5);
 
             // Get display efficiencies
             const normalGain = await page.locator('#upgrade-gain-normal-t4').textContent();
@@ -495,7 +488,7 @@ test.describe('Weapon Levels - Upgrade Priority Algorithm', () => {
 
             // Act - Check priority chain reflects this
             await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(300);
+            await waitForCalculations(page, 300);
 
             const chainHTML = await getPriorityChain(page);
             const upgrades = parsePriorityChain(chainHTML);
@@ -503,64 +496,6 @@ test.describe('Weapon Levels - Upgrade Priority Algorithm', () => {
             // First upgrade should be Normal T4
             expect(upgrades[0].rarity).toBe('normal');
             expect(upgrades[0].tier).toBe('t4');
-        });
-    });
-
-    // =========================================================================
-    // SUB-TAB INTERACTIONS
-    // =========================================================================
-
-    test.describe('Priority Sub-Tab Interactions', () => {
-
-        test('switching to weapons grid and back maintains calculator state', async ({ page }) => {
-            // Arrange
-            await applyWeaponLevelsFixture(page, WEAPON_LEVELS_MID);
-            await page.waitForTimeout(200);
-
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(200);
-
-            // Enter currency
-            await page.locator('#upgrade-currency-input').fill('10000');
-            await page.waitForTimeout(300);
-            await expect(page.locator('#currency-upgrade-results')).toHaveClass(/visible/);
-
-            // Act - Switch to weapons grid
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Weapons Grid' }).click();
-            await page.waitForTimeout(200);
-
-            // Act - Switch back to priority
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(200);
-
-            // Assert - Calculator state should be maintained
-            await expect(page.locator('#upgrade-currency-input')).toHaveValue('10000');
-            await expect(page.locator('#currency-upgrade-results')).toHaveClass(/visible/);
-        });
-
-        test('changing weapon in grid updates priority chain', async ({ page }) => {
-            // Arrange
-            await applyWeaponLevelsFixture(page, WEAPON_LEVELS_EARLY);
-            await page.waitForTimeout(200);
-
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(300);
-            const initialChain = await getPriorityChain(page);
-
-            // Act - Switch to grid and change weapon
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Weapons Grid' }).click();
-            await page.waitForTimeout(200);
-
-            await page.locator('#level-normal-t4').fill('100');
-            await page.waitForTimeout(300);
-
-            // Act - Switch back to priority
-            await page.locator('#weapon-levels-subtab-button').filter({ hasText: 'Upgrade Priority' }).click();
-            await page.waitForTimeout(300);
-
-            // Assert - Chain should be updated
-            const newChain = await getPriorityChain(page);
-            expect(newChain).not.toBe(initialChain);
         });
     });
 });

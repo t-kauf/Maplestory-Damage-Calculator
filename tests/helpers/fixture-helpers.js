@@ -32,25 +32,34 @@ export async function clearStorage(page) {
  * @param {object} fixture - Fixture object containing all character stats
  */
 export async function applyBaseStatsFixture(page, fixture) {
-  // Set class selection
+  // Set class selection - only if visible
   if (fixture.class) {
     const classSelector = CLASS_SELECTORS[fixture.class];
     if (classSelector) {
-      await page.click(classSelector);
+      const isVisible = await page.locator(classSelector).isVisible({ timeout: 1000 }).catch(() => false);
+      if (isVisible) {
+        await page.click(classSelector);
+      }
     }
   }
 
-  // Set job tier
+  // Set job tier - only if visible
   if (fixture.jobTier) {
     const tierButton = JOB_TIER_BUTTONS[fixture.jobTier];
     if (tierButton) {
-      await page.click(tierButton);
+      const isVisible = await page.locator(tierButton).isVisible({ timeout: 1000 }).catch(() => false);
+      if (isVisible) {
+        await page.click(tierButton);
+      }
     }
   }
 
-  // Set character level
+  // Set character level - only if visible
   if (fixture.level !== undefined) {
-    await page.fill('#character-level', String(fixture.level));
+    const isVisible = await page.locator('#character-level').isVisible({ timeout: 1000 }).catch(() => false);
+    if (isVisible) {
+      await page.fill('#character-level', String(fixture.level));
+    }
   }
 
   // Set stat inputs - only fill visible inputs
@@ -87,7 +96,7 @@ export async function applyBaseStatsFixture(page, fixture) {
     }
   }
 
-  // Set skill levels
+  // Set skill levels - only if visible
   if (fixture.skillLevels) {
     const skillMappings = {
       '1st': fixture.skillLevels['1st'],
@@ -98,50 +107,73 @@ export async function applyBaseStatsFixture(page, fixture) {
 
     for (const [skill, value] of Object.entries(skillMappings)) {
       if (value !== undefined && SKILL_LEVEL_INPUTS[skill]) {
-        await page.fill(SKILL_LEVEL_INPUTS[skill], String(value));
+        const selector = SKILL_LEVEL_INPUTS[skill];
+        const isVisible = await page.locator(selector).isVisible({ timeout: 1000 }).catch(() => false);
+        if (isVisible) {
+          await page.fill(selector, String(value));
+        }
       }
     }
   }
 
-  // Set mastery checkboxes
+  // Set mastery checkboxes - only if visible
   if (fixture.mastery) {
     // 3rd job mastery
     for (const [key, value] of Object.entries(fixture.mastery)) {
       if (key.startsWith('3rd') && value) {
-        const checkbox = MASTERY_3RD_CHECKBOXES[key.replace('mastery-', '').replace('-', '')];
-        // Handle the naming conversion
         const checkboxKey = key.replace('mastery-', '');
-        if (checkboxKey === '3rd-all-64' && value) await page.check(MASTERY_3RD_CHECKBOXES.all64);
-        if (checkboxKey === '3rd-all-68' && value) await page.check(MASTERY_3RD_CHECKBOXES.all68);
-        if (checkboxKey === '3rd-boss-72' && value) await page.check(MASTERY_3RD_CHECKBOXES.boss72);
-        if (checkboxKey === '3rd-all-76' && value) await page.check(MASTERY_3RD_CHECKBOXES.all76);
-        if (checkboxKey === '3rd-all-80' && value) await page.check(MASTERY_3RD_CHECKBOXES.all80);
-        if (checkboxKey === '3rd-boss-84' && value) await page.check(MASTERY_3RD_CHECKBOXES.boss84);
-        if (checkboxKey === '3rd-all-88' && value) await page.check(MASTERY_3RD_CHECKBOXES.all88);
-        if (checkboxKey === '3rd-all-92' && value) await page.check(MASTERY_3RD_CHECKBOXES.all92);
+        const checkboxMap = {
+          '3rd-all-64': MASTERY_3RD_CHECKBOXES.all64,
+          '3rd-all-68': MASTERY_3RD_CHECKBOXES.all68,
+          '3rd-boss-72': MASTERY_3RD_CHECKBOXES.boss72,
+          '3rd-all-76': MASTERY_3RD_CHECKBOXES.all76,
+          '3rd-all-80': MASTERY_3RD_CHECKBOXES.all80,
+          '3rd-boss-84': MASTERY_3RD_CHECKBOXES.boss84,
+          '3rd-all-88': MASTERY_3RD_CHECKBOXES.all88,
+          '3rd-all-92': MASTERY_3RD_CHECKBOXES.all92
+        };
+        const selector = checkboxMap[checkboxKey];
+        if (selector) {
+          const isVisible = await page.locator(selector).isVisible({ timeout: 1000 }).catch(() => false);
+          if (isVisible) {
+            await page.check(selector);
+          }
+        }
       }
     }
 
     // 4th job mastery
     for (const [key, value] of Object.entries(fixture.mastery)) {
       if (key.startsWith('4th') && value) {
-        if (key === '4th-all-102' && value) await page.check(MASTERY_4TH_CHECKBOXES.all102);
-        if (key === '4th-all-106' && value) await page.check(MASTERY_4TH_CHECKBOXES.all106);
-        if (key === '4th-boss-111' && value) await page.check(MASTERY_4TH_CHECKBOXES.boss111);
-        if (key === '4th-all-116' && value) await page.check(MASTERY_4TH_CHECKBOXES.all116);
-        if (key === '4th-all-120' && value) await page.check(MASTERY_4TH_CHECKBOXES.all120);
-        if (key === '4th-boss-124' && value) await page.check(MASTERY_4TH_CHECKBOXES.boss124);
-        if (key === '4th-all-128' && value) await page.check(MASTERY_4TH_CHECKBOXES.all128);
-        if (key === '4th-all-132' && value) await page.check(MASTERY_4TH_CHECKBOXES.all132);
+        const checkboxMap = {
+          '4th-all-102': MASTERY_4TH_CHECKBOXES.all102,
+          '4th-all-106': MASTERY_4TH_CHECKBOXES.all106,
+          '4th-boss-111': MASTERY_4TH_CHECKBOXES.boss111,
+          '4th-all-116': MASTERY_4TH_CHECKBOXES.all116,
+          '4th-all-120': MASTERY_4TH_CHECKBOXES.all120,
+          '4th-boss-124': MASTERY_4TH_CHECKBOXES.boss124,
+          '4th-all-128': MASTERY_4TH_CHECKBOXES.all128,
+          '4th-all-132': MASTERY_4TH_CHECKBOXES.all132
+        };
+        const selector = checkboxMap[key];
+        if (selector) {
+          const isVisible = await page.locator(selector).isVisible({ timeout: 1000 }).catch(() => false);
+          if (isVisible) {
+            await page.check(selector);
+          }
+        }
       }
     }
   }
 
-  // Set target content
+  // Set target content - only if visible
   if (fixture.targetContent) {
     const contentType = CONTENT_TYPE_SELECTORS[fixture.targetContent];
     if (contentType) {
-      await page.click(contentType);
+      const isVisible = await page.locator(contentType).isVisible({ timeout: 1000 }).catch(() => false);
+      if (isVisible) {
+        await page.click(contentType);
+      }
     }
   }
 

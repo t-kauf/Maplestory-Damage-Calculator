@@ -333,3 +333,197 @@ export async function verifyMaxLevelEnforcement(page, rarity, tier, stars, expec
     const maxAttr = await levelInput.getAttribute('max');
     expect(parseInt(maxAttr)).toBe(expectedMaxLevel);
 }
+
+/**
+ * Switch to a specific sub-tab on weapon levels page
+ * @param {Page} page - Playwright page object
+ * @param {string} tabName - Tab name ('weapons-grid' or 'upgrade-priority')
+ */
+export async function switchToSubTab(page, tabName) {
+    const buttonText = tabName === 'upgrade-priority' ? 'Upgrade Priority' : 'Weapons Grid';
+    await page.locator('#weapon-levels-subtab-button').filter({ hasText: buttonText }).click();
+    await page.waitForTimeout(300);
+}
+
+/**
+ * Set weapon stars directly (more reliable than clicking)
+ * @param {Page} page - Playwright page object
+ * @param {string} rarity - Weapon rarity
+ * @param {string} tier - Weapon tier
+ * @param {number} starCount - Number of stars to set (0-5)
+ */
+export async function setStars(page, rarity, tier, starCount) {
+    // Get current stars value to determine if we need to toggle
+    const starsInput = page.locator(`#stars-${rarity}-${tier}`);
+    const currentStars = await starsInput.inputValue();
+    const currentStarsInt = parseInt(currentStars) || 0;
+
+    // For setting to 0, we need to click the current star twice (toggle behavior)
+    // For other values, we click the target star
+    if (starCount === 0 && currentStarsInt > 0) {
+        // Toggle to 0 by clicking the current star again
+        const starElement = page.locator(`#star-${rarity}-${tier}-${currentStarsInt}`);
+        await starElement.click();
+    } else if (starCount !== currentStarsInt) {
+        // Click the target star to set to that value
+        const starElement = page.locator(`#star-${rarity}-${tier}-${starCount}`);
+        await starElement.click();
+    }
+
+    // Wait for the UI to update
+    await page.waitForTimeout(300);
+}
+
+/**
+ * Set weapon level and verify
+ * @param {Page} page - Playwright page object
+ * @param {string} rarity - Weapon rarity
+ * @param {string} tier - Weapon tier
+ * @param {number} level - Level to set
+ */
+export async function setWeaponLevel(page, rarity, tier, level) {
+    const levelInput = page.locator(`#level-${rarity}-${tier}`);
+    await levelInput.fill(level.toString());
+    await page.waitForTimeout(200);
+}
+
+/**
+ * Get upgrade gain text for a weapon
+ * @param {Page} page - Playwright page object
+ * @param {string} rarity - Weapon rarity
+ * @param {string} tier - Weapon tier
+ * @returns {Promise<string>} Upgrade gain text content
+ */
+export async function getUpgradeGainText(page, rarity, tier) {
+    const upgradeGain = page.locator(`#upgrade-gain-${rarity}-${tier}`);
+    return await upgradeGain.textContent();
+}
+
+/**
+ * Extract efficiency value from upgrade gain text
+ * @param {string} upgradeGainText - Text from upgrade gain element
+ * @returns {number|null} Efficiency percentage value or null
+ */
+export function extractEfficiency(upgradeGainText) {
+    const match = upgradeGainText.match(/([\d.]+)%/);
+    return match ? parseFloat(match[1]) : null;
+}
+
+/**
+ * Verify upgrade gain visibility
+ * @param {Page} page - Playwright page object
+ * @param {string} rarity - Weapon rarity
+ * @param {string} tier - Weapon tier
+ * @param {boolean} shouldBeVisible - Whether upgrade gain should be visible
+ */
+export async function verifyUpgradeGainVisible(page, rarity, tier, shouldBeVisible) {
+    const upgradeGainContainer = page.locator(`#upgrade-gain-container-${rarity}-${tier}`);
+    if (shouldBeVisible) {
+        await expect(upgradeGainContainer).toHaveClass(/visible/);
+    } else {
+        await expect(upgradeGainContainer).not.toHaveClass(/visible/);
+    }
+}
+
+/**
+ * Verify star states for a weapon
+ * @param {Page} page - Playwright page object
+ * @param {string} rarity - Weapon rarity
+ * @param {string} tier - Weapon tier
+ * @param {number} activeCount - Number of stars that should be active (0-5)
+ */
+export async function verifyStarStates(page, rarity, tier, activeCount) {
+    for (let i = 1; i <= 5; i++) {
+        const star = page.locator(`#star-${rarity}-${tier}-${i}`);
+        if (i <= activeCount) {
+            await expect(star).toHaveClass(/active/);
+        } else {
+            await expect(star).not.toHaveClass(/active/);
+        }
+    }
+}
+
+/**
+ * Set up weapon with level and stars
+ * @param {Page} page - Playwright page object
+ * @param {string} rarity - Weapon rarity
+ * @param {string} tier - Weapon tier
+ * @param {number} level - Level to set
+ * @param {number} stars - Stars to set
+ */
+export async function setupWeapon(page, rarity, tier, level, stars) {
+    await setStars(page, rarity, tier, stars);
+    await setWeaponLevel(page, rarity, tier, level);
+    await page.waitForTimeout(300);
+}
+
+/**
+ * Navigate to a tab and back to weapon levels, then verify preservation
+ * @param {Page} page - Playwright page object
+ * @param {string} targetUrl - URL to navigate to
+ * @param {string} pageId - Expected page element ID to verify navigation
+ * @returns {Promise<Object>} Snapshot of stats before navigation
+ */
+export async function testCrossTabPersistence(page, targetUrl, pageId) {
+    // Get initial stats
+    const initialStats = {
+        totalInventory: await page.locator('#total-inventory-attack').textContent(),
+        equipped: await page.locator('#equipped-weapon-attack-pct').textContent()
+    };
+
+    // Navigate away
+    await page.goto(targetUrl);
+    await page.waitForTimeout(200);
+    await expect(page.locator(`#${pageId}`)).toBeVisible();
+
+    // Navigate back
+    await page.goto('http://localhost:8000/#/setup/weapon-levels');
+    await page.waitForTimeout(200);
+
+    // Verify preservation
+    await expect(page.locator('#total-inventory-attack')).toHaveText(initialStats.totalInventory);
+    await expect(page.locator('#equipped-weapon-attack-pct')).toHaveText(initialStats.equipped);
+
+    return initialStats;
+}
+
+/**
+ * Wait for calculations to complete
+ * @param {Page} page - Playwright page object
+ * @param {number} ms - Milliseconds to wait (default 300)
+ */
+export async function waitForCalculations(page, ms = 300) {
+    await page.waitForTimeout(ms);
+}
+
+/**
+ * Get all visible upgrade gain texts from weapon grid
+ * @param {Page} page - Playwright page object
+ * @returns {Promise<Map>} Map of weapon key to upgrade gain text
+ */
+export async function getAllUpgradeGains(page) {
+    const weaponKeys = [
+        'normal-t4', 'normal-t3', 'normal-t2',
+        'rare-t4', 'rare-t3', 'rare-t2',
+        'epic-t4', 'epic-t3', 'epic-t2',
+        'unique-t4', 'unique-t3',
+        'legendary-t4', 'legendary-t3',
+        'mystic-t4', 'mystic-t3',
+        'ancient-t4', 'ancient-t3', 'ancient-t2'
+    ];
+
+    const upgradeGains = new Map();
+
+    for (const key of weaponKeys) {
+        try {
+            const text = await getUpgradeGainText(page, key.split('-')[0], key.split('-')[1]);
+            if (text && text.trim() !== '') {
+                upgradeGains.set(key, text);
+            }
+        } catch (e) {
+            // Element might not exist or be visible
+        }
+    }
+
+    return upgradeGains;
+}
