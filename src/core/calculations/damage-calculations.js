@@ -1,6 +1,7 @@
 import { getSelectedStageDefense } from '@core/state/state.js';
 import { formatNumber } from '@utils/formatters.js';
 import { StatCalculationService } from '@core/services/stat-calculation-service.js';
+import { getStats } from '@core/state/state.js';
 
 window.calculateStatEquivalency = calculateStatEquivalency;
 
@@ -344,26 +345,7 @@ window.sortStatPredictions = function(setup, tabName, colIndex, headerElement) {
 // Calculate stat equivalency - shows what other stats equal a given stat increase
 export function calculateStatEquivalency(sourceStat) {
     // Get base stats from inputs
-    const stats = {
-        attack: parseFloat(document.getElementById('attack-base').value),
-        critRate: parseFloat(document.getElementById('crit-rate-base').value),
-        critDamage: parseFloat(document.getElementById('crit-damage-base').value),
-        statDamage: parseFloat(document.getElementById('stat-damage-base').value),
-        damage: parseFloat(document.getElementById('damage-base').value),
-        damageAmp: parseFloat(document.getElementById('damage-amp-base').value),
-        attackSpeed: parseFloat(document.getElementById('attack-speed-base').value),
-        defPen: parseFloat(document.getElementById('def-pen-base')?.value || 0),
-        bossDamage: parseFloat(document.getElementById('boss-damage-base').value),
-        normalDamage: parseFloat(document.getElementById('normal-damage-base').value),
-        skillCoeff: parseFloat(document.getElementById('skill-coeff-base').value),
-        skillMastery: parseFloat(document.getElementById('skill-mastery-base').value),
-        skillMasteryBoss: parseFloat(document.getElementById('skill-mastery-boss-base').value),
-        minDamage: parseFloat(document.getElementById('min-damage-base').value),
-        maxDamage: parseFloat(document.getElementById('max-damage-base').value),
-        finalDamage: parseFloat(document.getElementById('final-damage-base').value),
-        defense: parseFloat(document.getElementById('defense-base')?.value) || 0,
-        mainStatPct: parseFloat(document.getElementById('main-stat-pct-base')?.value) || 0
-    };
+    const stats = getStats('base');
 
     // Create base service to get base DPS value (calculated once in constructor, auto-fetches weaponAttackBonus)
     const baseService = new StatCalculationService(stats);
@@ -469,7 +451,7 @@ export function calculateStatEquivalency(sourceStat) {
             suffix: '%'
         },
         'stat-damage': {
-            label: 'Main Stat %',
+            label: 'Stat Prop. Damage (%)',
             getValue: () => parseFloat(document.getElementById('equiv-stat-damage').value) || 0,
             applyToStats: (stats, value) => {
                 const service = new StatCalculationService(stats);
@@ -570,9 +552,19 @@ export function calculateStatEquivalency(sourceStat) {
 
     // Use boss DPS as the baseline for display
     const baseDPS = baseService.baseBossDPS;
-    const modifiedStats = statMapping[sourceStat].applyToStats(stats, sourceValue);
-    const modifiedService = new StatCalculationService(modifiedStats);
-    const newDPS = modifiedService.computeDPS('boss');
+
+    // For main-stat-pct, we need to apply to a fresh service to avoid baseBossDPS
+    // being calculated with already-increased statDamage
+    let newDPS;
+    if (sourceStat === 'main-stat-pct') {
+        const modifiedService = new StatCalculationService(stats);
+        modifiedService.addMainStatPct(sourceValue);
+        newDPS = modifiedService.computeDPS('boss');
+    } else {
+        const modifiedStats = statMapping[sourceStat].applyToStats(stats, sourceValue);
+        const modifiedService = new StatCalculationService(modifiedStats);
+        newDPS = modifiedService.computeDPS('boss');
+    }
     const targetDPSGain = ((newDPS - baseDPS) / baseDPS * 100);
 
     // Build HTML for results
@@ -678,9 +670,21 @@ export function calculateStatEquivalency(sourceStat) {
 
         while (iterations < maxIterations && high - low > tolerance) {
             const mid = (low + high) / 2;
-            const testStats = statConfig.applyToStats(stats, mid);
-            const testService = new StatCalculationService(testStats);
-            const testDPS = testService.computeDPS(rowTargetType);
+            let testDPS;
+
+            // For main-stat-pct, we need to apply fresh to original stats each iteration
+            // because applyToStats returns stats with increased statDamage, and creating
+            // a new service with those stats would calculate baseBossDPS incorrectly
+            if (statId === 'main-stat-pct') {
+                const testService = new StatCalculationService(stats);
+                testService.addMainStatPct(mid);
+                testDPS = testService.computeDPS(rowTargetType);
+            } else {
+                const testStats = statConfig.applyToStats(stats, mid);
+                const testService = new StatCalculationService(testStats);
+                testDPS = testService.computeDPS(rowTargetType);
+            }
+
             const actualGain = ((testDPS - rowBaseDPS) / rowBaseDPS * 100);
 
             if (Math.abs(actualGain - targetDPSGain) < tolerance) {
@@ -697,9 +701,16 @@ export function calculateStatEquivalency(sourceStat) {
         const equivalentValue = (low + high) / 2;
 
         // Check if we hit the cap and still can't reach target gain
-        const verifyStats = statConfig.applyToStats(stats, equivalentValue);
-        const verifyService = new StatCalculationService(verifyStats);
-        const verifyDPS = verifyService.computeDPS(rowTargetType);
+        let verifyDPS;
+        if (statId === 'main-stat-pct') {
+            const verifyService = new StatCalculationService(stats);
+            verifyService.addMainStatPct(equivalentValue);
+            verifyDPS = verifyService.computeDPS(rowTargetType);
+        } else {
+            const verifyStats = statConfig.applyToStats(stats, equivalentValue);
+            const verifyService = new StatCalculationService(verifyStats);
+            verifyDPS = verifyService.computeDPS(rowTargetType);
+        }
         const verifyGain = ((verifyDPS - rowBaseDPS) / rowBaseDPS * 100);
 
         // If we're at the cap and still below target gain, show as unable to match
