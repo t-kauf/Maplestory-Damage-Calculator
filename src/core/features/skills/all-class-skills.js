@@ -779,7 +779,7 @@ export const BOWMASTER_SKILLS = {
         skillIndex: 73020,
         effects: [
             {
-                stat: "attack",
+                stat: "finalAttack",
                 baseValue: 200,
                 factorIndex: 22,
                 type: "percent"
@@ -911,7 +911,7 @@ export const MARKSMAN_SKILLS = {
         skillIndex: 82040,
         effects: [
             {
-                stat: "attack",
+                stat: "finalAttack",
                 baseValue: 100,
                 factorIndex: 22,
                 type: "percent"
@@ -1012,7 +1012,7 @@ export const MARKSMAN_SKILLS = {
         skillIndex: 83070,
         effects: [
             {
-                stat: "attack",
+                stat: "finalAttack",
                 baseValue: 200,
                 factorIndex: 22,
                 type: "percent"
@@ -1188,7 +1188,7 @@ export const NIGHT_LORD_SKILLS = {
         skillIndex: 93070,
         effects: [
             {
-                stat: "attack",
+                stat: "finalAttack",
                 baseValue: 180,
                 factorIndex: 22,
                 type: "percent"
@@ -1290,7 +1290,7 @@ export const SHADOWER_SKILLS = {
         skillIndex: 102050,
         effects: [
             {
-                stat: "attack",
+                stat: "finalAttack",
                 baseValue: 80,
                 factorIndex: 22,
                 type: "percent"

@@ -4,9 +4,9 @@ import { renderArtifactPotential } from '@core/features/artifacts/artifact-poten
 import { clearCubeRankingsCache } from '@core/cube/cube-potential.js';
 import { addComparisonItemStat, addComparisonItem } from '@ui/comparison-ui.js';
 import { addEquippedStat } from '@ui/equipment-ui.js';
-import { handleWeaponLevelChange, handleEquippedCheckboxChange, updateEquippedWeaponIndicator } from '@core/weapon-levels/weapons-ui.js';
+import { handleWeaponLevelChange, handleWeaponLevelChangeBulk, handleEquippedCheckboxChange, setEquippedState, updateEquippedWeaponIndicator, updateWeaponBonuses, updateWeaponUpgradeColors } from '@core/weapon-levels/weapons-ui.js';
 import { rarities, tiers, equippedStatCount } from '@core/constants.js';
-import { getCompanionsState, setCompanionsState, getPresets, setPresetsState, getEquippedPresetId, setEquippedPresetId, getContributedStats, setContributedStats, getShowPresetDpsComparison, setShowPresetDpsComparison, getLockedMainCompanion, setLockedMainCompanion, updateAllContributions, updateCompanionEquippedContributions, getUnlockableStatsState, setUnlockableStatsState, getGuildBonusesState, setGuildBonusesState, getCubeSlotData, setCubeSlotData } from './state.js';
+import { getCompanionsState, setCompanionsState, getPresets, setPresetsState, getEquippedPresetId, setEquippedPresetId, getContributedStats, setContributedStats, getShowPresetDpsComparison, setShowPresetDpsComparison, getLockedMainCompanion, setLockedMainCompanion, updateAllContributions, updateCompanionEquippedContributions, getUnlockableStatsState, setUnlockableStatsState, getGuildBonusesState, setGuildBonusesState, getCubeSlotData, setCubeSlotData, setCharacterLevel } from './state.js';
 import { refreshCompanionsUI } from '@ui/companions-ui.js';
 import { refreshPresetsUI } from '@ui/companions-presets-ui.js';
 import { getCurrentSlot } from '@ui/comparison/slot-comparison.js';
@@ -108,9 +108,6 @@ export function saveToLocalStorage() {
             if (levelInput) {
                 const key = `${rarity}-${tier}`;
                 const starsValue = starsInput ? starsInput.value : '5';
-                if (key === 'normal-t4') {
-                    console.log('[SAVE] normal-t4 stars:', starsValue, 'type:', typeof starsValue);
-                }
                 data.weapons[key] = {
                     level: levelInput.value,
                     stars: starsValue,
@@ -253,6 +250,7 @@ export function loadFromLocalStorage() {
             const characterLevelElement = document.getElementById('character-level');
             if (characterLevelElement && data.baseSetup['character-level'] !== undefined) {
                 characterLevelElement.value = data.baseSetup['character-level'];
+                setCharacterLevel(data.baseSetup['character-level']);
             }
         }
 
@@ -292,10 +290,6 @@ export function loadFromLocalStorage() {
                     const weaponData = data.weapons[key];
 
                     if (weaponData) {
-                        if (key === 'normal-t4') {
-                            console.log('[LOAD] normal-t4 weaponData:', weaponData);
-                        }
-
                         const levelInput = document.getElementById(`level-${rarity}-${tier}`);
                         const starsInput = document.getElementById(`stars-${rarity}-${tier}`);
                         const equippedCheckbox = document.getElementById(`equipped-checkbox-${rarity}-${tier}`);
@@ -304,9 +298,6 @@ export function loadFromLocalStorage() {
                         if (starsInput) {
                             const defaultStars = ['legendary', 'mystic', 'ancient'].includes(rarity) ? 1 : 5;
                             const stars = weaponData.stars !== undefined ? weaponData.stars : defaultStars;
-                            if (key === 'normal-t4') {
-                                console.log('[LOAD] normal-t4 setting stars to:', stars, 'type:', typeof stars);
-                            }
                             starsInput.value = stars.toString();
 
                             // Update star display (1-5 stars) - use active class to match initialization
@@ -323,23 +314,27 @@ export function loadFromLocalStorage() {
                             levelInput.value = weaponData.level || '0';
                         }
 
-                        // Restore equipped state
-                        if (equippedCheckbox && weaponData.equipped) {
-                            equippedCheckbox.checked = true;
-                            handleEquippedCheckboxChange(rarity, tier);
+                        // Restore equipped state (skip automatic update - will call once after loop)
+                        if (weaponData.equipped) {
+                            setEquippedState(rarity, tier);
                         }
 
-                        // Trigger the level change handler AFTER equipped state is set
+                        // Trigger the BULK level change handler (skips updateWeaponBonuses during load)
                         if (levelInput) {
-                            handleWeaponLevelChange(rarity, tier);
+                            handleWeaponLevelChangeBulk(rarity, tier);
                         }
                     }
                 });
             });
-        }
 
-        // Update equipped weapon indicator after loading
-        updateEquippedWeaponIndicator();
+            // Update totals once after all weapons are loaded (prevents 28 unnecessary cascading updates)
+            updateWeaponBonuses();
+            updateEquippedWeaponIndicator();
+            updateWeaponUpgradeColors();
+        } else {
+            // Update equipped weapon indicator after loading
+            updateEquippedWeaponIndicator();
+        }
 
         // Load Equipment Slots
         if (data.equipmentSlots) {
@@ -708,6 +703,7 @@ export function attachSaveListeners() {
     const characterLevelElement = document.getElementById('character-level');
     if (characterLevelElement) {
         characterLevelElement.addEventListener('input', () => {
+            setCharacterLevel(characterLevelElement.value);
             saveToLocalStorage();
             updateAnalysisTabs();
         });

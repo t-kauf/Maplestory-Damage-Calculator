@@ -838,6 +838,8 @@ export function calculateJobSkillPassiveGains(className, characterLevel, skillLe
     const statChanges = {};
     const breakdown = [];
     const complexPassives = [];
+    const complexStatChanges = [];
+    complexStatChanges['finalAttack'] = 0;
 
     const jobTiers = [1, 2, 3, 4];
     const jobTierNames = ['firstJob', 'secondJob', 'thirdJob', 'fourthJob'];
@@ -848,7 +850,7 @@ export function calculateJobSkillPassiveGains(className, characterLevel, skillLe
         const tierName = jobTierNames[i];
         const tierBonus = (skillLevelBonuses[tierName] || 0) + allSkillsBonus;
 
-        if (tierBonus === 0) continue;  // Skip if no bonus for this tier
+        //if (tierBonus === 0) continue;  // Skip if no bonus for this tier
 
         // Get regular passives for this tier
         const passives = getPassivesByTier(classSkills, tierNumber);
@@ -960,6 +962,11 @@ export function calculateJobSkillPassiveGains(className, characterLevel, skillLe
                     const gain = bonusValue - baseValue;
                     const calculatorStat = effect.stat;
 
+                    if(calculatorStat.toLowerCase() == 'finalattack')
+                    {
+                        complexStatChanges['finalAttack'] += bonusValue;
+                    }
+
                     complexPassives.push({
                         passive: name,
                         stat: calculatorStat,
@@ -983,6 +990,7 @@ export function calculateJobSkillPassiveGains(className, characterLevel, skillLe
     return {
         statChanges,
         breakdown,
-        complexPassives
+        complexPassives,
+        complexStatChanges
     };
 }

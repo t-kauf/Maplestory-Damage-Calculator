@@ -84,7 +84,7 @@ export function potentialStatToDamageStat(potentialStat, value, accumulatedMainS
         const currentMainStatPct = baseMainStatPct + accumulatedMainStatPct;
 
         // Use the shared function to calculate stat damage gain
-        const statDamageGain = calculateMainStatPercentGain(
+        const mainStatGain = calculateMainStatPercentGain(
             value,
             currentMainStatPct,
             primaryMainStat,
@@ -92,7 +92,7 @@ export function potentialStatToDamageStat(potentialStat, value, accumulatedMainS
             currentSelectedClass
         );
 
-        return { stat: 'statDamage', value: statDamageGain, isMainStatPct: true };
+        return { stat: 'statDamage', value: mainStatGain/100, isMainStatPct: true };
     }
 
     // Check if it's a flat stat (convert to stat damage if main stat)

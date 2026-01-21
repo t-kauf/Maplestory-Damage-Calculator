@@ -1,4 +1,4 @@
-import { getPresets, getPreset, setPresetSlot, clearPresetSlot, getSelectedSlotInfo, setSelectedSlot, clearSelectedSlot, getCompanion, getEquippedPresetId, setEquippedPresetId, updateCompanionEquippedContributions, getShowPresetDpsComparison, setShowPresetDpsComparison, getLockedMainCompanion, setLockedMainCompanion } from '@core/state/state.js';
+import { getPresets, getPreset, setPresetSlot, clearPresetSlot, getSelectedSlotInfo, setSelectedSlot, clearSelectedSlot, getCompanion, getEquippedPresetId, setEquippedPresetId, updateCompanionEquippedContributions, getShowPresetDpsComparison, setShowPresetDpsComparison, getLockedMainCompanion, setLockedMainCompanion, getCachedOptimalPreset } from '@core/state/state.js';
 import { saveToLocalStorage } from '@core/state/storage.js';
 import { getCompanionEffects, getMaxCompanionLevel } from '@core/companions/index.js';
 import { addStat, subtractStat, Stat } from '@core/services/stat-inputs-service.js';
@@ -25,9 +25,47 @@ export function initializePresetsUI() {
 /**
  * Render the presets panel
  */
-function renderPresetsPanel() {
+function renderPresetsPanel() {   
     const container = document.getElementById('companions-presets-container');
     if (!container) return;
+
+    // Skip expensive optimal preset generation if companions tab is not visible
+    const companionsTab = document.getElementById('setup-companions');
+    const isTabVisible = companionsTab && companionsTab.classList.contains('active');
+
+    if (!isTabVisible) {
+        // Still render basic UI without optimal presets
+        const presets = getPresets();
+        const showDpsComparison = getShowPresetDpsComparison();
+        const equippedPresetId = getEquippedPresetId();
+        const currentPresetEffects = getPresetEquipEffects(equippedPresetId);
+
+        let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
+
+        // Add toggle header
+        html += `
+            <header style="margin-bottom: 8px; padding: 10px 12px; background: rgba(0, 122, 255, 0.08); border: 1px solid rgba(0, 122, 255, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
+                <span style="font-weight: 600; color: var(--text-primary);">Show DPS Comparison</span>
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="preset-dps-comparison-toggle" onchange="window.togglePresetDpsComparison(this.checked)" ${showDpsComparison ? 'checked' : ''}>
+                    <span style="font-size: 0.9em; color: var(--text-secondary);">Enable DPS info below each preset</span>
+                </label>
+            </header>
+        `;
+
+        // Render user presets only (skip optimal ones)
+        for (let i = 1; i <= 5; i++) {
+            const presetId = `preset${i}`;
+            const presetData = presets[presetId];
+            const isEquipped = presetId === equippedPresetId;
+            html += renderPresetRow(presetId, presetData, isEquipped, showDpsComparison, currentPresetEffects, false);
+        }
+
+        html += '</div>';
+        container.innerHTML = html;
+        attachPresetEventListeners();
+        return;
+    }
 
     const presets = getPresets();
     const showDpsComparison = getShowPresetDpsComparison();

@@ -163,6 +163,12 @@ export function setupRaritySelector() {
     raritySelector.onchange = (e) => {
         const cubeSlotData = getCubeSlotData();
         cubeSlotData[currentCubeSlot][currentPotentialType].rarity = e.target.value;
+        // Reset roll count when rarity changes
+        cubeSlotData[currentCubeSlot][currentPotentialType].rollCount = 0;
+        const rollCountInput = document.getElementById('cube-roll-count');
+        if (rollCountInput) {
+            rollCountInput.value = 0;
+        }
         updateSlotButtonColors(); // Update slot button border colors
         updateCubePotentialUI(); // This will clear invalid lines
         saveToLocalStorage(); // Save after clearing invalid lines
@@ -180,21 +186,43 @@ export function setupRaritySelector() {
             calculateComparisonOrchestrator();
         }
     };
+
+    // Setup roll count input
+    setupRollCountInput();
 }
 
-// Setup tab switching - flattened 4-tab structure
+// Setup roll count input for current slot
+function setupRollCountInput() {
+    const rollCountInput = document.getElementById('cube-roll-count');
+    if (!rollCountInput) return;
+
+    const cubeSlotData = getCubeSlotData();
+    const currentRollCount = cubeSlotData[currentCubeSlot][currentPotentialType].rollCount || 0;
+    rollCountInput.value = currentRollCount;
+
+    rollCountInput.onchange = (e) => {
+        const value = parseInt(e.target.value) || 0;
+        const cubeSlotData = getCubeSlotData();
+        cubeSlotData[currentCubeSlot][currentPotentialType].rollCount = value;
+        saveToLocalStorage();
+    };
+}
+
+// Setup tab switching - flattened 5-tab structure
 export async function setupCubeTabs() {
     // Main tabs (flattened structure)
     const comparisonTab = document.getElementById('cube-main-tab-comparison');
     const rankingsTab = document.getElementById('cube-main-tab-rankings');
     const summaryTab = document.getElementById('cube-main-tab-summary');
     const simulationTab = document.getElementById('cube-main-tab-simulation');
+    const optimalTab = document.getElementById('cube-main-tab-optimal');
 
     // Tab content sections
     const comparisonContent = document.getElementById('cube-comparison-content');
     const rankingsContent = document.getElementById('cube-rankings-content');
     const summaryContent = document.getElementById('cube-summary-content');
     const simulationContent = document.getElementById('cube-simulation-content');
+    const optimalContent = document.getElementById('cube-optimal-content');
 
     // Control sections (Comparison has its own controls, Rankings has independent rarity)
     const comparisonControls = document.getElementById('cube-comparison-controls');
@@ -207,24 +235,24 @@ export async function setupCubeTabs() {
     if (comparisonTab) comparisonTab.classList.add('active');
 
     // Setup tab switching
-    if (comparisonTab && rankingsTab && summaryTab && simulationTab &&
-        comparisonContent && rankingsContent && summaryContent && simulationContent) {
+    if (comparisonTab && rankingsTab && summaryTab && simulationTab && optimalTab &&
+        comparisonContent && rankingsContent && summaryContent && simulationContent && optimalContent) {
 
         // Comparison tab click
         comparisonTab.addEventListener('click', () => {
             switchCubeTab('comparison', {
-                comparisonTab, rankingsTab, summaryTab, simulationTab
+                comparisonTab, rankingsTab, summaryTab, simulationTab, optimalTab
             }, {
-                comparisonContent, rankingsContent, summaryContent, simulationContent
+                comparisonContent, rankingsContent, summaryContent, simulationContent, optimalContent
             }, comparisonControls, rankingsControls);
         });
 
         // Rankings tab click
         rankingsTab.addEventListener('click', () => {
             switchCubeTab('rankings', {
-                comparisonTab, rankingsTab, summaryTab, simulationTab
+                comparisonTab, rankingsTab, summaryTab, simulationTab, optimalTab
             }, {
-                comparisonContent, rankingsContent, summaryContent, simulationContent
+                comparisonContent, rankingsContent, summaryContent, simulationContent, optimalContent
             }, comparisonControls, rankingsControls);
 
             // Sync rankings slot selector with current selected slot from Comparison tab
@@ -240,9 +268,9 @@ export async function setupCubeTabs() {
         // Summary tab click
         summaryTab.addEventListener('click', async () => {
             switchCubeTab('summary', {
-                comparisonTab, rankingsTab, summaryTab, simulationTab
+                comparisonTab, rankingsTab, summaryTab, simulationTab, optimalTab
             }, {
-                comparisonContent, rankingsContent, summaryContent, simulationContent
+                comparisonContent, rankingsContent, summaryContent, simulationContent, optimalContent
             }, comparisonControls, rankingsControls);
 
             // Display summary and start loading any missing rankings
@@ -253,10 +281,24 @@ export async function setupCubeTabs() {
         // Simulation tab click
         simulationTab.addEventListener('click', () => {
             switchCubeTab('simulation', {
-                comparisonTab, rankingsTab, summaryTab, simulationTab
+                comparisonTab, rankingsTab, summaryTab, simulationTab, optimalTab
             }, {
-                comparisonContent, rankingsContent, summaryContent, simulationContent
+                comparisonContent, rankingsContent, summaryContent, simulationContent, optimalContent
             }, comparisonControls, rankingsControls);
+        });
+
+        // Optimal tab click
+        optimalTab.addEventListener('click', () => {
+            switchCubeTab('optimal', {
+                comparisonTab, rankingsTab, summaryTab, simulationTab, optimalTab
+            }, {
+                comparisonContent, rankingsContent, summaryContent, simulationContent, optimalContent
+            }, comparisonControls, rankingsControls);
+
+            // Initialize optimal guidance when tab is opened
+            if (window.initOptimalGuidance) {
+                window.initOptimalGuidance();
+            }
         });
     }
 }
@@ -288,7 +330,7 @@ function setupRankingsRaritySelector() {
 
         // Sync back to global state for consistency with Comparison tab
         if (slotId !== currentCubeSlot) {
-            currentCubeSlot = slotId;
+            selectCubeSlot(slotId);
             updateSlotButtonColors();
         }
 
@@ -351,20 +393,22 @@ export function displayOrCalculateRankingsForRarity(rarity) {
 
 // Helper function to switch tabs
 function switchCubeTab(activeTabName, tabs, contents, comparisonControls, rankingsControls) {
-    const { comparisonTab, rankingsTab, summaryTab, simulationTab } = tabs;
-    const { comparisonContent, rankingsContent, summaryContent, simulationContent } = contents;
+    const { comparisonTab, rankingsTab, summaryTab, simulationTab, optimalTab } = tabs;
+    const { comparisonContent, rankingsContent, summaryContent, simulationContent, optimalContent } = contents;
 
     // Remove active class from all tabs
     comparisonTab.classList.remove('active');
     rankingsTab.classList.remove('active');
     summaryTab.classList.remove('active');
     simulationTab.classList.remove('active');
+    if (optimalTab) optimalTab.classList.remove('active');
 
     // Hide all content
     comparisonContent.classList.remove('active');
     rankingsContent.classList.remove('active');
     summaryContent.classList.remove('active');
     simulationContent.classList.remove('active');
+    if (optimalContent) optimalContent.classList.remove('active');
 
     // Hide all control sections
     if (comparisonControls) comparisonControls.style.display = 'none';
@@ -389,6 +433,10 @@ function switchCubeTab(activeTabName, tabs, contents, comparisonControls, rankin
         case 'simulation':
             simulationTab.classList.add('active');
             simulationContent.classList.add('active');
+            break;
+        case 'optimal':
+            if (optimalTab) optimalTab.classList.add('active');
+            if (optimalContent) optimalContent.classList.add('active');
             break;
     }
 }
@@ -1289,7 +1337,8 @@ export function displaySimulationResults(results, cubeBudget, simulationCount) {
         worstFirst: { name: 'Worst First', desc: 'Always upgrades the slot currently providing the least DPS gain with a single cube at a time.' },
         balancedThreshold: { name: 'Balanced Threshold', desc: 'Keeps all slots within a certain DPS gain range of each other, preventing over-investment in terrible slots.' },
         hybridFastRarity: { name: 'Hybrid: Fast Rarity + Worst First', desc: 'First rushes all slots to Epic rarity, then switches to Worst First strategy for remaining cubes.' },
-        rarityWeightedWorstFirst: { name: 'Rarity-Weighted Worst First', desc: 'Like Worst First but factors in how close a slot is to its next rarity upgrade, prioritizing slots near upgrade thresholds.' }
+        rarityWeightedWorstFirst: { name: 'Rarity-Weighted Worst First', desc: 'Like Worst First but factors in how close a slot is to its next rarity upgrade, prioritizing slots near upgrade thresholds.' },
+        dpOptimal: { name: 'DP Optimal', desc: 'Mathematically optimal strategy that cubes the slot with highest expected marginal DPS gain, accounting for tier-up probability and future rarity potential.' }
     };
 
     // Sort strategies by average gain (best first)

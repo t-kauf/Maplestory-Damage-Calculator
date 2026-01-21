@@ -191,7 +191,9 @@ export function calculatePresetStatValue(preset, targetStat, getCompanionEffects
  * @returns {Object} Optimal preset with main and subs filled
  */
 export function generateOptimalPreset(targetStat, getCompanionEffects, getCompanion, getMaxCompanionLevel, lockedMainCompanion = null) {
-    const classes = ['Hero', 'DarkKnight', 'ArchMageIL', 'ArchMageFP', 'BowMaster', 'Marksman', 'NightLord', 'Shadower'];
+    // Exclude classes that will never be optimal: DarkKnight, Marksman
+    const classes = ['Hero', 'ArchMageIL', 'ArchMageFP', 'BowMaster', 'NightLord', 'Shadower'];
+    // Only consider Legendary, Unique, Epic (Normal and Rare are never optimal)
     const rarities = ['Legendary', 'Unique', 'Epic'];
 
     // Determine monster type from target stat
@@ -259,6 +261,9 @@ export function generateOptimalPreset(targetStat, getCompanionEffects, getCompan
         const maxCombinationsToTest = 50000;
         let combinationsTested = 0;
 
+        // Reuse service instance to avoid redundant calculations
+        const service = new StatCalculationService(baseStats, null);
+
         // Test each combination of 6 subs (main is locked)
         for (const subCombination of generateCombinations(subCandidates, 6)) {
             combinationsTested++;
@@ -283,7 +288,7 @@ export function generateOptimalPreset(targetStat, getCompanionEffects, getCompan
             });
 
             // Apply effects to base stats and calculate DPS
-            const service = new StatCalculationService(baseStats, null);
+            service.reset();
             applyEffectsToService(service, totalEffects, false);
             const dps = service.computeDPS(monsterType);
 
@@ -301,6 +306,9 @@ export function generateOptimalPreset(targetStat, getCompanionEffects, getCompan
         // For performance, limit to reasonable number of combinations
         const maxCombinationsToTest = 50000;
         let combinationsTested = 0;
+
+        // Reuse service instance to avoid redundant calculations
+        const service = new StatCalculationService(baseStats, null);
 
         // Test each combination of 7 companions
         for (const combination of generateCombinations(unlockedCompanions, 7)) {
@@ -330,7 +338,7 @@ export function generateOptimalPreset(targetStat, getCompanionEffects, getCompan
             });
 
             // Apply effects to base stats and calculate DPS
-            const service = new StatCalculationService(baseStats, null);
+            service.reset();
             applyEffectsToService(service, totalEffects, false);
             const dps = service.computeDPS(monsterType);
 

@@ -6,12 +6,6 @@ export function calculateMainStatPercentGain(mainStatPctIncrease, currentMainSta
         defenseToMainStat = defense * 0.127;
     }
 
-    // Primary main stat is AFTER applying current main stat %
-    // We need to work backwards to find the base main stat (before main stat % multiplier)
-    // For Dark Knight: defense contribution is NOT affected by main stat %
-    // So: primaryMainStat = (baseMainStat × currentMultiplier) + defenseToMainStat
-    // Therefore: baseMainStat = (primaryMainStat - defenseToMainStat) / currentMultiplier
-
     const currentMultiplier = 1 + currentMainStatPct / 100;
     const baseMainStat = (primaryMainStat - defenseToMainStat) / currentMultiplier;
 
@@ -21,9 +15,5 @@ export function calculateMainStatPercentGain(mainStatPctIncrease, currentMainSta
 
     // Calculate the gain in main stat
     const mainStatGain = newTotalMainStat - primaryMainStat;
-
-    // Convert to stat damage (100 main stat = 1% stat damage)
-    const statDamageGain = mainStatGain / 100;
-
-    return statDamageGain;
+    return mainStatGain;
 }

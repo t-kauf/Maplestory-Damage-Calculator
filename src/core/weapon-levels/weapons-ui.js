@@ -270,6 +270,47 @@ export function handleEquippedCheckboxChange(rarity, tier) {
     updateEquippedWeaponIndicator();
 }
 
+/**
+ * Bulk update version for loading - skips save and global updates to avoid cascading
+ * Use this when loading equipped state, then call updateWeaponBonuses once after
+ */
+export function setEquippedState(rarity, tier) {
+    const checkbox = document.getElementById(`equipped-checkbox-${rarity}-${tier}`);
+    const equippedDisplay = document.getElementById(`equipped-display-${rarity}-${tier}`);
+    const card = document.getElementById(`weapon-${rarity}-${tier}`);
+
+    if (!checkbox) return;
+
+    checkbox.checked = true;
+        // Uncheck all other equipped checkboxes
+        rarities.forEach(r => {
+            tiers.forEach(t => {
+                if (r !== rarity || t !== tier) {
+                    const otherCheckbox = document.getElementById(`equipped-checkbox-${r}-${t}`);
+                    const otherDisplay = document.getElementById(`equipped-display-${r}-${t}`);
+                    const otherCard = document.getElementById(`weapon-${r}-${t}`);
+
+                    if (otherCheckbox) otherCheckbox.checked = false;
+                    if (otherDisplay) otherDisplay.style.display = 'none';
+                    if (otherCard) otherCard.classList.remove('equipped');
+                }
+            });
+        });
+
+        // Calculate and display equipped attack
+        const levelInput = document.getElementById(`level-${rarity}-${tier}`);
+        const level = parseInt(levelInput?.value) || 0;
+        const { equippedAttack } = calculateWeaponAttacks(rarity, tier, level);
+
+        const equippedValue = document.getElementById(`equipped-value-${rarity}-${tier}`);
+        if (equippedValue) {
+            equippedValue.textContent = `${equippedAttack.toFixed(1)}% equipped attack`;
+        }
+
+        if (equippedDisplay) equippedDisplay.style.display = 'block';
+        if (card) card.classList.add('equipped');
+}
+
 export function updateWeaponUpgradeColors() {
     // Collect all gainPer1k values
     const gainValues = [];
@@ -414,6 +455,107 @@ export function handleWeaponLevelChange(rarity, tier) {
     updateWeaponBonuses();
     updateEquippedWeaponIndicator();
     updateWeaponUpgradeColors();
+}
+
+/**
+ * Bulk update version for loading - skips global updates to avoid cascading
+ * Use this when loading multiple weapons at once, then call updateWeaponBonuses once after
+ */
+export function handleWeaponLevelChangeBulk(rarity, tier) {
+    const levelInput = document.getElementById(`level-${rarity}-${tier}`);
+    const starsInput = document.getElementById(`stars-${rarity}-${tier}`);
+    const level = parseInt(levelInput.value) || 0;
+
+    const stars = starsInput?.value !== undefined && starsInput?.value !== ''
+        ? parseInt(starsInput.value) : 5;
+
+    // Enforce max level based on stars
+    const maxLevel = getMaxLevelForStars(stars);
+    levelInput.setAttribute('max', maxLevel);
+    if (level > maxLevel) {
+        levelInput.value = maxLevel;
+        return handleWeaponLevelChangeBulk(rarity, tier);
+    }
+
+    // Calculate inventory and equipped attack percentages
+    const { inventoryAttack, equippedAttack } = calculateWeaponAttacks(rarity, tier, level);
+
+    // Update inventory display
+    const inventoryDisplay = document.getElementById(`inventory-display-${rarity}-${tier}`);
+    if (inventoryDisplay) {
+        inventoryDisplay.textContent = `${inventoryAttack.toFixed(1)}% inventory attack`;
+    }
+
+    // Show/hide upgrade gain display based on whether at max level
+    const upgradeGainContainer = document.getElementById(`upgrade-gain-container-${rarity}-${tier}`);
+    const upgradeGainDisplay = document.getElementById(`upgrade-gain-${rarity}-${tier}`);
+
+    if (level < maxLevel && level > 0) {
+        // Check if this weapon is equipped
+        const equippedDisplay = document.getElementById(`equipped-display-${rarity}-${tier}`);
+        const isEquipped = equippedDisplay && equippedDisplay.style.display !== 'none';
+
+        // Calculate multi-level efficiency (what you actually get per 1k shards)
+        const upgradeGain = calculateUpgradeGain(rarity, tier, level, stars, 1000, isEquipped);
+
+        if (upgradeGainDisplay && upgradeGain.attackGain > 0) {
+            let gainPer1k;
+            let totalGainPer1k;
+
+            if (upgradeGain.isUnaffordable) {
+                // Next level costs more than 1k - normalize to per 1k
+                gainPer1k = (upgradeGain.attackGain / upgradeGain.singleLevelCost) * 1000;
+                const equippedGainPer1k = (upgradeGain.equippedAttackGain / upgradeGain.singleLevelCost) * 1000;
+                totalGainPer1k = gainPer1k + equippedGainPer1k;
+
+                if (isEquipped) {
+                    upgradeGainDisplay.textContent = `+${totalGainPer1k.toFixed(2)}% per 1k shards (${gainPer1k.toFixed(2)}% inv + ${equippedGainPer1k.toFixed(2)}% eq, next level costs ${upgradeGain.singleLevelCost} shards)`;
+                } else {
+                    upgradeGainDisplay.textContent = `+${gainPer1k.toFixed(2)}% per 1k shards (next level costs ${upgradeGain.singleLevelCost} shards)`;
+                }
+            } else {
+                // Can afford levels with 1k shards
+                gainPer1k = upgradeGain.attackGain;
+                totalGainPer1k = gainPer1k + upgradeGain.equippedAttackGain;
+
+                if (isEquipped) {
+                    upgradeGainDisplay.textContent = `+${totalGainPer1k.toFixed(2)}% per 1k shards (${gainPer1k.toFixed(2)}% inv + ${upgradeGain.equippedAttackGain.toFixed(2)}% eq, ${upgradeGain.levelsGained} levels)`;
+                } else {
+                    upgradeGainDisplay.textContent = `+${gainPer1k.toFixed(2)}% per 1k shards (${upgradeGain.levelsGained} levels)`;
+                }
+            }
+
+            // Store totalGainPer1k for color coding (use total when equipped, otherwise just inventory)
+            upgradeGainDisplay.dataset.gainPer1k = isEquipped ? totalGainPer1k : gainPer1k;
+
+            if (upgradeGainContainer) {
+                upgradeGainContainer.classList.add('visible');
+            }
+        } else {
+            // Hide if no gain or can't calculate
+            if (upgradeGainContainer) {
+                upgradeGainContainer.classList.remove('visible');
+            }
+        }
+    } else {
+        if (upgradeGainContainer) {
+            upgradeGainContainer.classList.remove('visible');
+        }
+        if (upgradeGainDisplay) {
+            delete upgradeGainDisplay.dataset.gainPer1k;
+        }
+    }
+
+    // Update equipped display if this weapon is currently shown as equipped
+    const equippedDisplay = document.getElementById(`equipped-display-${rarity}-${tier}`);
+    if (equippedDisplay && equippedDisplay.style.display !== 'none') {
+        const equippedValue = document.getElementById(`equipped-value-${rarity}-${tier}`);
+        if (equippedValue) {
+            equippedValue.textContent = `${equippedAttack.toFixed(1)}% equipped attack`;
+        }
+    }
+
+    // NOTE: Does NOT call updateWeaponBonuses() to avoid cascading during bulk operations
 }
 
 export function updateEquippedWeaponIndicator() {

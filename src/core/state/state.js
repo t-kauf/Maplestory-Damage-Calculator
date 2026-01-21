@@ -7,6 +7,7 @@ import { itemStatProperties, allItemStatProperties, rarities, tiers } from '@cor
 let currentContentType = 'none';
 let selectedClass = null;
 let selectedJobTier = '3rd';
+let characterLevel = 0;
 
 export function getCurrentContentType() {
     return currentContentType;
@@ -32,6 +33,14 @@ export function getSelectedJobTier() {
     return selectedJobTier;
 }
 
+export function getCharacterLevel() {
+    return characterLevel;
+}
+
+export function setCharacterLevel(level) {
+    characterLevel = parseInt(level) || 0;
+}
+
 export function getStats(setup) {
     return {
         attack: parseFloat(document.getElementById(`attack-${setup}`).value) || 0,
@@ -51,8 +60,12 @@ export function getStats(setup) {
         skillMasteryBoss: parseFloat(document.getElementById(`skill-mastery-boss-${setup}`).value) || 0,
         minDamage: parseFloat(document.getElementById(`min-damage-${setup}`).value) || 0,
         maxDamage: parseFloat(document.getElementById(`max-damage-${setup}`).value) || 0,
-        defense: parseFloat(document.getElementById('defense-base').value) || 0,
-        mainStatPct: parseFloat(document.getElementById('main-stat-pct-base').value) || 0
+        defense: parseFloat(document.getElementById(`defense-${setup}`).value) || 0,
+         mainStatPct: parseFloat(document.getElementById('main-stat-pct-base').value) || 0,
+        firstJob: parseFloat(document.getElementById(`skill-level-1st-${setup}`).value) || 0,
+        secondJob: parseFloat(document.getElementById(`skill-level-2nd-${setup}`).value) || 0,
+        thirdJob: parseFloat(document.getElementById(`skill-level-3rd-${setup}`).value) || 0,
+        fourthJob: parseFloat(document.getElementById(`skill-level-4th-${setup}`).value) || 0
     };
 }
 
@@ -163,6 +176,55 @@ export function getSelectedStageDefense() {
 // Companions state
 let companionsState = {};
 
+// Optimal preset cache - stores calculated optimal presets to avoid recalculation
+let optimalPresetCache = {
+    boss: null,
+    normal: null,
+    lastCompanionsHash: null
+};
+
+/**
+ * Generate a hash of the current companions state for cache invalidation
+ */
+function generateCompanionsHash() {
+    const companions = getCompanionsState();
+    return JSON.stringify(companions);
+}
+
+/**
+ * Invalidate the optimal preset cache (call when companions change)
+ */
+export function invalidateOptimalPresetCache() {
+    optimalPresetCache.boss = null;
+    optimalPresetCache.normal = null;
+    optimalPresetCache.lastCompanionsHash = null;
+}
+
+/**
+ * Get cached optimal preset for a monster type
+ * @param {string} monsterType - 'bossDamage' or 'normalDamage'
+ * @param {Function} generator - Function to generate the preset if not cached
+ * @returns {Object} Optimal preset
+ */
+export function getCachedOptimalPreset(monsterType, generator) {
+    const currentHash = generateCompanionsHash();
+    const cacheKey = monsterType === 'bossDamage' ? 'boss' : 'normal';
+
+    // Check if cache is valid
+    if (optimalPresetCache.lastCompanionsHash !== currentHash) {
+        // Companions have changed, invalidate cache
+        invalidateOptimalPresetCache();
+    }
+
+    // Return cached value or generate new one
+    if (!optimalPresetCache[cacheKey]) {
+        optimalPresetCache[cacheKey] = generator();
+        optimalPresetCache.lastCompanionsHash = currentHash;
+    }
+
+    return optimalPresetCache[cacheKey];
+}
+
 /**
  * Ensure default unlocked companions are initialized in state
  * Normal, Rare, and Epic rarities default to unlocked at level 1
@@ -197,6 +259,8 @@ export function setCompanionsState(state) {
     companionsState = state || {};
     // Ensure default companions are initialized after loading saved data
     initializeDefaultCompanions();
+    // Invalidate cache when companions state is loaded
+    invalidateOptimalPresetCache();
 }
 
 /**
@@ -204,6 +268,8 @@ export function setCompanionsState(state) {
  */
 export function updateCompanion(companionKey, data) {
     companionsState[companionKey] = data;
+    // Invalidate cache when a companion changes
+    invalidateOptimalPresetCache();
 }
 
 /**
@@ -291,6 +357,7 @@ export function initializeCubeSlotData(slotNames) {
         const defaultSlotData = {
             regular: {
                 rarity: 'normal',
+                rollCount: 0,
                 setA: {
                     line1: { stat: '', value: 0 },
                     line2: { stat: '', value: 0 },
@@ -304,6 +371,7 @@ export function initializeCubeSlotData(slotNames) {
             },
             bonus: {
                 rarity: 'normal',
+                rollCount: 0,
                 setA: {
                     line1: { stat: '', value: 0 },
                     line2: { stat: '', value: 0 },
@@ -327,18 +395,29 @@ export function initializeCubeSlotData(slotNames) {
                 cubeSlotData[slot.id] = {
                     regular: {
                         rarity: cubeSlotData[slot.id].rarity || 'normal',
+                        rollCount: cubeSlotData[slot.id].rollCount || 0,
                         setA: cubeSlotData[slot.id].setA || defaultSlotData.regular.setA,
                         setB: cubeSlotData[slot.id].setB || defaultSlotData.regular.setB
                     },
                     bonus: defaultSlotData.bonus
                 };
             } else {
-                // New format - ensure both regular and bonus exist
+                // New format - ensure both regular and bonus exist, and rollCount is present
                 if (!cubeSlotData[slot.id].regular) {
                     cubeSlotData[slot.id].regular = defaultSlotData.regular;
+                } else {
+                    // Ensure rollCount exists
+                    if (typeof cubeSlotData[slot.id].regular.rollCount !== 'number') {
+                        cubeSlotData[slot.id].regular.rollCount = 0;
+                    }
                 }
                 if (!cubeSlotData[slot.id].bonus) {
                     cubeSlotData[slot.id].bonus = defaultSlotData.bonus;
+                } else {
+                    // Ensure rollCount exists
+                    if (typeof cubeSlotData[slot.id].bonus.rollCount !== 'number') {
+                        cubeSlotData[slot.id].bonus.rollCount = 0;
+                    }
                 }
             }
         }

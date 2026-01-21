@@ -40,6 +40,35 @@
     --cube-border-strong: rgba(148, 163, 184, 0.3);
 }
 
+/* Roll count styling to match rarity dropdown */
+.cube-rarity-row {
+    display: flex;
+    gap: 16px;
+    align-items: flex-end;
+    margin-bottom: 16px;
+}
+
+.cube-roll-count-container {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.cube-roll-count-container label {
+    font-size: 0.8em;
+    color: var(--text-secondary);
+}
+
+.cube-roll-count-container input {
+    width: 80px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 0.95em;
+}
+
 /* === Slot Selector Section === */
 .cube-slot-selector-wrapper {
     background: linear-gradient(135deg, rgba(0, 122, 255, 0.08), rgba(88, 86, 214, 0.05));
@@ -659,3 +688,42 @@
     background-color: #374151;
     color: #f3f4f6;
 }
+
+
+/* === Optimal Strategy Tab Styles === */
+.optimal-config {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.optimal-config label {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+}
+
+.optimal-config select,
+.optimal-config input[type="number"] {
+    padding: 6px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.optimal-config input[type="number"] {
+    width: 100px;
+}
+
+.optimal-recommendation-panel {
+    margin-bottom: 24px;
+}
+
+.optimal-sequence-table h4 {
+    color: var(--accent-primary);
+    margin: 20px 0 15px;
+    font-size: 1.1em;
+}
+

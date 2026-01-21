@@ -7,6 +7,7 @@ import { equipmentPotentialData, RARITY_UPGRADE_RATES, slotNames, slotSpecificPo
 import { potentialStatToDamageStat } from '@core/cube/cube-logic.js';
 import { StatCalculationService } from '@core/services/stat-calculation-service.js';
 import { getStats } from '@core/state/state.js';
+import { findOptimalSlotToCube } from '@core/cube/cube-expected-value.js';
 
 window.runCubeSimulation = runCubeSimulation;
 let simCache = {
@@ -15,6 +16,72 @@ let simCache = {
     lineOptionsCache: {}, // Cache merged line options per slot+rarity
     weightCache: {}       // Cache total weights for line options
 };
+
+/**
+ * Helper function to get initial slot state
+ * Either starts from user's current equipment data or from scratch
+ */
+function getInitialSlotState(useUserData, potentialType) {
+    if (useUserData) {
+        const cubeSlotData = getCubeSlotData();
+        return slotNames.map(slotDef => {
+            const slotData = cubeSlotData[slotDef.id][potentialType];
+            // Extract lines from setA
+            const lines = [
+                slotData.setA.line1?.stat ? slotData.setA.line1 : null,
+                slotData.setA.line2?.stat ? slotData.setA.line2 : null,
+                slotData.setA.line3?.stat ? slotData.setA.line3 : null
+            ];
+            return {
+                id: slotDef.id,
+                name: slotDef.name,
+                rarity: slotData.rarity,
+                rollCount: slotData.rollCount || 0,
+                lines: lines,
+                dpsGain: calculateExistingSlotDPSGain(slotDef.id, slotData)
+            };
+        });
+    } else {
+        return slotNames.map(slotDef => ({
+            id: slotDef.id,
+            name: slotDef.name,
+            rarity: 'normal',
+            rollCount: 0,
+            lines: [],
+            dpsGain: 0
+        }));
+    }
+}
+
+/**
+ * Calculate DPS gain for existing slot data
+ */
+function calculateExistingSlotDPSGain(slotId, slotData) {
+    const slotService = new StatCalculationService(simCache.baseStats);
+    let accumulatedMainStatPct = 0;
+
+    const lines = [
+        slotData.setA.line1,
+        slotData.setA.line2,
+        slotData.setA.line3
+    ];
+
+    lines.forEach(line => {
+        if (!line || !line.stat) return;
+        const mapped = potentialStatToDamageStat(line.stat, line.value, accumulatedMainStatPct);
+        if (mapped.stat) {
+            if (mapped.isMainStatPct) {
+                slotService.addPercentageStat('statDamage', mapped.value);
+                accumulatedMainStatPct += line.value;
+            } else {
+                slotService.addPercentageStat(mapped.stat, mapped.value);
+            }
+        }
+    });
+
+    const slotDPS = slotService.computeDPS('boss');
+    return ((slotDPS - simCache.baseDPS) / simCache.baseDPS * 100);
+}
 
 // Initialize simulation cache
 export function initSimulationCache() {
@@ -57,10 +124,22 @@ export function initSimulationCache() {
 
 // Simulate using a single cube on a slot
 export function simulateCubeOnSlot(slot, slotId) {
-    // Try to upgrade rarity
+    // Increment roll count
+    slot.rollCount = (slot.rollCount || 0) + 1;
+
+    // Check for rarity upgrade with pity mechanics
     const upgradeData = RARITY_UPGRADE_RATES[slot.rarity];
-    if (upgradeData && Math.random() < upgradeData.rate) {
-        slot.rarity = upgradeData.next;
+    if (upgradeData) {
+        // Check pity first (guaranteed upgrade at max rolls)
+        if (slot.rollCount >= upgradeData.max) {
+            slot.rarity = upgradeData.next;
+            slot.rollCount = 0; // Reset roll count after upgrade
+        }
+        // Then check random upgrade
+        else if (Math.random() < upgradeData.rate) {
+            slot.rarity = upgradeData.next;
+            slot.rollCount = 0; // Reset roll count after upgrade
+        }
     }
 
     // Get cached line options
@@ -225,6 +304,9 @@ export async function calculateRankingsForRarity(rarity, slotId = currentCubeSlo
         const baseService = new StatCalculationService(baseStats);
         const baseDPS = baseService.computeDPS('boss');
 
+        // Reuse service instance to avoid redundant calculations
+        const comboService = new StatCalculationService(baseStats);
+
         let processedCount = 0;
         const batchSize = 50; // Smaller batch for more frequent UI updates
 
@@ -239,7 +321,7 @@ export async function calculateRankingsForRarity(rarity, slotId = currentCubeSlo
                     };
 
                     // Calculate stats for this combination using StatCalculationService
-                    const comboService = new StatCalculationService(baseStats);
+                    comboService.reset();
                     let accumulatedMainStatPct = 0;
 
                     [combo.line1, combo.line2, combo.line3].forEach(line => {
@@ -411,6 +493,11 @@ export async function runCubeSimulation() {
     const cubeBudget = parseInt(document.getElementById('simulation-cube-budget').value);
     const simulationCount = parseInt(document.getElementById('simulation-count').value);
 
+    // Read simulation configuration
+    const potentialTypeInput = document.querySelector('input[name="sim-potential-type"]:checked');
+    const potentialType = potentialTypeInput ? potentialTypeInput.value : 'regular';
+    const useUserData = document.getElementById('sim-use-my-data').checked;
+
     const progressBar = document.getElementById('cube-simulation-progress');
     const progressFill = document.getElementById('cube-simulation-progress-fill');
     const progressText = document.getElementById('cube-simulation-progress-text');
@@ -427,7 +514,8 @@ export async function runCubeSimulation() {
         worstFirst: { totalGains: [], simulations: [], avgGain: 0, slotDistribution: {} },
         balancedThreshold: { totalGains: [], simulations: [], avgGain: 0, slotDistribution: {} },
         hybridFastRarity: { totalGains: [], simulations: [], avgGain: 0, slotDistribution: {} },
-        rarityWeightedWorstFirst: { totalGains: [], simulations: [], avgGain: 0, slotDistribution: {} }
+        rarityWeightedWorstFirst: { totalGains: [], simulations: [], avgGain: 0, slotDistribution: {} },
+        dpOptimal: { totalGains: [], simulations: [], avgGain: 0, slotDistribution: {} }
     };
 
     try {
@@ -445,7 +533,8 @@ export async function runCubeSimulation() {
             worstFirst: 0,
             balancedThreshold: 0,
             hybridFastRarity: 0,
-            rarityWeightedWorstFirst: 0
+            rarityWeightedWorstFirst: 0,
+            dpOptimal: 0
         };
 
         // Run all simulations for all strategies in parallel
@@ -456,7 +545,7 @@ export async function runCubeSimulation() {
             // Worst First
             allPromises.push(
                 new Promise(resolve => {
-                    const slots = runWorstFirstStrategy(cubeBudget);
+                    const slots = runWorstFirstStrategy(cubeBudget, useUserData, potentialType);
                     const totalGain = calculateTotalDPSGain(slots);
                     resolve({ strategy: 'worstFirst', slots, totalGain });
                 })
@@ -465,7 +554,7 @@ export async function runCubeSimulation() {
             // Balanced Threshold
             allPromises.push(
                 new Promise(resolve => {
-                    const slots = runBalancedThresholdStrategy(cubeBudget);
+                    const slots = runBalancedThresholdStrategy(cubeBudget, useUserData, potentialType);
                     const totalGain = calculateTotalDPSGain(slots);
                     resolve({ strategy: 'balancedThreshold', slots, totalGain });
                 })
@@ -474,7 +563,7 @@ export async function runCubeSimulation() {
             // Hybrid Fast Rarity
             allPromises.push(
                 (async () => {
-                    const slots = await runHybridFastRarityStrategy(cubeBudget);
+                    const slots = await runHybridFastRarityStrategy(cubeBudget, useUserData, potentialType);
                     const totalGain = calculateTotalDPSGain(slots);
                     return { strategy: 'hybridFastRarity', slots, totalGain };
                 })()
@@ -483,9 +572,18 @@ export async function runCubeSimulation() {
             // Rarity-Weighted Worst First
             allPromises.push(
                 new Promise(resolve => {
-                    const slots = runRarityWeightedWorstFirstStrategy(cubeBudget);
+                    const slots = runRarityWeightedWorstFirstStrategy(cubeBudget, useUserData, potentialType);
                     const totalGain = calculateTotalDPSGain(slots);
                     resolve({ strategy: 'rarityWeightedWorstFirst', slots, totalGain });
+                })
+            );
+
+            // DP Optimal
+            allPromises.push(
+                new Promise(resolve => {
+                    const result = runDPOptimalStrategy(cubeBudget, useUserData, potentialType);
+                    const totalGain = calculateTotalDPSGain(result.slots);
+                    resolve({ strategy: 'dpOptimal', slots: result.slots, totalGain, decisionLog: result.decisionLog });
                 })
             );
         }
@@ -539,15 +637,8 @@ export async function runCubeSimulation() {
 
 
 // Strategy: Worst First - always upgrade the slot with lowest DPS
-export function runWorstFirstStrategy(cubeBudget) {
-    // Initialize all slots to normal with no lines
-    const slots = slotNames.map(slotDef => ({
-        id: slotDef.id,
-        name: slotDef.name,
-        rarity: 'normal',
-        lines: [],
-        dpsGain: 0
-    }));
+export function runWorstFirstStrategy(cubeBudget, useUserData = false, potentialType = 'regular') {
+    const slots = getInitialSlotState(useUserData, potentialType);
 
     // Use all cubes
     for (let i = 0; i < cubeBudget; i++) {
@@ -567,15 +658,8 @@ export function runWorstFirstStrategy(cubeBudget) {
 }
 
 // Strategy: Balanced Threshold - keep all slots within a certain range of each other
-export function runBalancedThresholdStrategy(cubeBudget) {
-    // Initialize all slots to normal with no lines
-    const slots = slotNames.map(slotDef => ({
-        id: slotDef.id,
-        name: slotDef.name,
-        rarity: 'normal',
-        lines: [],
-        dpsGain: 0
-    }));
+export function runBalancedThresholdStrategy(cubeBudget, useUserData = false, potentialType = 'regular') {
+    const slots = getInitialSlotState(useUserData, potentialType);
 
     // Use all cubes
     for (let i = 0; i < cubeBudget; i++) {
@@ -602,16 +686,13 @@ export function runBalancedThresholdStrategy(cubeBudget) {
 }
 
 // Strategy: Rarity-Weighted Worst First - considers proximity to rarity upgrades
-export function runRarityWeightedWorstFirstStrategy(cubeBudget) {
-    // Initialize all slots to normal with no lines
-    const slots = slotNames.map(slotDef => ({
-        id: slotDef.id,
-        name: slotDef.name,
-        rarity: 'normal',
-        lines: [],
-        dpsGain: 0,
-        cubesAtCurrentRarity: 0
-    }));
+export function runRarityWeightedWorstFirstStrategy(cubeBudget, useUserData = false, potentialType = 'regular') {
+    const slots = getInitialSlotState(useUserData, potentialType);
+
+    // Initialize cubesAtCurrentRarity from rollCount for each slot
+    slots.forEach(slot => {
+        slot.cubesAtCurrentRarity = slot.rollCount || 0;
+    });
 
     const expectedCubesForUpgrade = {
         'normal': 1 / 0.06,      // ~16.7 cubes
@@ -648,26 +729,16 @@ export function runRarityWeightedWorstFirstStrategy(cubeBudget) {
         const oldRarity = bestSlot.rarity;
         simulateCubeOnSlot(bestSlot, bestSlot.id);
 
-        if (bestSlot.rarity === oldRarity) {
-            bestSlot.cubesAtCurrentRarity++;
-        } else {
-            bestSlot.cubesAtCurrentRarity = 0;
-        }
+        // Update cubesAtCurrentRarity to match rollCount from simulateCubeOnSlot
+        bestSlot.cubesAtCurrentRarity = bestSlot.rollCount || 0;
     }
 
     return slots;
 }
 
 // Strategy: Hybrid Fast Rarity + Worst First
-export async function runHybridFastRarityStrategy(cubeBudget) {
-    // Initialize all slots to normal with no lines
-    const slots = slotNames.map(slotDef => ({
-        id: slotDef.id,
-        name: slotDef.name,
-        rarity: 'normal',
-        lines: [],
-        dpsGain: 0
-    }));
+export async function runHybridFastRarityStrategy(cubeBudget, useUserData = false, potentialType = 'regular') {
+    const slots = getInitialSlotState(useUserData, potentialType);
 
     let cubesUsed = 0;
     const targetRarity = 'epic'; // Get all slots to epic first
@@ -703,4 +774,48 @@ export async function runHybridFastRarityStrategy(cubeBudget) {
     }
 
     return slots;
+}
+
+/**
+ * DP Optimal Strategy
+ * At each step, cubes the slot with highest expected marginal DPS gain
+ * Uses Monte Carlo expected value with actual DPS calculations
+ */
+export function runDPOptimalStrategy(cubeBudget, useUserData = false, potentialType = 'regular') {
+    const slots = getInitialSlotState(useUserData, potentialType);
+    const decisionLog = [];
+
+    // Get base stats and DPS from cache (initialized in initSimulationCache)
+    const baseStats = simCache.baseStats;
+    const baseDPS = simCache.baseDPS;
+
+    for (let cubeNum = 1; cubeNum <= cubeBudget; cubeNum++) {
+        // Find optimal slot using Monte Carlo expected value
+        // Use smaller sample size for simulation (perf) vs guidance (accuracy)
+        const { slot: targetSlot, marginalGain } = findOptimalSlotToCube(
+            slots,
+            baseStats,
+            baseDPS,
+            30 // Sample size for simulation speed
+        );
+
+        if (!targetSlot) break;
+
+        // Log decision
+        decisionLog.push({
+            cubeNum,
+            slotId: targetSlot.id,
+            slotName: targetSlot.name,
+            marginalGain,
+            rarity: targetSlot.rarity,
+            rollCount: targetSlot.rollCount,
+            dpsBeforeCube: targetSlot.dpsGain
+        });
+
+        // Use cube on optimal slot
+        // simulateCubeOnSlot already updates slot.dpsGain
+        simulateCubeOnSlot(targetSlot, targetSlot.id);
+    }
+
+    return { slots, decisionLog };
 }

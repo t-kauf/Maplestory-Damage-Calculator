@@ -89,6 +89,13 @@ export function switchPotentialType(type) {
         raritySelector.value = cubeSlotData[currentCubeSlot][currentPotentialType].rarity;
     }
 
+    // Update roll count input
+    const rollCountInput = document.getElementById('cube-roll-count');
+    if (rollCountInput) {
+        const cubeSlotData = getCubeSlotData();
+        rollCountInput.value = cubeSlotData[currentCubeSlot][currentPotentialType].rollCount || 0;
+    }
+
     // Update slot button colors based on current potential type
     updateSlotButtonColors();
 
@@ -134,6 +141,12 @@ export function selectCubeSlot(slotId) {
         raritySelector.value = cubeSlotData[currentCubeSlot][currentPotentialType].rarity;
     }
 
+    // Update roll count input
+    const rollCountInput = document.getElementById('cube-roll-count');
+    if (rollCountInput) {
+        rollCountInput.value = cubeSlotData[currentCubeSlot][currentPotentialType].rollCount || 0;
+    }
+
     // Sync Rankings rarity dropdown when slot changes
     const rankingsRaritySelector = document.getElementById('cube-rankings-rarity-selector');
     if (rankingsRaritySelector) {
@@ -173,10 +186,11 @@ export function calculateComparisonOrchestrator() {
     // Display results (use setBAbsoluteGain for ranking comparison)
     displayComparisonResults(results.setAGain, results.setBGain, results.setBAbsoluteGain, results.deltaGain, results.setAStats, results.setBStats);
 
-    // Start loading rankings in the background if not already loaded
+    // Start loading rankings in the background if not already loaded or in progress
     const slotId = currentCubeSlot;
     const rarity = cubeSlotData[currentCubeSlot][currentPotentialType].rarity;
-    if (!rankingsCache[slotId]?.[rarity]) {
+    const key = `${slotId}-${rarity}`;
+    if (!rankingsCache[slotId]?.[rarity] && !rankingsInProgress[key]) {
         loadRankingsInBackground(slotId, rarity, results.setAGain, results.setBAbsoluteGain);
     }
 

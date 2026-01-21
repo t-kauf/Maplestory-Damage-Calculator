@@ -33,6 +33,7 @@ export function displayResults(itemName, stats, uniqueId, isEquipped = false, eq
 
     // Generate passive gains breakdown HTML
     let passiveGainsHTML = '';
+
     if (stats.passiveGainsBreakdown && stats.passiveGainsBreakdown.comparison) {
         const gains = stats.passiveGainsBreakdown.comparison;
 
@@ -55,12 +56,13 @@ export function displayResults(itemName, stats, uniqueId, isEquipped = false, eq
             'finalDamage': 'Final Damage'
         };
 
+
         if (gains.breakdown && gains.breakdown.length > 0) {
             passiveGainsHTML = `
                 <div class="damage-box">
                     <h3 onclick="toggleSubDetails('passive-gains-${uniqueId}')">Passive Skill Gains <span id="passive-gains-${uniqueId}-icon">▼</span></h3>
                     <div id="passive-gains-${uniqueId}" class="collapsible-section">
-                        ${gains.breakdown.map(item => {
+                        ${gains.breakdown.filter(item => item.gain != 0).map(item => {
                             const statLabel = item.statDisplay || statDisplayNames[item.stat] || item.stat;
                             const percentSign = item.isPercent ? '%' : '';
                             const gainSign = item.gain >= 0 ? '+' : '';
@@ -81,7 +83,7 @@ export function displayResults(itemName, stats, uniqueId, isEquipped = false, eq
                 <div class="damage-box">
                     <h3 onclick="toggleSubDetails('complex-passives-${uniqueId}')">Complex Passives (Not in DPS) <span id="complex-passives-${uniqueId}-icon">▼</span></h3>
                     <div id="complex-passives-${uniqueId}" class="collapsible-section">
-                        ${gains.complexPassives.map(item => {
+                        ${gains.complexPassives.filter(item => item.gain != 0).map(item => {
                             // If we have gain data, format it with the stat changes
                             if (item.stat && item.gain !== undefined && item.baseValue !== undefined && item.bonusValue !== undefined) {
                                 const statName = statDisplayNames[item.stat] || item.stat;

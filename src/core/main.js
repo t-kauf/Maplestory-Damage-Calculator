@@ -6,7 +6,9 @@ import {
     getStats,
     getItemStats,
     getSelectedClass,
-    getSelectedJobTier
+    getSelectedJobTier,
+    getCharacterLevel,
+    setCharacterLevel
 } from '@core/state/state.js';
 import { StatCalculationService } from '@core/services/stat-calculation-service.js';
 import { showToast } from '@utils/notifications.js';
@@ -50,6 +52,8 @@ import '@core/features/scrolling/scroll-optimizer.js';
 // Data extraction functions
 // getStats and getItemStats moved to state.js
 export { getStats, getItemStats };
+
+sayHello();
 
 // Main calculation orchestration
 export function calculate() {
@@ -96,7 +100,7 @@ export function calculate() {
         // Build context object for applyItemToStats
         const context = {
             currentClass: getSelectedClass(),
-            characterLevel: parseInt(document.getElementById('character-level')?.value) || 0,
+            characterLevel: getCharacterLevel(),
             jobTier: getSelectedJobTier(),
             baseSkillLevel1st: parseInt(document.getElementById('skill-level-1st-base')?.value) || 0,
             baseSkillLevel2nd: parseInt(document.getElementById('skill-level-2nd-base')?.value) || 0,
@@ -249,7 +253,7 @@ const SKILL_DATA = (() => {
 })();
 
 function populateSkillDetails() {
-    const characterLevel = parseInt(document.getElementById('character-level').value) || 0;
+    const characterLevel = getCharacterLevel();
 
     // Get skill levels for each job tier
     const skillLevel2nd = parseInt(document.getElementById('skill-level-2nd-base')?.value) || 0;
@@ -419,6 +423,12 @@ window.onload = function () {
     populateStageDropdown(); // This sets contentType to 'none' without saving
     enableGlobalNumberInputAutoSelect();
     const loaded = loadFromLocalStorage();
+
+    // Initialize character level state from DOM (in case localStorage was empty)
+    const characterLevelElement = document.getElementById('character-level');
+    if (characterLevelElement) {
+        setCharacterLevel(characterLevelElement.value);
+    }
 
     // Restore content type AFTER loading data (to avoid overwriting during load)
     if (loaded) {

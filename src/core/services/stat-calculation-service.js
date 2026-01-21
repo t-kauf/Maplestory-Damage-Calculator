@@ -4,6 +4,8 @@
 import { calculateDamage } from '@core/calculations/damage-calculations.js';
 import { calculateMainStatPercentGain } from '@core/calculations/stat-calculations.js';
 import { getWeaponAttackBonus, getSelectedClass } from '@core/state/state.js';
+import { calculateJobSkillPassiveGains } from './../features/skills/skill-coefficient.js';
+import { getCharacterLevel } from '../state/state.js';
 
 /**
  * StatCalculationService - A unified service for stat manipulation
@@ -63,8 +65,23 @@ export class StatCalculationService {
      * @returns {StatCalculationService} Returns this for chaining
      */
     addAttack(value, applyWeaponBonus = true) {
+        let finalAttackBonus = 0;
+
+        const result = calculateJobSkillPassiveGains(this.context.selectedClass, getCharacterLevel(),
+            {
+                firstJob: this.stats.firstJob,
+                secondJob: this.stats.secondJob,
+                thirdJob: this.stats.thirdJob,
+                fourthJob: this.stats.fourthJob
+            });
+        var classFinalAttackBonus = result.complexStatChanges['finalAttack'] ?? 0;
+
+        if (classFinalAttackBonus != 0) {
+            finalAttackBonus = (1 + classFinalAttackBonus / 100);
+        }
+
         const effective = applyWeaponBonus
-            ? value * (1 + this.weaponAttackBonus / 100)
+            ? value * (1 + this.weaponAttackBonus / 100) * finalAttackBonus
             : value;
         this.stats.attack += effective;
         return this;
@@ -77,7 +94,13 @@ export class StatCalculationService {
      * @returns {StatCalculationService} Returns this for chaining
      */
     addMainStat(value) {
-        const statDamageIncrease = value / 100;
+        const increaseWithMainstatPct = this.calculateMainStatIncreaseWithPct(value);
+        const statDamageIncrease = increaseWithMainstatPct / 100;
+
+        this.stats.mainStat += increaseWithMainstatPct;
+
+        this.addAttack(increaseWithMainstatPct);
+
         this.stats.statDamage += statDamageIncrease;
         return this;
     }
@@ -88,19 +111,20 @@ export class StatCalculationService {
      * @returns {StatCalculationService} Returns this for chaining
      */
     addMainStatPct(value) {
-        const statDamageGain = calculateMainStatPercentGain(
+        const mainStatGain = calculateMainStatPercentGain(
             value,
             this.context.mainStatPct,
             this.context.primaryMainStat,
             this.context.defense,
             this.context.selectedClass
         );
-        this.stats.statDamage += statDamageGain;
+
+        this.addMainStat(mainStatGain);
+        this.context.mainStatPct += value;
         return this;
     }
 
-    calculateMainStatIncreaseWithPct(value)
-    {
+    calculateMainStatIncreaseWithPct(value) {
         const mainStatPct = this.context.mainStatPct;
         const mainStatWithPctIncrease = value * (1 + mainStatPct / 100);
         return mainStatWithPctIncrease;
@@ -292,6 +316,8 @@ export class StatCalculationService {
     }
 }
 
+
+
 /**
  * Factory function to create a StatCalculationService with common setup
  * @param {Object} baseStats - Base stats
@@ -447,7 +473,7 @@ export class CumulativeStatCalculator {
      */
     _stepMainStatPct(cumulativeIncrease, stepIncrease) {
         const prevCumulativeIncrease = this.seriesState.previousCumulativeIncrease;
-        const statDamageGain = calculateMainStatPercentGain(
+        const mainStatGain = calculateMainStatPercentGain(
             stepIncrease,
             this.seriesState.mainStatPct + prevCumulativeIncrease,
             this.seriesState.primaryMainStat,
@@ -455,8 +481,10 @@ export class CumulativeStatCalculator {
             this.seriesState.selectedClass
         );
 
+        this.addMainStat(mainStatGain);
+
         const modifiedStats = { ...this.seriesState.cumulativeStats };
-        modifiedStats.statDamage = (modifiedStats.statDamage || 0) + statDamageGain;
+        modifiedStats.statDamage = (modifiedStats.statDamage || 0) + (mainStatGain/100);
 
         this.seriesState.cumulativeStats = modifiedStats;
         return calculateDamage(modifiedStats, this.seriesState.monsterType).dps;
