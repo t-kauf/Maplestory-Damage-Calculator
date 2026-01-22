@@ -245,6 +245,17 @@ export function calculateEquivalentValue(
     statConfig: Record<string, EquivalencyStatConfig>,
     rowTargetType: MonsterType
 ): { equivalentValue: number; verifyGain: number; unableToMatch: boolean } {
+    // Capture original base DPS before any modifications
+    const originalService = new StatCalculationService(stats);
+    const originalBaseDPS = rowTargetType === MONSTER_TYPE.BOSS ?
+        originalService.baseBossDPS :
+        originalService.baseNormalDPS;
+
+    // Guard against division by zero
+    if (originalBaseDPS === 0) {
+        return { equivalentValue: 0, verifyGain: 0, unableToMatch: true };
+    }
+
     const statMax = STAT_MAXIMUMS[targetStat];
     let equivalentValue = 0;
     let unableToMatch = false;
@@ -263,11 +274,8 @@ export function calculateEquivalentValue(
         const modifiedStats = statConfig[targetStat].applyToStats(stats, equivalentValue);
         const modifiedService = new StatCalculationService(modifiedStats);
         const newDPS = modifiedService.computeDPS(rowTargetType);
-        const baseDPS = rowTargetType === MONSTER_TYPE.BOSS ?
-            modifiedService.baseBossDPS :
-            modifiedService.baseNormalDPS;
 
-        verifyGain = ((newDPS - baseDPS) / baseDPS) * 100;
+        verifyGain = ((newDPS - originalBaseDPS) / originalBaseDPS) * 100;
 
         if (Math.abs(verifyGain - targetDPSGain) < BINARY_SEARCH.PRECISION) {
             break;
