@@ -14,6 +14,13 @@
  * }
  */
 
+// Type declarations for window functions used by BasePage
+declare global {
+    interface Window {
+        navigateToTab: (pageName: string, tabName: string) => void;
+    }
+}
+
 export abstract class BasePage {
     protected currentTab: string | null = null;
     protected readonly pageId: string;
