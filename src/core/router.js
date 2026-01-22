@@ -1,12 +1,17 @@
 // Hash-based Router
 // Manages navigation between pages using URL hashes
+// Simplified to delegate tab management to page instances
 
 import { switchTab } from '@utils/tabs.js';
 
 let currentPage = 'setup';
 let currentTab = null;
 
-// Page configurations
+// Page registry - maps page names to their instances
+// Pages will register themselves here during initialization
+const pageInstances = {};
+
+// Page configurations (for metadata)
 const pages = {
     'setup': {
         id: 'page-setup',
@@ -24,6 +29,14 @@ const pages = {
         defaultTab: 'stat-tables'
     }
 };
+
+/**
+ * Register a page instance
+ * Called by page modules during initialization
+ */
+export function registerPage(pageName, pageInstance) {
+    pageInstances[pageName] = pageInstance;
+}
 
 // Navigate to a page
 export function navigateTo(pageName) {
@@ -53,10 +66,13 @@ export function navigateTo(pageName) {
     if (!window.location.hash.includes(`${pageName}/`)) {
         const defaultTab = pages[pageName]?.defaultTab;
         if (defaultTab) {
-            // Use requestAnimationFrame for smoother immediate update
-            requestAnimationFrame(() => {
-                restoreTabState(pageName, defaultTab);
-            });
+            // Use page lifecycle to activate default tab
+            const pageInstance = pageInstances[pageName];
+            if (pageInstance) {
+                requestAnimationFrame(() => {
+                    pageInstance.onPageVisible(defaultTab);
+                });
+            }
         }
     }
 }
@@ -186,7 +202,6 @@ export function initializeRouter() {
 function presetActiveStates() {
     const hash = window.location.hash;
     const hashParts = hash.replace('#/', '').split('/');
-    const isMobile = window.innerWidth < 1024;
 
     let pageName = 'setup';
     let tabName = null;
@@ -204,6 +219,20 @@ function presetActiveStates() {
         tabName = hashParts[1] || null;
     }
 
+    // Call page lifecycle hook for pre-render stage
+    const pageInstance = pageInstances[pageName];
+    if (pageInstance && typeof pageInstance.onBeforePageVisible === 'function') {
+        pageInstance.onBeforePageVisible(tabName);
+    } else {
+        // Fallback to old behavior for pages not yet migrated
+        presetActiveStatesLegacy(pageName, tabName);
+    }
+}
+
+// Legacy presetActiveStates for pages not yet migrated to BasePage
+function presetActiveStatesLegacy(pageName, tabName) {
+    const isMobile = window.innerWidth < 1024;
+
     // Set active nav item
     const navItem = document.querySelector(`[data-page="${pageName}"]`);
     if (navItem) {
@@ -213,16 +242,6 @@ function presetActiveStates() {
             navItem.classList.add('expanded');
         }
     }
-
-    // Set active nav item
-    //const tabItem = document.querySelector(`[data-tab="${tabName}"]`);
-    //if (tabName) {
-    //    tabItem.classList.add('active');
-    //    // Only add expanded class on mobile
-    //    if (isMobile) {
-    //        tabItem.classList.add('expanded');
-    //    }
-    //}
 
     // Expand the correct submenu (only on mobile, desktop shows all)
     if (isMobile) {
@@ -269,14 +288,24 @@ function handleHashChange() {
         tabName = hashParts[1] || null;
     }
 
-    // Update without triggering another hash change
+    // Update state
     currentPage = pageName;
     currentTab = tabName;
+
+    // Show page container
     showPage(pageName);
+
+    // Update sidebar active state
     updateSidebarActiveState(pageName);
 
-    // Restore tab state
-    restoreTabState(pageName, tabName);
+    // Call page lifecycle hook for post-render stage
+    const pageInstance = pageInstances[pageName];
+    if (pageInstance && typeof pageInstance.onPageVisible === 'function') {
+        pageInstance.onPageVisible(tabName);
+    } else {
+        // Fallback to old behavior for pages not yet migrated
+        restoreTabState(pageName, tabName);
+    }
 }
 
 // Reset cube tabs to default (Comparison) - flattened 4-tab structure
@@ -416,7 +445,7 @@ export function navigateToTab(pageName, tabName) {
         window.location.hash = targetHash;
     }
 
-    // First navigate to the page
+    // First navigate to the page if different
     if (currentPage !== pageName) {
         currentPage = pageName;
         showPage(pageName);
@@ -427,27 +456,30 @@ export function navigateToTab(pageName, tabName) {
 
     // Use requestAnimationFrame for immediate, smooth transition
     requestAnimationFrame(() => {
-        // Find the appropriate tab group and call switchTab directly
-        let groupName;
-        if (pageName === 'setup') {
-            groupName = 'setup';
-        } else if (pageName === 'optimization') {
-            groupName = 'analysis';
-        } else if (pageName === 'predictions') {
-            groupName = 'predictions';
-        }
+        // Call page lifecycle hook if page instance exists
+        const pageInstance = pageInstances[pageName];
+        if (pageInstance && typeof pageInstance.onPageVisible === 'function') {
+            pageInstance.onPageVisible(tabName);
+        } else {
+            // Fallback to old behavior for pages not yet migrated
+            let groupName;
+            if (pageName === 'setup') {
+                groupName = 'setup';
+            } else if (pageName === 'optimization') {
+                groupName = 'analysis';
+            } else if (pageName === 'predictions') {
+                groupName = 'predictions';
+            }
 
-        // Only call switchTab directly if hash was already set (no hashchange event fired)
-        // If hash changed, handleHashChange already called restoreTabState which handled the visual switching
-        if (hashAlreadySet) {
-            switchTab(groupName, tabName);
+            // Only call switchTab directly if hash was already set (no hashchange event fired)
+            if (hashAlreadySet) {
+                switchTab(groupName, tabName);
+            }
+            updateSubmenuActiveStates(pageName, tabName);
         }
 
         // Close mobile menu if open
         closeMobileMenu();
-
-        // Update submenu item active states
-        updateSubmenuActiveStates(pageName, tabName);
     });
 }
 

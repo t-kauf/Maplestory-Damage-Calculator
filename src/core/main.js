@@ -1,7 +1,7 @@
 // Main Entry Point - ES6 Module
 // This is the single entry point that orchestrates the entire application
 
-import { initializeRouter } from '@core/router.js';
+import { initializeRouter, registerPage } from '@core/router.js';
 import {
     getStats,
     getItemStats,
@@ -22,7 +22,7 @@ import { getCurrentSlot } from '@ui/comparison/slot-comparison.js';
 import { displayResults } from '@ui/results-display.js';
 import { refreshPresetsUI } from '@ui/companions-presets-ui.js';
 
-import { initializeLoadoutPage } from '@page/loadout-page.js';
+import { loadoutPage } from '@page/loadout-page.js';
 import { initializeStatHubPage } from '@page/stat-hub-page.js';
 import '@utils/tabs.js';
 import '@utils/stat-chart.js';
@@ -327,16 +327,22 @@ export function showSkillDescription(skillKey, category, jobTier) {
 
 // Initialize application
 window.onload = async function () {
+    // Register page instances with router
+    registerPage('setup', loadoutPage);
+    // Register other pages here as they migrate to BasePage pattern
+    // registerPage('optimization', optimizationPage);
+    // registerPage('predictions', predictionsPage);
+
     initializeRouter(); // Initialize routing system first
     loadTheme();
 
-
-    await initializeLoadoutPage();
-    await initializeStatHubPage();
+    // Loadout page initialization now happens via lifecycle hooks
+    // when the page becomes visible for the first time
+   // await initializeStatHubPage();
 
 //   initializeHeroPowerPresets();
 //   enableGlobalNumberInputAutoSelect();
-// 
+//
 // const loaded = loadFromLocalStorage();
 //   // Initialize character level state from DOM (in case localStorage was empty)
 //   const characterLevelElement = document.getElementById('character-level');
