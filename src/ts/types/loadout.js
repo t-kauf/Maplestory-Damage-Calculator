@@ -1,4 +1,5 @@
 import { CONTENT_TYPE, JOB_TIER, MASTERY_TYPE, DEFAULT_BASE_STATS } from "./constants.js";
+import { DEFAULT_COMPANION_STATE } from "./page/companions/companions.types.js";
 const DEFAULT_LOADOUT_DATA = {
   baseStats: DEFAULT_BASE_STATS,
   character: {
@@ -19,7 +20,8 @@ const DEFAULT_LOADOUT_DATA = {
   weaponAttackBonus: {
     totalAttack: 0,
     equippedAttack: 0
-  }
+  },
+  companions: DEFAULT_COMPANION_STATE
 };
 export {
   DEFAULT_LOADOUT_DATA

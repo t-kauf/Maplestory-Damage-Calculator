@@ -4,7 +4,7 @@
  * Handles all HTML generation and event handling for the companions tab
  */
 
-import { getCompanionEffects, getMaxCompanionLevel } from '@core/companions/index.js';
+import { getCompanionEffects, getMaxCompanionLevel } from '@ts/services/index.js';
 import { loadoutStore } from '@ts/store/loadout.store.js';
 import { addStat, subtractStat } from '@core/services/stat-inputs-service.js';
 import { calculateBothDpsDifferences, presetHasAnyCompanion, generateOptimalPreset } from './companion.js';
@@ -221,7 +221,7 @@ function renderIconGrid(): string {
  */
 function showDetailPanel(
     companionKey: CompanionKey,
-    className: ClassName,
+    className: CompanionClass,
     rarity: CompanionRarity,
     borderColor: string,
     color: string
@@ -231,7 +231,6 @@ function showDetailPanel(
     if (!panel || !content) return;
 
     const companionData = loadoutStore.getCompanion(companionKey);
-    if (!companionData) return;
 
     const displayName = CLASS_DISPLAY_NAMES[className];
     const isUnlocked = companionData.unlocked;
@@ -797,7 +796,7 @@ function renderSlot(
     // For main slots: use webp with preset-specific class
     // For sub slots: use png with preset-specific sub class
     const isMain = slotType === 'main';
-    const iconName = isMain ? getClassWebpName(className as ClassName) : getClassPngName(className as ClassName);
+    const iconName = isMain ? getClassWebpName(className as CompanionClass) : getClassPngName(className as CompanionClass);
     const iconExt = isMain ? 'webp' : 'png';
     const iconClass = isMain
         ? `comp-image comp-preset-${className}`
@@ -921,7 +920,7 @@ function renderOptimalMainSlot(
     // Filled slot
     const [className, rarity] = companionKey.split('-');
     const config = RARITY_CONFIG[rarity as CompanionRarity] || RARITY_CONFIG['Normal'];
-    const iconName = getClassWebpName(className as ClassName);
+    const iconName = getClassWebpName(className as CompanionClass);
     const iconClass = `comp-image comp-preset-${className}`;
 
     return `
@@ -1012,7 +1011,7 @@ function renderReadOnlySlot(companionKey: CompanionKey | null, size: number): st
     const config = RARITY_CONFIG[rarity as CompanionRarity] || RARITY_CONFIG['Normal'];
 
     // Use PNG icons for sub slots in optimal presets
-    const iconName = getClassPngName(className as ClassName);
+    const iconName = getClassPngName(className as CompanionClass);
     const iconClass = `comp-image comp-preset-sub-${className}`;
 
     return `
@@ -1060,7 +1059,7 @@ function attachCompanionIconListeners(): void {
         icon.addEventListener('click', (e) => {
             const target = icon as HTMLElement;
             const companionKey = target.dataset.companion as CompanionKey;
-            const className = target.dataset.class as ClassName;
+            const className = target.dataset.class as CompanionClass;
             const rarity = target.dataset.rarity as CompanionRarity;
             const borderColor = target.dataset.configBorder || '';
             const color = target.dataset.configColor || '';
@@ -1076,11 +1075,14 @@ function attachCompanionIconListeners(): void {
                     setTimeout(() => {
                         target.style.animation = '';
                     }, 500);
-                }
 
-                // Assign this companion to the selected slot (will check unlock status)
-                assignCompanionToSlot(companionKey);
-                return;
+                    // For locked companions, show detail panel so user can unlock them
+                    // Don't return early - fall through to detail panel display below
+                } else {
+                    // Unlocked companion - assign to slot and return
+                    assignCompanionToSlot(companionKey);
+                    return;
+                }
             }
 
             // Track current companion
@@ -1259,7 +1261,7 @@ function formatStat(stat: string): string {
         'critrate': 'Critical Rate',
         'attackspeed': 'Attack Speed',
         'attack speed': 'Attack Speed',
-        'attackpowerincc': 'Status Effect Damage',
+        'damageInCc': 'Status Effect Damage',
         'bossdamage': 'Boss Monster Damage',
         'mindamage': 'Min Damage Multiplier',
         'mainstat': 'Main Stat',
@@ -1274,7 +1276,7 @@ function formatStat(stat: string): string {
  */
 function setCurrentCompanion(
     companionKey: CompanionKey,
-    className: ClassName,
+    className: CompanionClass,
     rarity: CompanionRarity,
     borderColor: string,
     color: string
@@ -1286,7 +1288,7 @@ function setCurrentCompanion(
  * Get png icon representation for class
  */
 function getClassPngName(className: CompanionClass): string {
-    const names: Record<ClassName, string> = {
+    const names: Record<CompanionClass, string> = {
         'Hero': 'hero',
         'DarkKnight': 'dk',
         'ArchMageIL': 'mage-il',
@@ -1303,7 +1305,7 @@ function getClassPngName(className: CompanionClass): string {
  * Get webp representation for class
  */
 function getClassWebpName(className: CompanionClass): string {
-    const names: Record<ClassName, string> = {
+    const names: Record<CompanionClass, string> = {
         'Hero': 'hero',
         'DarkKnight': 'dk',
         'ArchMageIL': 'il',
@@ -1590,7 +1592,7 @@ function assignCompanionToSlot(companionKey: CompanionKey): void {
 
     // For optimal presets, just set the locked main
     if (isOptimalPreset && slotInfo.type === 'main') {
-        loadoutStore.setLockedMainCompanion(slotInfo.presetId, companionKey);
+        loadoutStore.setLockedMainCompanion(slotInfo.presetId as 'optimal-boss' | 'optimal-normal', companionKey);
         clearSelectionFeedback();
         clearSelectedSlot();
         renderPresetsPanel();

@@ -220,15 +220,35 @@ export class LoadoutStore {
         }
 
         // Migrate companions data
-        const companions = localStorage.getItem('companions');
-        const presets = localStorage.getItem('presets');
+        // First try from separate localStorage keys
+        let companions = localStorage.getItem('companions');
+        let presets = localStorage.getItem('presets');
         const equippedPresetId = localStorage.getItem('equippedPresetId');
         const showPresetDpsComparison = localStorage.getItem('showPresetDpsComparison');
         const lockedMainCompanion = localStorage.getItem('lockedMainCompanion');
 
+        // If companions not found in separate key, check legacy damageCalculatorData
+        if (!companions && legacy && (legacy as any).companions) {
+            companions = JSON.stringify((legacy as any).companions);
+        }
+
         if (companions) {
             try {
-                this.data.companions.companions = JSON.parse(companions);
+                const companionsData = JSON.parse(companions);
+                // Migrate each companion, removing 'equipped' field if present
+                const migratedCompanions: Partial<Record<CompanionKey, CompanionData>> = {};
+                Object.entries(companionsData).forEach(([key, value]: [string, any]) => {
+                    if (value && typeof value === 'object') {
+                        migratedCompanions[key as CompanionKey] = {
+                            unlocked: value.unlocked ?? false,
+                            level: value.level ?? 1
+                            // 'equipped' field is no longer needed
+                        };
+                    }
+                });
+                // Type assertion: migrated data is valid as Record<CompanionKey, CompanionData>
+                // since the validateAndFillDefaults() method will fill in missing keys
+                this.data.companions.companions = migratedCompanions as Record<CompanionKey, CompanionData>;
             } catch (e) {
                 console.error('Failed to parse companions data', e);
             }
@@ -389,7 +409,7 @@ export class LoadoutStore {
 
         // Ensure companions.companions exists
         if (!this.data.companions.companions) {
-            this.data.companions.companions = {};
+            this.data.companions.companions = {} as Record<CompanionKey, CompanionData>;
         }
 
         // Ensure companions.presets exists and has all presets
@@ -561,12 +581,14 @@ export class LoadoutStore {
     /**
      * Get a single companion's data
      * @param companionKey - Companion key (e.g., 'Hero-Legendary')
-     * @returns Companion data or null if not found
+     * @returns Companion data (returns default locked state if not found)
      */
-    getCompanion(companionKey: CompanionKey): CompanionData | null {
-        return this.data.companions.companions[companionKey]
-            ? { ...this.data.companions.companions[companionKey] }
-            : null;
+    getCompanion(companionKey: CompanionKey): CompanionData {
+        if (!this.data.companions.companions[companionKey]) {
+            // Return default locked state for uninitialized companions
+            return { unlocked: false, level: 1 };
+        }
+        return { ...this.data.companions.companions[companionKey] };
     }
 
     /**

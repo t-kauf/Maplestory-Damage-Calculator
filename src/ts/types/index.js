@@ -26,6 +26,7 @@ import {
 export * from "./page/base-stats/base-stats.types.js";
 export * from "./page/weapons/weapons.types.js";
 export * from "./page/weapons/weapons.constants.js";
+export * from "./page/companions/companions.types.js";
 export {
   BINARY_SEARCH,
   CLASS,

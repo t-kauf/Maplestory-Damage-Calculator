@@ -4,7 +4,7 @@
  * No DOM dependencies - all functions are pure and testable
  */
 
-import { StatCalculationService } from '@core/services/stat-calculation-service.js';
+import { StatCalculationService } from '@ts/services/stat-calculation-service.js';
 import type {
     CompanionEffects,
     CompanionKey,
@@ -16,6 +16,7 @@ import type {
     CompanionData
 } from '@ts/types/page/companions/companions.types';
 import type { MonsterType } from '@ts/types';
+import { loadoutStore } from '@ts/store/loadout.store';
 
 // ============================================================================
 // HELPER FUNCTIONS
@@ -111,7 +112,7 @@ export function calculateDpsDifference(
     monsterType: MonsterType = 'boss'
 ): DpsComparisonResult {
     // Get base stats (which already include current effects)
-    const baseStats = (window as any).getStats('base');
+    const baseStats = loadoutStore.getBaseStats();
 
     // Calculate stats without current effects (clean baseline)
     // Start from baseStats and remove current effects
@@ -211,7 +212,7 @@ export function calculatePresetStatValue(
         if (!companionData.unlocked) return;
 
         const level = companionData.level || 1;
-        const effects = getCompanionEffects(className, rarity, level);
+        const effects = getCompanionEffects(className as CompanionClass, rarity, level);
 
         if (effects && effects.equipEffect && effects.equipEffect[targetStat]) {
             total += effects.equipEffect[targetStat];
@@ -238,7 +239,7 @@ export function generateOptimalPreset(
     lockedMainCompanion: CompanionKey | null = null
 ): CompanionPreset {
     // Exclude classes that will never be optimal: DarkKnight, Marksman
-    const classes = ['Hero', 'ArchMageIL', 'ArchMageFP', 'BowMaster', 'NightLord', 'Shadower'];
+    const classes: CompanionClass[] = ['Hero', 'ArchMageIL', 'ArchMageFP', 'BowMaster', 'NightLord', 'Shadower'];
     // Only consider Legendary, Unique, Epic (Normal and Rare are never optimal)
     const rarities = ['Legendary', 'Unique', 'Epic'];
 
@@ -279,7 +280,7 @@ export function generateOptimalPreset(
     }
 
     // Get base stats for DPS calculation
-    const baseStats = (window as any).getStats('base');
+    const baseStats = loadoutStore.getBaseStats();
     let bestDps = 0;
     let bestPreset: CompanionPreset = { main: null, subs: [null, null, null, null, null, null] };
 

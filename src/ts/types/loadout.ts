@@ -4,7 +4,8 @@
  */
 
 import { CONTENT_TYPE, JOB_TIER, MASTERY_TYPE, DEFAULT_BASE_STATS, type ContentType, type JobTier, type MasteryTypeValue, type StatKey as StatKeyFromConstants, type BaseStats as BaseStatsFromConstants } from './constants';
-import type { CompanionState, DEFAULT_COMPANION_STATE } from './page/companions/companions.types';
+import type { CompanionState } from './page/companions/companions.types';
+import { DEFAULT_COMPANION_STATE } from './page/companions/companions.types';
 
 // Re-export for backward compatibility
 export type StatKey = StatKeyFromConstants;

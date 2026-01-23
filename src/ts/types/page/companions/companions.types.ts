@@ -9,7 +9,17 @@ import type { MonsterType } from '@ts/types';
 // CORE TYPES
 // ============================================================================
 
-// Companion-specific class names (PascalCase, different from kebab-case ClassName)
+/**
+ * Companion-specific class names (PascalCase)
+ *
+ * NOTE: This is different from the global ClassName type (kebab-case).
+ *
+ * - ClassName: 'hero', 'dark-knight' (player classes, used throughout app)
+ * - CompanionClass: 'Hero', 'DarkKnight' (companion system only)
+ *
+ * This separation is necessary because the companion data uses PascalCase,
+ * while the rest of the application uses kebab-case for class names.
+ */
 export type CompanionClass =
     | 'Hero' | 'DarkKnight' | 'ArchMageIL' | 'ArchMageFP'
     | 'BowMaster' | 'Marksman' | 'NightLord' | 'Shadower';
@@ -189,7 +199,7 @@ export const EMPTY_PRESET: CompanionPreset = {
 
 // Default companion state
 export const DEFAULT_COMPANION_STATE: CompanionState = {
-    companions: {},
+    companions: {} as Record<CompanionKey, CompanionData>,
     presets: {
         'preset1': { ...EMPTY_PRESET },
         'preset2': { ...EMPTY_PRESET },
