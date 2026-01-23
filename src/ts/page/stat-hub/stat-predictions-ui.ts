@@ -199,3 +199,73 @@ export function updateStatPredictions(): void {
 
     container.innerHTML = generateStatPredictionsHTML();
 }
+
+// Column sorting for stat predictions tables
+window.sortStatPredictions = function(tableType: string, colIndex: number, th: HTMLElement): void {
+    const tableId = `stat-pred-table-${tableType}`;
+    const table = document.getElementById(tableId);
+    if (!table) return;
+
+    const tbody = table.querySelector('tbody');
+    if (!tbody) return;
+
+    // Get all data rows (exclude chart rows)
+    const rows = Array.from(tbody.querySelectorAll('tr')).filter(row => !row.classList.contains('chart-row'));
+
+    // Parse numeric values from the clicked column and create row data
+    const rowData = rows.map(row => {
+        const cell = row.querySelector(`td:nth-child(${colIndex + 1})`);
+        if (!cell) return { row, value: -Infinity };
+
+        const span = cell.querySelector('span');
+        const text = span ? span.textContent : cell.textContent;
+        // Extract numeric value (handles "+1.23%" format)
+        const value = parseFloat(text.replace(/[+%]/g, ''));
+        return { row, value };
+    });
+
+    // Determine sort direction
+    const currentSort = th.dataset.sort || 'none';
+    let newDirection = 'asc';
+
+    if (currentSort === 'asc') {
+        newDirection = 'desc';
+    } else if (currentSort === 'desc') {
+        newDirection = 'asc'; // Toggle back to asc
+    }
+
+    // Sort rows based on values
+    rowData.sort((a, b) => {
+        if (newDirection === 'asc') {
+            return a.value - b.value;
+        } else {
+            return b.value - a.value;
+        }
+    });
+
+    // Reorder rows in DOM (keeping chart rows with their data rows)
+    rowData.forEach((item, index) => {
+        const dataRow = item.row;
+        const chartRow = dataRow.nextElementSibling;
+        tbody.appendChild(dataRow);
+        if (chartRow && chartRow.classList.contains('chart-row')) {
+            tbody.appendChild(chartRow);
+        }
+    });
+
+    // Update sort indicators
+    const tableHeaders = table.querySelectorAll('th .sort-indicator');
+    tableHeaders.forEach((indicator: HTMLElement) => {
+        indicator.textContent = '⇅';
+        indicator.style.opacity = '0.3';
+    });
+
+    const clickedIndicator: HTMLElement = th.querySelector('.sort-indicator');
+    if (clickedIndicator) {
+        clickedIndicator.textContent = newDirection === 'asc' ? '▲' : '▼';
+        clickedIndicator.style.opacity = '1';
+    }
+
+    // Store sort state
+    th.dataset.sort = newDirection;
+};

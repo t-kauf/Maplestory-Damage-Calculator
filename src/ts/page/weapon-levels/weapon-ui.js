@@ -160,6 +160,7 @@ function loadWeaponsUI() {
   });
   updateWeaponBonuses(false);
   updateWeaponUpgradeColors();
+  updateEquippedWeaponIndicator();
 }
 function attachWeaponEventListeners() {
   initializeWeaponMaxLevels();

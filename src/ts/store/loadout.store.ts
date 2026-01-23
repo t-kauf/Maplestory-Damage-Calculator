@@ -18,6 +18,7 @@ import type {
 } from '@ts/types/loadout';
 import { DEFAULT_LOADOUT_DATA } from '@ts/types/loadout';
 import { CONTENT_TYPE, JOB_TIER, MASTERY_TYPE, DEFAULT_BASE_STATS, STAT, type ContentType, type JobTier, type MasteryTypeValue, type StatKey } from '@ts/types/constants';
+import type { CompanionKey, CompanionPresetId, CompanionPreset, CompanionData, CompanionState } from '@ts/types/page/companions/companions.types';
 
 export class LoadoutStore {
     private data: LoadoutData;
@@ -218,6 +219,45 @@ export class LoadoutStore {
             this.data.character.jobTier = selectedJobTier as JobTier;
         }
 
+        // Migrate companions data
+        const companions = localStorage.getItem('companions');
+        const presets = localStorage.getItem('presets');
+        const equippedPresetId = localStorage.getItem('equippedPresetId');
+        const showPresetDpsComparison = localStorage.getItem('showPresetDpsComparison');
+        const lockedMainCompanion = localStorage.getItem('lockedMainCompanion');
+
+        if (companions) {
+            try {
+                this.data.companions.companions = JSON.parse(companions);
+            } catch (e) {
+                console.error('Failed to parse companions data', e);
+            }
+        }
+
+        if (presets) {
+            try {
+                this.data.companions.presets = JSON.parse(presets);
+            } catch (e) {
+                console.error('Failed to parse presets data', e);
+            }
+        }
+
+        if (equippedPresetId) {
+            this.data.companions.equippedPresetId = equippedPresetId as CompanionPresetId;
+        }
+
+        if (showPresetDpsComparison) {
+            this.data.companions.showPresetDpsComparison = showPresetDpsComparison === 'true';
+        }
+
+        if (lockedMainCompanion) {
+            try {
+                this.data.companions.lockedMainCompanion = JSON.parse(lockedMainCompanion);
+            } catch (e) {
+                console.error('Failed to parse lockedMainCompanion data', e);
+            }
+        }
+
         // Note: migrateStatKeys() will be called in validateAndFillDefaults() after this method
         console.log('LoadoutStore: Migration complete, saving to new format...');
         this.saveDualWrite();
@@ -341,6 +381,56 @@ export class LoadoutStore {
         if (typeof this.data.weaponAttackBonus.equippedAttack !== 'number') {
             this.data.weaponAttackBonus.equippedAttack = defaults.weaponAttackBonus.equippedAttack;
         }
+
+        // Ensure companions exists
+        if (!this.data.companions) {
+            this.data.companions = { ...defaults.companions };
+        }
+
+        // Ensure companions.companions exists
+        if (!this.data.companions.companions) {
+            this.data.companions.companions = {};
+        }
+
+        // Ensure companions.presets exists and has all presets
+        if (!this.data.companions.presets) {
+            this.data.companions.presets = { ...defaults.companions.presets };
+        }
+
+        // Validate each preset has correct structure
+        const presetIds: CompanionPresetId[] = [
+            'preset1', 'preset2', 'preset3', 'preset4', 'preset5',
+            'optimal-boss', 'optimal-normal'
+        ];
+        presetIds.forEach(presetId => {
+            const preset = this.data.companions.presets[presetId];
+            if (!preset) {
+                this.data.companions.presets[presetId] = { ...defaults.companions.presets[presetId] };
+            } else {
+                // Ensure preset has main and subs
+                if (!preset.main) {
+                    preset.main = null;
+                }
+                if (!preset.subs || preset.subs.length !== 6) {
+                    preset.subs = [null, null, null, null, null, null];
+                }
+            }
+        });
+
+        // Ensure companions.equippedPresetId is valid
+        if (!this.data.companions.equippedPresetId || !presetIds.includes(this.data.companions.equippedPresetId)) {
+            this.data.companions.equippedPresetId = defaults.companions.equippedPresetId;
+        }
+
+        // Ensure companions.showPresetDpsComparison is boolean
+        if (typeof this.data.companions.showPresetDpsComparison !== 'boolean') {
+            this.data.companions.showPresetDpsComparison = defaults.companions.showPresetDpsComparison;
+        }
+
+        // Ensure companions.lockedMainCompanion exists
+        if (!this.data.companions.lockedMainCompanion) {
+            this.data.companions.lockedMainCompanion = { ...defaults.companions.lockedMainCompanion };
+        }
     }
 
     // ========================================================================
@@ -454,6 +544,71 @@ export class LoadoutStore {
      */
     getAllData(): LoadoutData {
         return JSON.parse(JSON.stringify(this.data));
+    }
+
+    // ========================================================================
+    // COMPANION GETTERS
+    // ========================================================================
+
+    /**
+     * Get all companion state
+     * @returns Complete companion state
+     */
+    getCompanions(): CompanionState {
+        return { ...this.data.companions };
+    }
+
+    /**
+     * Get a single companion's data
+     * @param companionKey - Companion key (e.g., 'Hero-Legendary')
+     * @returns Companion data or null if not found
+     */
+    getCompanion(companionKey: CompanionKey): CompanionData | null {
+        return this.data.companions.companions[companionKey]
+            ? { ...this.data.companions.companions[companionKey] }
+            : null;
+    }
+
+    /**
+     * Get all presets
+     * @returns All presets
+     */
+    getPresets(): Record<CompanionPresetId, CompanionPreset> {
+        return JSON.parse(JSON.stringify(this.data.companions.presets));
+    }
+
+    /**
+     * Get a single preset
+     * @param presetId - Preset ID
+     * @returns Preset data
+     */
+    getPreset(presetId: CompanionPresetId): CompanionPreset {
+        return JSON.parse(JSON.stringify(this.data.companions.presets[presetId]));
+    }
+
+    /**
+     * Get equipped preset ID
+     * @returns Currently equipped preset ID
+     */
+    getEquippedPresetId(): CompanionPresetId {
+        return this.data.companions.equippedPresetId;
+    }
+
+    /**
+     * Get show preset DPS comparison setting
+     * @returns Whether to show DPS comparison
+     */
+    getShowPresetDpsComparison(): boolean {
+        return this.data.companions.showPresetDpsComparison;
+    }
+
+    /**
+     * Get locked main companion for optimal presets
+     * @param optimalType - 'optimal-boss' or 'optimal-normal'
+     * @returns Locked companion key or null
+     */
+    getLockedMainCompanion(optimalType: 'optimal-boss' | 'optimal-normal'): CompanionKey | null {
+        return this.data.companions.lockedMainCompanion[optimalType];
     }
 
     // ========================================================================
@@ -597,6 +752,95 @@ export class LoadoutStore {
     }
 
     // ========================================================================
+    // COMPANION SETTERS
+    // ========================================================================
+
+    /**
+     * Update companion data
+     * @param companionKey - Companion key
+     * @param data - Partial companion data to update
+     */
+    updateCompanion(companionKey: CompanionKey, data: Partial<CompanionData>): void {
+        if (!this.data.companions.companions[companionKey]) {
+            this.data.companions.companions[companionKey] = { unlocked: false, level: 1 };
+        }
+        this.data.companions.companions[companionKey] = {
+            ...this.data.companions.companions[companionKey],
+            ...data
+        };
+        this.saveDualWrite();
+    }
+
+    /**
+     * Set a preset slot
+     * @param presetId - Preset ID
+     * @param slotType - 'main' or 'sub'
+     * @param slotIndex - Slot index (0 for main, 0-5 for subs)
+     * @param companionKey - Companion key or null to clear
+     */
+    setPresetSlot(
+        presetId: CompanionPresetId,
+        slotType: 'main' | 'sub',
+        slotIndex: number,
+        companionKey: CompanionKey | null
+    ): void {
+        const preset = this.data.companions.presets[presetId];
+        if (!preset) return;
+
+        if (slotType === 'main') {
+            preset.main = companionKey;
+        } else {
+            preset.subs[slotIndex] = companionKey;
+        }
+        this.saveDualWrite();
+    }
+
+    /**
+     * Clear a preset slot
+     * @param presetId - Preset ID
+     * @param slotType - 'main' or 'sub'
+     * @param slotIndex - Slot index (0 for main, 0-5 for subs)
+     */
+    clearPresetSlot(
+        presetId: CompanionPresetId,
+        slotType: 'main' | 'sub',
+        slotIndex: number
+    ): void {
+        this.setPresetSlot(presetId, slotType, slotIndex, null);
+    }
+
+    /**
+     * Set equipped preset ID
+     * @param presetId - Preset ID to equip
+     */
+    setEquippedPresetId(presetId: CompanionPresetId): void {
+        this.data.companions.equippedPresetId = presetId;
+        this.saveDualWrite();
+    }
+
+    /**
+     * Set show preset DPS comparison
+     * @param show - Whether to show DPS comparison
+     */
+    setShowPresetDpsComparison(show: boolean): void {
+        this.data.companions.showPresetDpsComparison = show;
+        this.saveDualWrite();
+    }
+
+    /**
+     * Set locked main companion for optimal presets
+     * @param optimalType - 'optimal-boss' or 'optimal-normal'
+     * @param companionKey - Companion key or null to clear
+     */
+    setLockedMainCompanion(
+        optimalType: 'optimal-boss' | 'optimal-normal',
+        companionKey: CompanionKey | null
+    ): void {
+        this.data.companions.lockedMainCompanion[optimalType] = companionKey;
+        this.saveDualWrite();
+    }
+
+    // ========================================================================
     // PERSISTENCE - Dual-write (new + legacy)
     // ========================================================================
 
@@ -616,6 +860,13 @@ export class LoadoutStore {
             localStorage.setItem('selectedClass', this.data.character.class);
         }
         localStorage.setItem('selectedJobTier', this.data.character.jobTier);
+
+        // 4. Dual-write companions data (legacy compatibility)
+        localStorage.setItem('companions', JSON.stringify(this.data.companions.companions));
+        localStorage.setItem('presets', JSON.stringify(this.data.companions.presets));
+        localStorage.setItem('equippedPresetId', this.data.companions.equippedPresetId);
+        localStorage.setItem('showPresetDpsComparison', String(this.data.companions.showPresetDpsComparison));
+        localStorage.setItem('lockedMainCompanion', JSON.stringify(this.data.companions.lockedMainCompanion));
     }
 
     /**

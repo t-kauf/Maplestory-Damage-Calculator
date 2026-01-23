@@ -122,8 +122,8 @@ export const EFFICIENCY_THRESHOLD = {
 
 export const BINARY_SEARCH = {
     DEFAULT_MAX: 1000000,
-    MAX_ITERATIONS: 100,
-    PRECISION: 0.01
+    MAX_ITERATIONS: 10000,
+    PRECISION: 0.0001
 } as const;
 
 // ============================================================================

@@ -121,6 +121,55 @@ function updateStatPredictions() {
   }
   container.innerHTML = generateStatPredictionsHTML();
 }
+window.sortStatPredictions = function(tableType, colIndex, th) {
+  const tableId = `stat-pred-table-${tableType}`;
+  const table = document.getElementById(tableId);
+  if (!table) return;
+  const tbody = table.querySelector("tbody");
+  if (!tbody) return;
+  const rows = Array.from(tbody.querySelectorAll("tr")).filter((row) => !row.classList.contains("chart-row"));
+  const rowData = rows.map((row) => {
+    const cell = row.querySelector(`td:nth-child(${colIndex + 1})`);
+    if (!cell) return { row, value: -Infinity };
+    const span = cell.querySelector("span");
+    const text = span ? span.textContent : cell.textContent;
+    const value = parseFloat(text.replace(/[+%]/g, ""));
+    return { row, value };
+  });
+  const currentSort = th.dataset.sort || "none";
+  let newDirection = "asc";
+  if (currentSort === "asc") {
+    newDirection = "desc";
+  } else if (currentSort === "desc") {
+    newDirection = "asc";
+  }
+  rowData.sort((a, b) => {
+    if (newDirection === "asc") {
+      return a.value - b.value;
+    } else {
+      return b.value - a.value;
+    }
+  });
+  rowData.forEach((item, index) => {
+    const dataRow = item.row;
+    const chartRow = dataRow.nextElementSibling;
+    tbody.appendChild(dataRow);
+    if (chartRow && chartRow.classList.contains("chart-row")) {
+      tbody.appendChild(chartRow);
+    }
+  });
+  const tableHeaders = table.querySelectorAll("th .sort-indicator");
+  tableHeaders.forEach((indicator) => {
+    indicator.textContent = "\u21C5";
+    indicator.style.opacity = "0.3";
+  });
+  const clickedIndicator = th.querySelector(".sort-indicator");
+  if (clickedIndicator) {
+    clickedIndicator.textContent = newDirection === "asc" ? "\u25B2" : "\u25BC";
+    clickedIndicator.style.opacity = "1";
+  }
+  th.dataset.sort = newDirection;
+};
 export {
   generateStatPredictionsHTML,
   updateStatPredictions

@@ -219,6 +219,7 @@ export function loadWeaponsUI(): void {
 
     updateWeaponBonuses(false);
     updateWeaponUpgradeColors();
+    updateEquippedWeaponIndicator();
 }
 
 /**

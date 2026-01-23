@@ -29,7 +29,7 @@ function createStatConfig(getValueFn) {
         service.addAttack(value);
         return service.getStats();
       },
-      formatValue: (val) => val.toLocaleString()
+      formatValue: (val) => val.toFixed(1)
     },
     "mainStat": {
       label: "Main Stat",
@@ -39,7 +39,7 @@ function createStatConfig(getValueFn) {
         service.addMainStat(value);
         return service.getStats();
       },
-      formatValue: (val) => val.toLocaleString()
+      formatValue: (val) => val.toFixed(1)
     },
     "mainStatPct": {
       label: "Main Stat %",
@@ -49,7 +49,7 @@ function createStatConfig(getValueFn) {
         service.addMainStatPct(value);
         return service.getStats();
       },
-      formatValue: (val) => `${val.toFixed(2)}%`
+      formatValue: (val) => `${val.toFixed(1)}%`
     },
     "skillCoeff": {
       label: "Skill Coefficient",
@@ -59,7 +59,7 @@ function createStatConfig(getValueFn) {
         service.addPercentageStat(STAT.SKILL_COEFFICIENT.id, value);
         return service.getStats();
       },
-      formatValue: (val) => `${val.toFixed(2)}%`
+      formatValue: (val) => `${val.toFixed(1)}%`
     },
     "skillMastery": {
       label: "Skill Mastery",
@@ -69,7 +69,7 @@ function createStatConfig(getValueFn) {
         service.addPercentageStat(STAT.MASTERY.id, value);
         return service.getStats();
       },
-      formatValue: (val) => `${val.toFixed(2)}%`
+      formatValue: (val) => `${val.toFixed(1)}%`
     },
     "damage": {
       label: "Damage",
@@ -79,7 +79,7 @@ function createStatConfig(getValueFn) {
         service.addPercentageStat(STAT.DAMAGE.id, value);
         return service.getStats();
       },
-      formatValue: (val) => `${val.toFixed(2)}%`
+      formatValue: (val) => `${val.toFixed(1)}%`
     },
     "finalDamage": {
       label: "Final Damage",
@@ -89,7 +89,7 @@ function createStatConfig(getValueFn) {
         service.addMultiplicativeStat(STAT.FINAL_DAMAGE.id, value);
         return service.getStats();
       },
-      formatValue: (val) => `${val.toFixed(2)}%`
+      formatValue: (val) => `${val.toFixed(1)}%`
     },
     "bossDamage": {
       label: "Boss Damage",
@@ -99,7 +99,7 @@ function createStatConfig(getValueFn) {
         service.addPercentageStat(STAT.BOSS_DAMAGE.id, value);
         return service.getStats();
       },
-      formatValue: (val) => `${val.toFixed(2)}%`
+      formatValue: (val) => `${val.toFixed(1)}%`
     },
     "normalDamage": {
       label: "Monster Damage",
@@ -109,7 +109,7 @@ function createStatConfig(getValueFn) {
         service.addPercentageStat(STAT.NORMAL_DAMAGE.id, value);
         return service.getStats();
       },
-      formatValue: (val) => `${val.toFixed(2)}%`
+      formatValue: (val) => `${val.toFixed(1)}%`
     },
     "damageAmp": {
       label: "Damage Amplification",
@@ -119,7 +119,7 @@ function createStatConfig(getValueFn) {
         service.addPercentageStat(STAT.DAMAGE_AMP.id, value);
         return service.getStats();
       },
-      formatValue: (val) => `${val.toFixed(2)}x`
+      formatValue: (val) => `${val.toFixed(1)}x`
     },
     "minDamage": {
       label: "Min Damage Multiplier",
@@ -129,7 +129,7 @@ function createStatConfig(getValueFn) {
         service.addPercentageStat(STAT.MIN_DAMAGE.id, value);
         return service.getStats();
       },
-      formatValue: (val) => `${val.toFixed(2)}%`
+      formatValue: (val) => `${val.toFixed(1)}%`
     },
     "maxDamage": {
       label: "Max Damage Multiplier",
@@ -139,7 +139,7 @@ function createStatConfig(getValueFn) {
         service.addPercentageStat(STAT.MAX_DAMAGE.id, value);
         return service.getStats();
       },
-      formatValue: (val) => `${val.toFixed(2)}%`
+      formatValue: (val) => `${val.toFixed(1)}%`
     },
     "critRate": {
       label: "Critical Rate",
@@ -149,7 +149,7 @@ function createStatConfig(getValueFn) {
         service.addPercentageStat(STAT.CRIT_RATE.id, value);
         return service.getStats();
       },
-      formatValue: (val) => `${val.toFixed(2)}%`
+      formatValue: (val) => `${val.toFixed(1)}%`
     },
     "critDamage": {
       label: "Critical Damage",
@@ -159,7 +159,7 @@ function createStatConfig(getValueFn) {
         service.addPercentageStat(STAT.CRIT_DAMAGE.id, value);
         return service.getStats();
       },
-      formatValue: (val) => `${val.toFixed(2)}%`
+      formatValue: (val) => `${val.toFixed(1)}%`
     },
     "attackSpeed": {
       label: "Attack Speed",
@@ -169,7 +169,7 @@ function createStatConfig(getValueFn) {
         service.addDiminishingReturnStat(STAT.ATTACK_SPEED.id, value, 150);
         return service.getStats();
       },
-      formatValue: (val) => `${val.toFixed(2)}%`
+      formatValue: (val) => `${val.toFixed(1)}%`
     },
     "defPen": {
       label: "Defense Penetration",
@@ -179,30 +179,36 @@ function createStatConfig(getValueFn) {
         service.addDiminishingReturnStat(STAT.DEF_PEN.id, value, 100);
         return service.getStats();
       },
-      formatValue: (val) => `${val.toFixed(2)}%`
+      formatValue: (val) => `${val.toFixed(1)}%`
     }
   };
 }
 function calculateTargetDPSGain(stats, sourceStat, sourceValue, statConfig) {
   const baseService = new StatCalculationService(stats);
-  const baseDPS = baseService.baseBossDPS;
+  const monsterType = STAT.NORMAL_DAMAGE.id === sourceStat ? MONSTER_TYPE.NORMAL : MONSTER_TYPE.BOSS;
+  let baseDPS = monsterType === MONSTER_TYPE.BOSS ? baseService.baseBossDPS : baseService.baseNormalDPS;
   if (sourceValue === 0) {
     return { baseDPS, targetDPSGain: 0 };
   }
   let newDPS;
-  if (sourceStat === "mainStatPct") {
+  if (sourceStat === STAT.MAIN_STAT_PCT.id) {
     const modifiedService = new StatCalculationService(stats);
     modifiedService.addMainStatPct(sourceValue);
-    newDPS = modifiedService.computeDPS(MONSTER_TYPE.BOSS);
+    newDPS = modifiedService.computeDPS(monsterType);
   } else {
     const modifiedStats = statConfig[sourceStat].applyToStats(stats, sourceValue);
     const modifiedService = new StatCalculationService(modifiedStats);
-    newDPS = modifiedService.computeDPS(MONSTER_TYPE.BOSS);
+    newDPS = modifiedService.computeDPS(monsterType);
   }
   const targetDPSGain = (newDPS - baseDPS) / baseDPS * 100;
   return { baseDPS, targetDPSGain };
 }
 function calculateEquivalentValue(stats, targetStat, targetDPSGain, statConfig, rowTargetType) {
+  const originalService = new StatCalculationService(stats);
+  const originalBaseDPS = rowTargetType === MONSTER_TYPE.BOSS ? originalService.baseBossDPS : originalService.baseNormalDPS;
+  if (originalBaseDPS === 0) {
+    return { equivalentValue: 0, verifyGain: 0, unableToMatch: true };
+  }
   const statMax = STAT_MAXIMUMS[targetStat];
   let equivalentValue = 0;
   let unableToMatch = false;
@@ -217,8 +223,7 @@ function calculateEquivalentValue(stats, targetStat, targetDPSGain, statConfig, 
     const modifiedStats = statConfig[targetStat].applyToStats(stats, equivalentValue);
     const modifiedService = new StatCalculationService(modifiedStats);
     const newDPS = modifiedService.computeDPS(rowTargetType);
-    const baseDPS = rowTargetType === MONSTER_TYPE.BOSS ? modifiedService.baseBossDPS : modifiedService.baseNormalDPS;
-    verifyGain = (newDPS - baseDPS) / baseDPS * 100;
+    verifyGain = (newDPS - originalBaseDPS) / originalBaseDPS * 100;
     if (Math.abs(verifyGain - targetDPSGain) < BINARY_SEARCH.PRECISION) {
       break;
     }
@@ -242,17 +247,17 @@ function calculateEquivalency(stats, sourceStat, sourceValue, statConfig) {
   const equivalents = {};
   Object.entries(statConfig).forEach(([statId, statConfigItem]) => {
     if (statId === sourceStat) return;
-    if (sourceStat === "statDamage") {
+    if (sourceStat === STAT.STAT_DAMAGE.id) {
       return;
     }
-    if (sourceStat === "bossDamage" && statId === "normalDamage") {
+    if (sourceStat === STAT.BOSS_DAMAGE.id && statId === STAT.NORMAL_DAMAGE.id) {
       equivalents[statId] = {
         value: 0,
         label: "Ineffective (Boss DMG \u2260 Monster target)"
       };
       return;
     }
-    if (sourceStat === "normalDamage" && statId === "bossDamage") {
+    if (sourceStat === STAT.NORMAL_DAMAGE.id && statId === STAT.BOSS_DAMAGE.id) {
       equivalents[statId] = {
         value: 0,
         label: "Ineffective (Monster DMG \u2260 Boss target)"
@@ -260,7 +265,7 @@ function calculateEquivalency(stats, sourceStat, sourceValue, statConfig) {
       return;
     }
     let rowTargetType = MONSTER_TYPE.BOSS;
-    if (statId === "normalDamage") {
+    if (statId === STAT.NORMAL_DAMAGE.id) {
       rowTargetType = MONSTER_TYPE.NORMAL;
     }
     const { equivalentValue, verifyGain, unableToMatch } = calculateEquivalentValue(

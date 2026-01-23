@@ -50,3 +50,5 @@ export * from './page/base-stats/base-stats.types';
 
 export * from './page/weapons/weapons.types';
 export * from './page/weapons/weapons.constants';
+
+export * from './page/companions/companions.types';

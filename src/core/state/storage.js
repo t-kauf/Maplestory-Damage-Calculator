@@ -5,8 +5,7 @@ import { clearCubeRankingsCache } from '@core/cube/cube-potential.js';
 import { addEquippedStat } from '@ui/equipment-ui.js';
 import { rarities, tiers, equippedStatCount } from '@core/constants.js';
 import { getCompanionsState, setCompanionsState, getPresets, setPresetsState, getEquippedPresetId, setEquippedPresetId, getContributedStats, setContributedStats, getShowPresetDpsComparison, setShowPresetDpsComparison, getLockedMainCompanion, setLockedMainCompanion, updateAllContributions, updateCompanionEquippedContributions, getUnlockableStatsState, setUnlockableStatsState, getGuildBonusesState, setGuildBonusesState, getCubeSlotData, setCubeSlotData, setCharacterLevel } from './state.js';
-import { refreshCompanionsUI } from '@ui/companions-ui.js';
-import { refreshPresetsUI } from '@ui/companions-presets-ui.js';
+import { refreshCompanionsUI } from '@ts/page/companions/companions-ui.js';
 
 // Equipment slots that have comparison items
 window.saveToLocalStorage = saveToLocalStorage;
@@ -270,8 +269,8 @@ export function loadFromLocalStorage() {
         if (data.companionsPresets) {
             setPresetsState(data.companionsPresets);
             // Refresh UI if companions tab is visible
-            if (typeof refreshPresetsUI === 'function') {
-                refreshPresetsUI();
+            if (typeof refreshCompanionsUI === 'function') {
+                refreshCompanionsUI();
             }
         }
 

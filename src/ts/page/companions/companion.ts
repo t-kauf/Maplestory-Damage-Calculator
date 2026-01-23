@@ -1,24 +1,36 @@
-// Companion Logic
-// Provides reusable functions for calculating companion preset DPS differences and optimizations
-// Used by: Companion Presets UI
+/**
+ * Pure logic layer for Companion System
+ * Helper functions for calculating companion preset DPS differences and optimizations
+ * No DOM dependencies - all functions are pure and testable
+ */
 
 import { StatCalculationService } from '@core/services/stat-calculation-service.js';
-import { getStats } from '@core/state/state.js';
+import type { CompanionEffects, CompanionKey, CompanionPreset, CompanionPresetId, DpsComparisonResult, BothDpsResults } from '@ts/types/page/companions/companions.types';
+import type { MonsterType } from '@ts/types';
+import type { CompanionData } from '@ts/types/page/companions/companions.types';
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
 
 /**
  * Smart routing helper to apply effects to a StatCalculationService
  * Intelligently routes each stat key to the correct chainable method based on stat type
  *
- * @param {StatCalculationService} service - The service instance
- * @param {Object} effects - Effects object with stat-value pairs
- * @param {boolean} isRemoving - If true, subtract the effects (for removing current effects)
- * @returns {StatCalculationService} Returns the service for chaining
+ * @param service - The service instance
+ * @param effects - Effects object with stat-value pairs
+ * @param isRemoving - If true, subtract the effects (for removing current effects)
+ * @returns Returns the service for chaining
  */
-function applyEffectsToService(service, effects, isRemoving = false) {
+function applyEffectsToService(
+    service: StatCalculationService,
+    effects: Record<string, number>,
+    isRemoving: boolean = false
+): StatCalculationService {
     if (!effects) return service;
 
     // Stat type mappings for proper routing to chainable methods
-    const statTypes = {
+    const statTypes: Record<string, (value: number) => void> = {
         // Flat attack - applies weapon attack bonus
         attack: (value) => isRemoving
             ? service.subtractAttack(Math.abs(value), true)
@@ -74,16 +86,24 @@ function applyEffectsToService(service, effects, isRemoving = false) {
     return service;
 }
 
+// ============================================================================
+// DPS CALCULATION FUNCTIONS
+// ============================================================================
+
 /**
  * Calculate DPS difference between two effect sets
- * @param {Object} currentEffects - Currently equipped effects (to be removed)
- * @param {Object} newEffects - New effects to apply
- * @param {string} monsterType - 'boss' or 'normal'
- * @returns {Object} DPS comparison results
+ * @param currentEffects - Currently equipped effects (to be removed)
+ * @param newEffects - New effects to apply
+ * @param monsterType - 'boss' or 'normal'
+ * @returns DPS comparison results
  */
-export function calculateDpsDifference(currentEffects, newEffects, monsterType = 'boss') {
+export function calculateDpsDifference(
+    currentEffects: Record<string, number>,
+    newEffects: Record<string, number>,
+    monsterType: MonsterType = 'boss'
+): DpsComparisonResult {
     // Get base stats (which already include current effects)
-    const baseStats = getStats('base');
+    const baseStats = (window as any).getStats('base');
 
     // Calculate stats without current effects (clean baseline)
     // Start from baseStats and remove current effects
@@ -122,11 +142,14 @@ export function calculateDpsDifference(currentEffects, newEffects, monsterType =
 
 /**
  * Calculate DPS for both boss and normal targets
- * @param {Object} currentEffects - Currently equipped effects
- * @param {Object} newEffects - New effects to apply
- * @returns {Object} Results for both target types
+ * @param currentEffects - Currently equipped effects
+ * @param newEffects - New effects to apply
+ * @returns Results for both target types
  */
-export function calculateBothDpsDifferences(currentEffects, newEffects) {
+export function calculateBothDpsDifferences(
+    currentEffects: Record<string, number>,
+    newEffects: Record<string, number>
+): BothDpsResults {
     const bossResults = calculateDpsDifference(currentEffects, newEffects, 'boss');
     const normalResults = calculateDpsDifference(currentEffects, newEffects, 'normal');
 
@@ -136,12 +159,16 @@ export function calculateBothDpsDifferences(currentEffects, newEffects) {
     };
 }
 
+// ============================================================================
+// PRESET MANAGEMENT FUNCTIONS
+// ============================================================================
+
 /**
  * Check if a preset has at least one slot filled
- * @param {Object} preset - Preset object with main and subs
- * @returns {boolean} True if at least one slot has a companion
+ * @param preset - Preset object with main and subs
+ * @returns True if at least one slot has a companion
  */
-export function presetHasAnyCompanion(preset) {
+export function presetHasAnyCompanion(preset: CompanionPreset): boolean {
     if (!preset) return false;
     if (preset.main) return true;
     if (preset.subs && preset.subs.some(sub => sub)) return true;
@@ -150,17 +177,22 @@ export function presetHasAnyCompanion(preset) {
 
 /**
  * Calculate the total value of a specific stat across all companions in a preset
- * @param {Object} preset - Preset object
- * @param {string} targetStat - The stat to sum (e.g., 'bossDamage', 'normalDamage')
- * @param {Function} getCompanionEffects - Function to get companion effects
- * @param {Function} getCompanion - Function to get companion data
- * @returns {number} Total value of the target stat
+ * @param preset - Preset object
+ * @param targetStat - The stat to sum (e.g., 'bossDamage', 'normalDamage')
+ * @param getCompanionEffects - Function to get companion effects
+ * @param getCompanion - Function to get companion data
+ * @returns Total value of the target stat
  */
-export function calculatePresetStatValue(preset, targetStat, getCompanionEffects, getCompanion) {
+export function calculatePresetStatValue(
+    preset: CompanionPreset,
+    targetStat: string,
+    getCompanionEffects: (className: string, rarity: string, level: number) => CompanionEffects | null,
+    getCompanion: (key: CompanionKey) => CompanionData
+): number {
     if (!preset) return 0;
 
     let total = 0;
-    const allSlots = [preset.main, ...preset.subs];
+    const allSlots: (CompanionKey | null)[] = [preset.main, ...preset.subs];
 
     allSlots.forEach(companionKey => {
         if (!companionKey) return;
@@ -183,28 +215,39 @@ export function calculatePresetStatValue(preset, targetStat, getCompanionEffects
 
 /**
  * Generate optimal preset for a specific target by calculating actual DPS
- * @param {string} targetStat - The stat to maximize ('bossDamage' or 'normalDamage')
- * @param {Object} getCompanionEffects - Function to get companion effects
- * @param {Object} getCompanion - Function to get companion data
- * @param {number} maxLevel - Max companion level
- * @param {string|null} lockedMainCompanion - Companion key to force as main, or null to optimize all slots
- * @returns {Object} Optimal preset with main and subs filled
+ * @param targetStat - The stat to maximize ('bossDamage' or 'normalDamage')
+ * @param getCompanionEffects - Function to get companion effects
+ * @param getCompanion - Function to get companion data
+ * @param getMaxCompanionLevel - Function to get max companion level
+ * @param lockedMainCompanion - Companion key to force as main, or null to optimize all slots
+ * @returns Optimal preset with main and subs filled
  */
-export function generateOptimalPreset(targetStat, getCompanionEffects, getCompanion, getMaxCompanionLevel, lockedMainCompanion = null) {
+export function generateOptimalPreset(
+    targetStat: 'bossDamage' | 'normalDamage',
+    getCompanionEffects: (className: string, rarity: string, level: number) => CompanionEffects | null,
+    getCompanion: (key: CompanionKey) => CompanionData,
+    getMaxCompanionLevel: () => number,
+    lockedMainCompanion: CompanionKey | null = null
+): CompanionPreset {
     // Exclude classes that will never be optimal: DarkKnight, Marksman
     const classes = ['Hero', 'ArchMageIL', 'ArchMageFP', 'BowMaster', 'NightLord', 'Shadower'];
     // Only consider Legendary, Unique, Epic (Normal and Rare are never optimal)
     const rarities = ['Legendary', 'Unique', 'Epic'];
 
     // Determine monster type from target stat
-    const monsterType = targetStat === 'bossDamage' ? 'boss' : 'normal';
+    const monsterType: MonsterType = targetStat === 'bossDamage' ? 'boss' : 'normal';
 
     // Collect all unlocked companions with their data
-    const unlockedCompanions = [];
+    interface UnlockedCompanion {
+        companionKey: CompanionKey;
+        effects: Record<string, number>;
+    }
+
+    const unlockedCompanions: UnlockedCompanion[] = [];
 
     rarities.forEach(rarity => {
         classes.forEach(className => {
-            const companionKey = `${className}-${rarity}`;
+            const companionKey: CompanionKey = `${className}-${rarity}` as CompanionKey;
             const companionData = getCompanion(companionKey);
 
             // Only consider unlocked companions
@@ -228,12 +271,12 @@ export function generateOptimalPreset(targetStat, getCompanionEffects, getCompan
     }
 
     // Get base stats for DPS calculation
-    const baseStats = getStats('base');
+    const baseStats = (window as any).getStats('base');
     let bestDps = 0;
-    let bestPreset = { main: null, subs: [null, null, null, null, null, null] };
+    let bestPreset: CompanionPreset = { main: null, subs: [null, null, null, null, null, null] };
 
     // Helper function to generate combinations
-    function* generateCombinations(companions, size, start = 0) {
+    function* generateCombinations(companions: UnlockedCompanion[], size: number, start: number = 0): Generator<UnlockedCompanion[]> {
         if (size === 0) {
             yield [];
             return;
@@ -273,7 +316,7 @@ export function generateOptimalPreset(targetStat, getCompanionEffects, getCompan
             }
 
             // Calculate total effects for this preset
-            const totalEffects = {};
+            const totalEffects: Record<string, number> = {};
 
             // Add locked main companion effects
             Object.entries(lockedMainData.effects).forEach(([stat, value]) => {
@@ -323,7 +366,7 @@ export function generateOptimalPreset(targetStat, getCompanionEffects, getCompan
             const subCompanions = combination.slice(1);
 
             // Calculate total effects for this preset
-            const totalEffects = {};
+            const totalEffects: Record<string, number> = {};
 
             // Add main companion effects
             Object.entries(mainCompanion.effects).forEach(([stat, value]) => {

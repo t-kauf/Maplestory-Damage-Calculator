@@ -20,7 +20,23 @@ if (typeof window !== "undefined") {
 function selectContentType(contentType) {
   updateContentTypeSelectionUI(contentType);
   configureDropdownsForContentType(contentType);
-  loadoutStore.updateTarget({ contentType });
+  const updateData = { contentType };
+  const stageSelect = document.getElementById("target-stage");
+  if (contentType === CONTENT_TYPE.NONE) {
+    updateData.subcategory = null;
+    updateData.selectedStage = null;
+  } else if (requiresSubcategory(contentType)) {
+    const subcategorySelect = document.getElementById("target-subcategory");
+    if (subcategorySelect && subcategorySelect.options.length > 0) {
+      updateData.subcategory = subcategorySelect.options[0].value;
+    }
+    if (stageSelect && stageSelect.options.length > 0) {
+      updateData.selectedStage = stageSelect.options[0].value;
+    }
+  } else if (stageSelect && stageSelect.options.length > 0) {
+    updateData.selectedStage = stageSelect.options[0].value;
+  }
+  loadoutStore.updateTarget(updateData);
 }
 function onSubcategoryChange() {
   const subcategorySelect = document.getElementById("target-subcategory");
@@ -35,7 +51,13 @@ function onSubcategoryChange() {
     populateStageDropdownFiltered(CONTENT_TYPE.GROWTH_DUNGEON, subcategory);
   }
   stageSelect.style.display = "block";
-  loadoutStore.updateTarget({ subcategory });
+  if (stageSelect.options.length > 0) {
+    stageSelect.selectedIndex = 0;
+    const firstStage = stageSelect.options[0].value;
+    loadoutStore.updateTarget({ subcategory, selectedStage: firstStage });
+  } else {
+    loadoutStore.updateTarget({ subcategory });
+  }
 }
 function loadTargetSelectUI() {
   const target = loadoutStore.getTarget();
@@ -47,28 +69,37 @@ function initializeWithDefaultState() {
 function restoreSavedSelectionUI(savedData) {
   const { contentType, subcategory, selectedStage } = savedData;
   updateContentTypeSelectionUI(contentType);
-  configureDropdownsForContentType(contentType);
+  const subcategorySelect = document.getElementById("target-subcategory");
+  const stageSelect = document.getElementById("target-stage");
+  if (subcategorySelect) subcategorySelect.style.display = "none";
+  if (stageSelect) stageSelect.style.display = "none";
+  if (contentType === CONTENT_TYPE.NONE) {
+    if (stageSelect) stageSelect.value = "none";
+    return;
+  }
   if (subcategory && requiresSubcategory(contentType)) {
-    const subcategorySelect = document.getElementById("target-subcategory");
     if (subcategorySelect) {
+      populateSubcategoryDropdown(contentType);
       subcategorySelect.value = subcategory;
+      subcategorySelect.style.display = "block";
       if (contentType === CONTENT_TYPE.STAGE_HUNT) {
         const chapter = subcategory.replace("chapter-", "");
         populateStageDropdownFiltered(CONTENT_TYPE.STAGE_HUNT, chapter);
       } else if (contentType === CONTENT_TYPE.GROWTH_DUNGEON) {
         populateStageDropdownFiltered(CONTENT_TYPE.GROWTH_DUNGEON, subcategory);
       }
-      const stageSelect = document.getElementById("target-stage");
-      if (stageSelect) {
-        stageSelect.style.display = "block";
-      }
+    }
+    if (stageSelect) {
+      stageSelect.style.display = "block";
+    }
+  } else {
+    if (stageSelect) {
+      stageSelect.style.display = "block";
+      populateStageDropdown(contentType);
     }
   }
-  if (selectedStage) {
-    const stageSelect = document.getElementById("target-stage");
-    if (stageSelect) {
-      stageSelect.value = selectedStage;
-    }
+  if (selectedStage && stageSelect) {
+    stageSelect.value = selectedStage;
   }
 }
 function updateContentTypeSelectionUI(contentType) {
@@ -94,10 +125,27 @@ function configureDropdownsForContentType(contentType) {
   }
   if (requiresSubcategory(contentType)) {
     populateSubcategoryDropdown(contentType);
+    if (subcategorySelect) {
+      subcategorySelect.style.display = "block";
+      subcategorySelect.selectedIndex = 0;
+      const firstSubcategory = subcategorySelect.value;
+      if (contentType === CONTENT_TYPE.STAGE_HUNT) {
+        const chapter = firstSubcategory.replace("chapter-", "");
+        populateStageDropdownFiltered(CONTENT_TYPE.STAGE_HUNT, chapter);
+      } else if (contentType === CONTENT_TYPE.GROWTH_DUNGEON) {
+        populateStageDropdownFiltered(CONTENT_TYPE.GROWTH_DUNGEON, firstSubcategory);
+      }
+      if (stageSelect && stageSelect.options.length > 0) {
+        stageSelect.selectedIndex = 0;
+      }
+    }
     stageSelect.style.display = "block";
   } else {
     stageSelect.style.display = "block";
     populateStageDropdown(contentType);
+    if (stageSelect && stageSelect.options.length > 0) {
+      stageSelect.selectedIndex = 0;
+    }
   }
 }
 function populateSubcategoryDropdown(contentType) {
