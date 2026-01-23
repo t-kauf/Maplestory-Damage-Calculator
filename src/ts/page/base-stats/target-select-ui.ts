@@ -44,14 +44,29 @@ export function selectContentType(contentType: ContentType): void {
     configureDropdownsForContentType(contentType);
 
     // Save via loadout store (auto dual-writes to localStorage)
-    const updateData: { contentType: ContentType; subcategory?: string } = { contentType };
+    const updateData: { contentType: ContentType; subcategory?: string | null; selectedStage?: string | null } = { contentType };
 
+    const stageSelect = document.getElementById('target-stage') as HTMLSelectElement;
+
+    // Clear subcategory and selectedStage when selecting None
+    if (contentType === CONTENT_TYPE.NONE) {
+        updateData.subcategory = null;
+        updateData.selectedStage = null;
+    }
     // If content type requires subcategory, save the default first option
-    if (requiresSubcategory(contentType)) {
+    else if (requiresSubcategory(contentType)) {
         const subcategorySelect = document.getElementById('target-subcategory') as HTMLSelectElement;
+
         if (subcategorySelect && subcategorySelect.options.length > 0) {
             updateData.subcategory = subcategorySelect.options[0].value;
         }
+
+        if (stageSelect && stageSelect.options.length > 0) {
+            updateData.selectedStage = stageSelect.options[0].value;
+        }
+    } else if (stageSelect && stageSelect.options.length > 0) {
+        // For non-subcategory types, also save the first stage option
+        updateData.selectedStage = stageSelect.options[0].value;
     }
 
     loadoutStore.updateTarget(updateData);
@@ -187,11 +202,20 @@ function configureDropdownsForContentType(contentType: ContentType): void {
             } else if (contentType === CONTENT_TYPE.GROWTH_DUNGEON) {
                 populateStageDropdownFiltered(CONTENT_TYPE.GROWTH_DUNGEON, firstSubcategory);
             }
+
+            // Auto-select first stage option
+            if (stageSelect && stageSelect.options.length > 0) {
+                stageSelect.selectedIndex = 0;
+            }
         }
         stageSelect.style.display = 'block';
     } else {
         stageSelect.style.display = 'block';
         populateStageDropdown(contentType);
+        // Auto-select first stage option
+        if (stageSelect && stageSelect.options.length > 0) {
+            stageSelect.selectedIndex = 0;
+        }
     }
 }
 
