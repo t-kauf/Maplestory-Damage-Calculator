@@ -93,8 +93,14 @@ export function onSubcategoryChange(): void {
 
     stageSelect.style.display = 'block';
 
-    // Save subcategory only - selectedStage is saved by the stage dropdown's own change event listener
-    loadoutStore.updateTarget({ subcategory });
+    // Auto-select first stage option and save it
+    if (stageSelect.options.length > 0) {
+        stageSelect.selectedIndex = 0;
+        const firstStage = stageSelect.options[0].value;
+        loadoutStore.updateTarget({ subcategory, selectedStage: firstStage });
+    } else {
+        loadoutStore.updateTarget({ subcategory });
+    }
     //updateAnalysisTabs();
 }
 
@@ -127,12 +133,24 @@ function restoreSavedSelectionUI(savedData: SavedContentTypeData): void {
     const { contentType, subcategory, selectedStage } = savedData;
 
     updateContentTypeSelectionUI(contentType);
-    configureDropdownsForContentType(contentType);
 
+    // Hide all dropdowns first
+    const subcategorySelect = document.getElementById('target-subcategory') as HTMLSelectElement;
+    const stageSelect = document.getElementById('target-stage') as HTMLSelectElement;
+    if (subcategorySelect) subcategorySelect.style.display = 'none';
+    if (stageSelect) stageSelect.style.display = 'none';
+
+    if (contentType === CONTENT_TYPE.NONE) {
+        if (stageSelect) stageSelect.value = 'none';
+        return;
+    }
+
+    // Restore subcategory-requiring content types
     if (subcategory && requiresSubcategory(contentType)) {
-        const subcategorySelect = document.getElementById('target-subcategory') as HTMLSelectElement;
         if (subcategorySelect) {
+            populateSubcategoryDropdown(contentType);
             subcategorySelect.value = subcategory;
+            subcategorySelect.style.display = 'block';
 
             if (contentType === CONTENT_TYPE.STAGE_HUNT) {
                 const chapter = subcategory.replace('chapter-', '');
@@ -140,20 +158,22 @@ function restoreSavedSelectionUI(savedData: SavedContentTypeData): void {
             } else if (contentType === CONTENT_TYPE.GROWTH_DUNGEON) {
                 populateStageDropdownFiltered(CONTENT_TYPE.GROWTH_DUNGEON, subcategory);
             }
-
-            // Show the stage select after populating it
-            const stageSelect = document.getElementById('target-stage') as HTMLSelectElement;
-            if (stageSelect) {
-                stageSelect.style.display = 'block';
-            }
+        }
+        if (stageSelect) {
+            stageSelect.style.display = 'block';
+        }
+    }
+    // Restore non-subcategory content types (Chapter Boss, World Boss)
+    else {
+        if (stageSelect) {
+            stageSelect.style.display = 'block';
+            populateStageDropdown(contentType);
         }
     }
 
-    if (selectedStage) {
-        const stageSelect = document.getElementById('target-stage') as HTMLSelectElement;
-        if (stageSelect) {
-            stageSelect.value = selectedStage;
-        }
+    // Set the saved stage value after populating
+    if (selectedStage && stageSelect) {
+        stageSelect.value = selectedStage;
     }
 }
 
