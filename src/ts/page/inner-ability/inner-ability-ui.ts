@@ -26,6 +26,13 @@ import {
 let presetSortState: TableSortState['preset'] = { column: 2, ascending: false };
 let theoreticalSortState: TableSortState['theoretical'] = { column: 2, ascending: false };
 
+// Theoretical Best roll visibility toggles
+let theoreticalRollFilters = {
+    min: true,
+    mid: true,
+    max: true
+};
+
 // ============================================================================
 // HTML GENERATION
 // ============================================================================
@@ -258,8 +265,24 @@ export function renderTheoreticalBest(): void {
         return theoreticalSortState.ascending ? a.dpsGain - b.dpsGain : b.dpsGain - a.dpsGain;
     });
 
+    // Filter results based on roll type checkboxes
+    const filteredResults = sortedResults.filter(result => {
+        if (result.roll === 'Min' && !theoreticalRollFilters.min) return false;
+        if (result.roll === 'Mid' && !theoreticalRollFilters.mid) return false;
+        if (result.roll === 'Max' && !theoreticalRollFilters.max) return false;
+        return true;
+    });
+
     let html = '<div class="ia-theoretical-section">';
     html += '<h3 class="title">All Possible Rolls Ranked</h3>';
+
+    // Add roll type checkboxes
+    html += '<div class="ia-roll-filters">';
+    html += '<label class="ia-roll-filter-label"><input type="checkbox" id="roll-filter-min" onchange="toggleTheoreticalRollFilter(\'min\')" ' + (theoreticalRollFilters.min ? 'checked' : '') + '> Min Rolls</label>';
+    html += '<label class="ia-roll-filter-label"><input type="checkbox" id="roll-filter-mid" onchange="toggleTheoreticalRollFilter(\'mid\')" ' + (theoreticalRollFilters.mid ? 'checked' : '') + '> Mid Rolls</label>';
+    html += '<label class="ia-roll-filter-label"><input type="checkbox" id="roll-filter-max" onchange="toggleTheoreticalRollFilter(\'max\')" ' + (theoreticalRollFilters.max ? 'checked' : '') + '> Max Rolls</label>';
+    html += '</div>';
+
     html += '<div class="table-scrollable">';
     html += '<table class="table"><thead><tr>';
     html += '<th>Stat & Roll</th>';
@@ -267,7 +290,7 @@ export function renderTheoreticalBest(): void {
     html += '<th class="sortable" onclick="sortTheoreticalTable(2)">DPS Gain</th>';
     html += '</tr></thead><tbody>';
 
-    sortedResults.forEach(result => {
+    filteredResults.forEach(result => {
         const rarityLetter = result.rarity.charAt(0).toUpperCase();
         const rarityClass = `rarity-${result.rarity.toLowerCase()}`;
         const badge = `<span class="badge badge--rarity ${rarityClass}">${rarityLetter}</span>`;
@@ -515,6 +538,14 @@ export function sortTheoreticalTable(column: number): void {
     renderTheoreticalBest();
 }
 
+/**
+ * Toggle theoretical roll filter (min/mid/max)
+ */
+export function toggleTheoreticalRollFilter(rollType: 'min' | 'mid' | 'max'): void {
+    theoreticalRollFilters[rollType] = !theoreticalRollFilters[rollType];
+    renderTheoreticalBest();
+}
+
 // ============================================================================
 // INITIALIZATION
 // ============================================================================
@@ -586,6 +617,7 @@ if (typeof window !== 'undefined') {
     (window as any).toggleLineBreakdown = toggleLineBreakdown;
     (window as any).sortPresetTable = sortPresetTable;
     (window as any).sortTheoreticalTable = sortTheoreticalTable;
+    (window as any).toggleTheoreticalRollFilter = toggleTheoreticalRollFilter;
     (window as any).switchPreset = switchPreset;
     (window as any).handlePresetEquipped = handlePresetEquipped;
     (window as any).handlePresetLineChange = handlePresetLineChange;
