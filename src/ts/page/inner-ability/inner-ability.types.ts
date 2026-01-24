@@ -30,25 +30,6 @@ export interface SortConfig {
     ascending: boolean;
 }
 
-// ============================================================================
-// STAT MAPPING TYPES
-// ============================================================================
-
-/**
- * Stat mapping configuration for inner ability
- */
-export interface StatMapping {
-    statName: string;
-    serviceMethod: 'addPercentageStat' | 'addDiminishingReturnStat' | 'addMainStat';
-    serviceParam?: string;  // For diminishing returns factor
-}
-
-/**
- * Base stats interface for stat calculation service
- */
-export interface BaseStats {
-    [key: string]: number | string;
-}
 
 // ============================================================================
 // UI STATE TYPES
