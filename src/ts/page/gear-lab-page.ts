@@ -7,6 +7,7 @@
 import { BasePage } from './base-page.js';
 import { gearLabStore } from '@ts/store/gear-lab-store.js';
 import { initializeInnerAbilityUI, loadInnerAbilityFromStore } from '@ts/page/inner-ability/inner-ability-ui.js';
+import { initializeArtifactPotential } from './artifact-potential/artifact-potential-ui.js';
 
 
 class GearLabPage extends BasePage {
@@ -34,6 +35,7 @@ class GearLabPage extends BasePage {
 
         // Initialize the Inner Ability UI
         initializeInnerAbilityUI();
+        initializeArtifactPotential();
 
         // Load saved presets from store
         loadInnerAbilityFromStore();
