@@ -158,8 +158,52 @@ const _LoadoutStore = class _LoadoutStore {
         console.error("Failed to parse lockedMainCompanion data", e);
       }
     }
+    const equipmentSlotsData = localStorage.getItem("equipmentSlots");
+    let equipmentSlotIds = [];
+    if (equipmentSlotsData) {
+      try {
+        const slotNamesObj = JSON.parse(equipmentSlotsData);
+        Object.keys(slotNamesObj).forEach((slotName) => {
+          equipmentSlotIds.push(slotName);
+          if (this.data.equipment[slotName]) return;
+          const equippedKey = `equipped.${slotName}`;
+          const equippedData = localStorage.getItem(equippedKey);
+          if (equippedData) {
+            try {
+              const slotData = JSON.parse(equippedData);
+              this.data.equipment[slotName] = slotData;
+              console.log(`LoadoutStore: Migrated ${equippedKey} to loadout-data.equipment.${slotName}`);
+            } catch (e) {
+              console.error(`Failed to parse ${equippedKey} data`, e);
+            }
+          }
+        });
+        console.log("LoadoutStore: Migrated equipment data from equipmentSlots");
+      } catch (e) {
+        console.error("Failed to parse equipmentSlots data", e);
+      }
+    }
     console.log("LoadoutStore: Migration complete, saving to new format...");
     this.saveDualWrite();
+    console.log("LoadoutStore: Cleaning up old localStorage keys...");
+    const keysToDelete = [
+      "selectedClass",
+      "selectedJobTier",
+      "lockedMainCompanion",
+      "showPresetDpsComparison",
+      "presets",
+      "companions",
+      "damageCalculatorData",
+      // Old legacy format
+      "equipmentSlots",
+      // Old equipment slots format
+      ...equipmentSlotIds.map((slotId) => `equipped.${slotId}`)
+      // Equipment keys
+    ];
+    keysToDelete.forEach((key) => {
+      localStorage.removeItem(key);
+    });
+    console.log(`LoadoutStore: Deleted ${keysToDelete.length} old localStorage keys`);
   }
   /**
    * Migrate stat keys from legacy hyphenated/camelCase format to uppercase StatKey
@@ -287,6 +331,60 @@ const _LoadoutStore = class _LoadoutStore {
     if (!this.data.companions.lockedMainCompanion) {
       this.data.companions.lockedMainCompanion = { ...defaults.companions.lockedMainCompanion };
     }
+    if (!this.data.equipment) {
+      this.data.equipment = { ...defaults.equipment };
+    }
+    const equipmentSlots = [
+      "head",
+      "cape",
+      "chest",
+      "shoulders",
+      "legs",
+      "belt",
+      "gloves",
+      "boots",
+      "ring",
+      "neck",
+      "eye-accessory"
+    ];
+    const allSlotsNull = equipmentSlots.every((slotId) => this.data.equipment[slotId] === null);
+    if (allSlotsNull) {
+      const equipmentSlotsData = localStorage.getItem("equipmentSlots");
+      if (equipmentSlotsData) {
+        try {
+          const legacySlots = JSON.parse(equipmentSlotsData);
+          let migratedCount = 0;
+          equipmentSlots.forEach((slotId) => {
+            const legacyData = legacySlots[slotId];
+            if (legacyData) {
+              const statLines = [];
+              if (legacyData.damageAmp > 0) {
+                statLines.push({ type: "damage-amp", value: legacyData.damageAmp });
+              }
+              this.data.equipment[slotId] = {
+                name: "",
+                attack: legacyData.attack,
+                mainStat: legacyData.mainStat,
+                statLines
+              };
+              migratedCount++;
+            }
+          });
+          if (migratedCount > 0) {
+            console.log(`LoadoutStore: Recovered ${migratedCount} equipment slots from legacy equipmentSlots data`);
+            localStorage.removeItem("equipmentSlots");
+            this.saveDualWrite();
+          }
+        } catch (e) {
+          console.error("Failed to recover equipmentSlots data", e);
+        }
+      }
+    }
+    equipmentSlots.forEach((slotId) => {
+      if (this.data.equipment[slotId] === void 0) {
+        this.data.equipment[slotId] = null;
+      }
+    });
   }
   // ========================================================================
   // GETTERS - Return pre-hydrated data with safe defaults
@@ -527,6 +625,21 @@ const _LoadoutStore = class _LoadoutStore {
     this.saveDualWrite();
   }
   /**
+   * Update equipment data for a specific slot
+   * @param slotId - Equipment slot ID
+   * @param data - Equipment slot data
+   */
+  updateEquipment(slotId, data) {
+    this.data.equipment[slotId] = data;
+    this.saveDualWrite();
+  }
+  /**
+   * Get all equipment data
+   */
+  getEquipmentData() {
+    return this.data.equipment;
+  }
+  /**
    * Set selected class
    * @param className - Class name or null
    */
@@ -628,24 +741,14 @@ const _LoadoutStore = class _LoadoutStore {
     this.saveDualWrite();
   }
   // ========================================================================
-  // PERSISTENCE - Dual-write (new + legacy)
+  // PERSISTENCE
   // ========================================================================
   /**
-   * Save to localStorage (dual-write: new + legacy format)
+   * Save to localStorage
+   * Note: Only writes to 'loadout-data' key. Legacy dual-write has been removed.
    */
   saveDualWrite() {
     localStorage.setItem("loadout-data", JSON.stringify(this.data));
-    const legacyFormat = this.convertToLegacyFormat();
-    localStorage.setItem("damageCalculatorData", JSON.stringify(legacyFormat));
-    if (this.data.character.class) {
-      localStorage.setItem("selectedClass", this.data.character.class);
-    }
-    localStorage.setItem("selectedJobTier", this.data.character.jobTier);
-    localStorage.setItem("companions", JSON.stringify(this.data.companions.companions));
-    localStorage.setItem("presets", JSON.stringify(this.data.companions.presets));
-    localStorage.setItem("equippedPresetId", this.data.companions.equippedPresetId);
-    localStorage.setItem("showPresetDpsComparison", String(this.data.companions.showPresetDpsComparison));
-    localStorage.setItem("lockedMainCompanion", JSON.stringify(this.data.companions.lockedMainCompanion));
   }
   /**
    * Convert new LoadoutData to legacy damageCalculatorData format

@@ -34,6 +34,22 @@ function importData() {
       if (importData2.theme) {
         localStorage.setItem("theme", importData2.theme);
       }
+      if (importData2.equipmentSlots) {
+        localStorage.setItem("equipmentSlots", JSON.stringify(importData2.equipmentSlots));
+      }
+      if (importData2["equipped.head"]) {
+        localStorage.setItem("equipped.head", JSON.stringify(importData2["equipped.head"]));
+        localStorage.setItem("equipped.cape", JSON.stringify(importData2["equipped.cape"]));
+        localStorage.setItem("equipped.chest", JSON.stringify(importData2["equipped.chest"]));
+        localStorage.setItem("equipped.legs", JSON.stringify(importData2["equipped.legs"]));
+        localStorage.setItem("equipped.belt", JSON.stringify(importData2["equipped.belt"]));
+        localStorage.setItem("equipped.gloves", JSON.stringify(importData2["equipped.gloves"]));
+        localStorage.setItem("equipped.boots", JSON.stringify(importData2["equipped.boots"]));
+        localStorage.setItem("equipped.shoulders", JSON.stringify(importData2["equipped.shoulders"]));
+        localStorage.setItem("equipped.ring", JSON.stringify(importData2["equipped.ring"]));
+        localStorage.setItem("equipped.neck", JSON.stringify(importData2["equipped.neck"]));
+        localStorage.setItem("equipped.eye-accessory", JSON.stringify(importData2["equipped.eye-accessory"]));
+      }
       alert("\u2705 Data imported successfully! Refreshing page...");
       location.reload();
     } catch (err) {

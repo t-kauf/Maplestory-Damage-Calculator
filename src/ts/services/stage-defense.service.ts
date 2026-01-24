@@ -1,5 +1,5 @@
 import { CONTENT_TYPE, ContentType } from "@ts/types";
-import { stageData } from '@data/stage-data.js';
+import { stageData } from '@data/stage-data';
 import { loadoutStore } from '@ts/store/loadout.store';
 
 export const stageDefenses = {

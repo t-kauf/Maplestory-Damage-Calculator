@@ -21,7 +21,20 @@ const DEFAULT_LOADOUT_DATA = {
     totalAttack: 0,
     equippedAttack: 0
   },
-  companions: DEFAULT_COMPANION_STATE
+  companions: DEFAULT_COMPANION_STATE,
+  equipment: {
+    head: null,
+    cape: null,
+    chest: null,
+    shoulders: null,
+    legs: null,
+    belt: null,
+    gloves: null,
+    boots: null,
+    ring: null,
+    neck: null,
+    "eye-accessory": null
+  }
 };
 export {
   DEFAULT_LOADOUT_DATA

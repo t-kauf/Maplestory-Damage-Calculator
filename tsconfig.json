@@ -14,7 +14,7 @@
       "@ts/*": ["ts/*"],
       "@core/*": ["core/*"],
       "@utils/*": ["ts/utils/*"],
-      "@data/*": ["data/*"],
+      "@data/*": ["ts/data/*"],
       "@ui/*": ["ui/*"],
       "@types/*": ["ts/types/*"],
     }

@@ -19,6 +19,7 @@ import type {
 import { DEFAULT_LOADOUT_DATA } from '@ts/types/loadout';
 import { CONTENT_TYPE, JOB_TIER, MASTERY_TYPE, DEFAULT_BASE_STATS, STAT, type ContentType, type JobTier, type MasteryTypeValue, type StatKey } from '@ts/types/constants';
 import type { CompanionKey, CompanionPresetId, CompanionPreset, CompanionData, CompanionState } from '@ts/types/page/companions/companions.types';
+import type { EquipmentSlotId, EquipmentSlotData, StatLine } from '@ts/types/page/equipment/equipment.types';
 
 export class LoadoutStore {
     private data: LoadoutData;
@@ -278,9 +279,64 @@ export class LoadoutStore {
             }
         }
 
+        // Migrate equipment data from equipmentSlots and equipped.X keys
+        // equipmentSlots is an array of slot names (e.g., ["head", "cape", "chest"])
+        // Each slot name is used to get equipped.{slotName} which contains EquipmentSlotData
+        const equipmentSlotsData = localStorage.getItem('equipmentSlots');
+        let equipmentSlotIds = [];
+        if (equipmentSlotsData) {
+            try {
+                // Parse equipmentSlots as an object with slot names as keys
+                const slotNamesObj: Record<string, unknown> = JSON.parse(equipmentSlotsData);
+
+                Object.keys(slotNamesObj).forEach((slotName) => {
+                    equipmentSlotIds.push(slotName);
+
+                    // Skip if already migrated
+                    if (this.data.equipment[slotName as EquipmentSlotId]) return;
+
+                    const equippedKey = `equipped.${slotName}`;
+                    const equippedData = localStorage.getItem(equippedKey);
+
+                    if (equippedData) {
+                        try {
+                            // Parse as EquipmentSlotData and add to equipment object
+                            const slotData: EquipmentSlotData = JSON.parse(equippedData);
+                            this.data.equipment[slotName as EquipmentSlotId] = slotData;
+                            console.log(`LoadoutStore: Migrated ${equippedKey} to loadout-data.equipment.${slotName}`);
+                        } catch (e) {
+                            console.error(`Failed to parse ${equippedKey} data`, e);
+                        }
+                    }
+                });
+                console.log('LoadoutStore: Migrated equipment data from equipmentSlots');
+            } catch (e) {
+                console.error('Failed to parse equipmentSlots data', e);
+            }
+        }
+
         // Note: migrateStatKeys() will be called in validateAndFillDefaults() after this method
         console.log('LoadoutStore: Migration complete, saving to new format...');
         this.saveDualWrite();
+
+        // Clean up old localStorage keys that have been migrated to loadout-data
+        console.log('LoadoutStore: Cleaning up old localStorage keys...');
+        const keysToDelete = [
+            'selectedClass',
+            'selectedJobTier',
+            'lockedMainCompanion',
+            'showPresetDpsComparison',
+            'presets',
+            'companions',
+            'damageCalculatorData', // Old legacy format
+            'equipmentSlots', // Old equipment slots format
+            ...equipmentSlotIds.map(slotId => `equipped.${slotId}`) // Equipment keys
+        ];
+
+        keysToDelete.forEach(key => {
+            localStorage.removeItem(key);
+        });
+        console.log(`LoadoutStore: Deleted ${keysToDelete.length} old localStorage keys`);
     }
 
     /**
@@ -451,6 +507,64 @@ export class LoadoutStore {
         if (!this.data.companions.lockedMainCompanion) {
             this.data.companions.lockedMainCompanion = { ...defaults.companions.lockedMainCompanion };
         }
+
+        // Ensure equipment exists
+        if (!this.data.equipment) {
+            this.data.equipment = { ...defaults.equipment };
+        }
+
+        // Ensure each equipment slot exists
+        const equipmentSlots: EquipmentSlotId[] = [
+            'head', 'cape', 'chest', 'shoulders', 'legs', 'belt',
+            'gloves', 'boots', 'ring', 'neck', 'eye-accessory'
+        ];
+
+        // Recovery migration: if all equipment slots are null and old equipmentSlots exists in localStorage,
+        // migrate the old data to recover it
+        const allSlotsNull = equipmentSlots.every(slotId => this.data.equipment[slotId] === null);
+        if (allSlotsNull) {
+            const equipmentSlotsData = localStorage.getItem('equipmentSlots');
+            if (equipmentSlotsData) {
+                try {
+                    const legacySlots: Record<string, { attack: number; mainStat: number; damageAmp: number }> = JSON.parse(equipmentSlotsData);
+                    let migratedCount = 0;
+
+                    equipmentSlots.forEach(slotId => {
+                        const legacyData = legacySlots[slotId];
+                        if (legacyData) {
+                            // Convert legacy format to new EquipmentSlotData format
+                            const statLines: StatLine[] = [];
+                            if (legacyData.damageAmp > 0) {
+                                statLines.push({ type: 'damage-amp', value: legacyData.damageAmp });
+                            }
+
+                            this.data.equipment[slotId] = {
+                                name: '',
+                                attack: legacyData.attack,
+                                mainStat: legacyData.mainStat,
+                                statLines
+                            };
+                            migratedCount++;
+                        }
+                    });
+
+                    if (migratedCount > 0) {
+                        console.log(`LoadoutStore: Recovered ${migratedCount} equipment slots from legacy equipmentSlots data`);
+                        // Clean up the old key after successful recovery
+                        localStorage.removeItem('equipmentSlots');
+                        this.saveDualWrite();
+                    }
+                } catch (e) {
+                    console.error('Failed to recover equipmentSlots data', e);
+                }
+            }
+        }
+
+        equipmentSlots.forEach(slotId => {
+            if (this.data.equipment[slotId] === undefined) {
+                this.data.equipment[slotId] = null;
+            }
+        });
     }
 
     // ========================================================================
@@ -738,6 +852,23 @@ export class LoadoutStore {
     }
 
     /**
+     * Update equipment data for a specific slot
+     * @param slotId - Equipment slot ID
+     * @param data - Equipment slot data
+     */
+    updateEquipment(slotId: EquipmentSlotId, data: EquipmentSlotData): void {
+        this.data.equipment[slotId] = data;
+        this.saveDualWrite();
+    }
+
+    /**
+     * Get all equipment data
+     */
+    getEquipmentData(): LoadoutData['equipment'] {
+        return this.data.equipment;
+    }
+
+    /**
      * Set selected class
      * @param className - Class name or null
      */
@@ -863,32 +994,16 @@ export class LoadoutStore {
     }
 
     // ========================================================================
-    // PERSISTENCE - Dual-write (new + legacy)
+    // PERSISTENCE
     // ========================================================================
 
     /**
-     * Save to localStorage (dual-write: new + legacy format)
+     * Save to localStorage
+     * Note: Only writes to 'loadout-data' key. Legacy dual-write has been removed.
      */
     private saveDualWrite(): void {
-        // 1. Write NEW structure to 'loadout-data'
+        // Write to new 'loadout-data' key only
         localStorage.setItem('loadout-data', JSON.stringify(this.data));
-
-        // 2. Dual-write OLD structure to 'damageCalculatorData' (for backward compatibility)
-        const legacyFormat = this.convertToLegacyFormat();
-        localStorage.setItem('damageCalculatorData', JSON.stringify(legacyFormat));
-
-        // 3. Write separate keys for class/jobTier (legacy compatibility)
-        if (this.data.character.class) {
-            localStorage.setItem('selectedClass', this.data.character.class);
-        }
-        localStorage.setItem('selectedJobTier', this.data.character.jobTier);
-
-        // 4. Dual-write companions data (legacy compatibility)
-        localStorage.setItem('companions', JSON.stringify(this.data.companions.companions));
-        localStorage.setItem('presets', JSON.stringify(this.data.companions.presets));
-        localStorage.setItem('equippedPresetId', this.data.companions.equippedPresetId);
-        localStorage.setItem('showPresetDpsComparison', String(this.data.companions.showPresetDpsComparison));
-        localStorage.setItem('lockedMainCompanion', JSON.stringify(this.data.companions.lockedMainCompanion));
     }
 
     /**

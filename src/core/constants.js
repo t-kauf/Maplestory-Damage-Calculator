@@ -14,8 +14,8 @@ export const rarities = ['normal', 'rare', 'epic', 'unique', 'legendary', 'mysti
 
 export const availableStats = [
     { value: 'attack', label: 'Attack' },
-    { value: 'main-stat', label: 'Main Stat (100 = 1% Stat Dmg)' },
-    { value: 'defense', label: 'Defense (DK: 12.7% → Main Stat)' },
+    { value: 'main-stat', label: 'Main Stat' },
+    { value: 'defense', label: 'Defense' },
     { value: 'crit-rate', label: 'Critical Rate (%)' },
     { value: 'crit-damage', label: 'Critical Damage (%)' },
     { value: 'skill-level-1st', label: '1st Job Skill Level' },

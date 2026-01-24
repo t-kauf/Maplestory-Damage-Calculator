@@ -5,6 +5,7 @@
 
 import { CONTENT_TYPE, JOB_TIER, MASTERY_TYPE, DEFAULT_BASE_STATS, type ContentType, type JobTier, type MasteryTypeValue, type StatKey as StatKeyFromConstants, type BaseStats as BaseStatsFromConstants } from './constants';
 import type { CompanionState } from './page/companions/companions.types';
+import type { EquipmentSlotId, EquipmentSlotData } from './page/equipment/equipment.types';
 import { DEFAULT_COMPANION_STATE } from './page/companions/companions.types';
 
 // Re-export for backward compatibility
@@ -64,6 +65,11 @@ export interface LoadoutData {
 
     /** Companion system data */
     companions: CompanionState;
+
+    /** Equipment data by slot */
+    equipment: {
+        [K in EquipmentSlotId]: EquipmentSlotData | null;
+    };
 }
 
 /**
@@ -105,5 +111,18 @@ export const DEFAULT_LOADOUT_DATA: LoadoutData = {
         totalAttack: 0,
         equippedAttack: 0
     },
-    companions: DEFAULT_COMPANION_STATE
+    companions: DEFAULT_COMPANION_STATE,
+    equipment: {
+        head: null,
+        cape: null,
+        chest: null,
+        shoulders: null,
+        legs: null,
+        belt: null,
+        gloves: null,
+        boots: null,
+        ring: null,
+        neck: null,
+        'eye-accessory': null
+    }
 };

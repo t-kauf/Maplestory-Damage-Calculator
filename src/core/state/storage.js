@@ -26,7 +26,7 @@ const BASE_SETUP_FIELDS = [
     'skill-level-1st', 'skill-level-2nd', 'skill-level-3rd', 'skill-level-4th',
     'str', 'dex', 'int', 'luk'
 ];
-
+/*
 // Save all data to localStorage
 export function saveToLocalStorage() {
     // Don't save if we're currently loading data
@@ -256,24 +256,6 @@ export function loadFromLocalStorage() {
             });
         }
 
-        // Load Companions
-        if (data.companions) {
-            setCompanionsState(data.companions);
-            // Refresh UI if companions tab is visible
-            if (typeof refreshCompanionsUI === 'function') {
-                refreshCompanionsUI();
-            }
-        }
-
-        // Load Companions Presets
-        if (data.companionsPresets) {
-            setPresetsState(data.companionsPresets);
-            // Refresh UI if companions tab is visible
-            if (typeof refreshCompanionsUI === 'function') {
-                refreshCompanionsUI();
-            }
-        }
-
         // Load Equipped Preset ID
         if (data.equippedPresetId) {
             setEquippedPresetId(data.equippedPresetId);
@@ -282,19 +264,6 @@ export function loadFromLocalStorage() {
         // Load Contributed Stats
         if (data.contributedStats) {
             setContributedStats(data.contributedStats);
-        }
-
-        // Load Preset DPS Comparison toggle
-        if (data.showPresetDpsComparison !== undefined) {
-            setShowPresetDpsComparison(data.showPresetDpsComparison);
-        }
-
-        // Load Locked Main Companions for optimal presets
-        if (data.lockedMainForOptimalBoss !== undefined) {
-            setLockedMainCompanion('optimal-boss', data.lockedMainForOptimalBoss);
-        }
-        if (data.lockedMainForOptimalNormal !== undefined) {
-            setLockedMainCompanion('optimal-normal', data.lockedMainForOptimalNormal);
         }
         
         // Load Special Stats
@@ -319,7 +288,7 @@ export function loadFromLocalStorage() {
         isLoading = false;
     }
 }
-
+*/
 // Update analysis tabs when base stats change
 export function updateAnalysisTabs() {
     // Update Inner Ability Analysis

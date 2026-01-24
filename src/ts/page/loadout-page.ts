@@ -26,6 +26,7 @@ import {
 } from "./weapon-levels/weapon-priority-ui";
 import { loadoutStore } from "@ts/store/loadout.store";
 import { attachCompanionsEventListeners, initializeCompanionsUI, loadCompanionsUI } from "./companions/companions-ui";
+import { attachEquipmentEventListeners, initializeEquipmentUI, loadEquipmentUI } from "./equipment/equipment-ui";
 
 /**
  * LoadoutPage - Manages the Loadout/Setup page
@@ -66,6 +67,7 @@ class LoadoutPage extends BasePage {
         initializeWeaponsUI(); // Handles tab HTML and weapon grid
         initializeWeaponPriorityUI(); // Initialize priority UI
         initializeCompanionsUI();
+        initializeEquipmentUI();
 
         // Step 2: Load UI from saved state
         loadBaseStatsUI();
@@ -74,7 +76,8 @@ class LoadoutPage extends BasePage {
         loadMasteryBonusesUI();
         loadWeaponsUI();
         loadCompanionsUI();
-
+        loadEquipmentUI();
+        
         // Step 3: Attach all event listeners (must be last to avoid triggering during load)
         attachBaseStatsEventListeners();
         attachWeaponEventListeners();
@@ -82,6 +85,7 @@ class LoadoutPage extends BasePage {
         attachTargetSelectEventListeners();
         attachMasteryEventListeners();
         attachCompanionsEventListeners();
+        attachEquipmentEventListeners();
 
         // Debug: Verify store is working
         const baseStats = loadoutStore.getBaseStats();

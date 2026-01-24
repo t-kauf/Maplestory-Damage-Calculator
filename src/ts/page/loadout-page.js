@@ -26,6 +26,7 @@ import {
 } from "./weapon-levels/weapon-priority-ui.js";
 import { loadoutStore } from "@ts/store/loadout.store.js";
 import { attachCompanionsEventListeners, initializeCompanionsUI, loadCompanionsUI } from "./companions/companions-ui.js";
+import { attachEquipmentEventListeners, initializeEquipmentUI, loadEquipmentUI } from "./equipment/equipment-ui.js";
 class LoadoutPage extends BasePage {
   constructor() {
     super("setup", "base-stats");
@@ -52,18 +53,21 @@ class LoadoutPage extends BasePage {
     initializeWeaponsUI();
     initializeWeaponPriorityUI();
     initializeCompanionsUI();
+    initializeEquipmentUI();
     loadBaseStatsUI();
     loadClassSelectUI();
     loadTargetSelectUI();
     loadMasteryBonusesUI();
     loadWeaponsUI();
     loadCompanionsUI();
+    loadEquipmentUI();
     attachBaseStatsEventListeners();
     attachWeaponEventListeners();
     attachClassSelectEventListeners();
     attachTargetSelectEventListeners();
     attachMasteryEventListeners();
     attachCompanionsEventListeners();
+    attachEquipmentEventListeners();
     const baseStats = loadoutStore.getBaseStats();
     console.log("Loadout page initialized. Base stats loaded:", baseStats.ATTACK);
   }

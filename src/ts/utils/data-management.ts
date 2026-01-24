@@ -13,6 +13,18 @@ interface ImportData {
     selectedClass?: string;
     selectedJobTier?: string;
     theme?: string;
+    equipmentSlots?: string;
+    "equipped.head"?: unknown;
+    "equipped.shoulders"?: unknown;
+    "equipped.chest"?: unknown;
+    "equipped.cape"?: unknown;
+    "equipped.ring"?: unknown;
+    "equipped.neck"?: unknown;
+    "equipped.eye-accessory"?: unknown;
+    "equipped.belt"?: unknown;
+    "equipped.gloves"?: unknown;
+    "equipped.boots"?: unknown;
+    "equipped.legs"?: unknown;
 }
 
 interface ExportData {
@@ -78,6 +90,25 @@ export function importData(): void {
             }
             if (importData.theme) {
                 localStorage.setItem('theme', importData.theme);
+            }
+
+            if (importData.equipmentSlots) {
+                localStorage.setItem('equipmentSlots', JSON.stringify(importData.equipmentSlots));
+            }
+
+            if(importData["equipped.head"])
+            {
+      localStorage.setItem('equipped.head',         JSON.stringify(importData["equipped.head"]));
+      localStorage.setItem('equipped.cape',         JSON.stringify(importData["equipped.cape"]));
+      localStorage.setItem('equipped.chest',        JSON.stringify(importData["equipped.chest"]));
+      localStorage.setItem('equipped.legs',         JSON.stringify(importData["equipped.legs"]));
+      localStorage.setItem('equipped.belt',         JSON.stringify(importData["equipped.belt"]));
+      localStorage.setItem('equipped.gloves',       JSON.stringify(importData["equipped.gloves"]));
+      localStorage.setItem('equipped.boots',        JSON.stringify(importData["equipped.boots"]));
+      localStorage.setItem('equipped.shoulders',    JSON.stringify(importData["equipped.shoulders"]));
+      localStorage.setItem('equipped.ring',         JSON.stringify(importData["equipped.ring"]));
+      localStorage.setItem('equipped.neck',         JSON.stringify(importData["equipped.neck"]));
+      localStorage.setItem('equipped.eye-accessory',    JSON.stringify(importData["equipped.eye-accessory"]));
             }
 
             alert('✅ Data imported successfully! Refreshing page...');
