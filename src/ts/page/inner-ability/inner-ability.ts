@@ -350,3 +350,13 @@ export function calculateBestCombinations(): {
         allRarities
     };
 }
+
+// ============================================================================
+// WINDOW EXPORTS
+// ============================================================================
+
+// Export functions to window for state.js integration
+if (typeof window !== 'undefined') {
+    (window as any).getAllPresets = getAllPresets;
+    (window as any).applyInnerAbilityLines = applyInnerAbilityLines;
+}

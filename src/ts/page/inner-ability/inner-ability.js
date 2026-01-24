@@ -202,6 +202,10 @@ function calculateBestCombinations() {
     allRarities
   };
 }
+if (typeof window !== "undefined") {
+  window.getAllPresets = getAllPresets;
+  window.applyInnerAbilityLines = applyInnerAbilityLines;
+}
 export {
   applyInnerAbilityLines,
   calculateBestCombinations,
