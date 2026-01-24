@@ -15,13 +15,9 @@ import type { BaseStats } from '@ts/types/loadout.js';
 import {
     calculatePresetComparisons,
     calculateTheoreticalBest,
-    calculateBestCombinations
+    calculateBestCombinations,
+    getBaselineStats
 } from '@ts/page/inner-ability/inner-ability.js';
-
-// Import getStats dynamically to avoid circular dependency
-function getStats(): BaseStats {
-    return (window as any).getStats ? (window as any).getStats('base') : {} as BaseStats;
-}
 
 // ============================================================================
 // STATE
@@ -252,7 +248,7 @@ export function renderTheoreticalBest(): void {
     const combinations = calculateBestCombinations();
 
     // Calculate baseline damage using StatCalculationService
-    const baseline = getStats();
+    const baseline = getBaselineStats();
     const baselineService = new StatCalculationService(baseline);
     const baselineBossDamage = baselineService.compute('boss');
     const baselineBossDps = baselineBossDamage.dps;
