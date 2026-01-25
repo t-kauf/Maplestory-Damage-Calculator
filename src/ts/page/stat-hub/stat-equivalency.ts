@@ -44,7 +44,7 @@ export function createStatConfig(
             getValue: () => getValueFn('attack'),
             applyToStats: (stats: BaseStats, value: number) => {
                 const service = new StatCalculationService(stats);
-                service.addAttack(value);
+                service.add('attack', value);
                 return service.getStats();
             },
             formatValue: (val: number) => val.toFixed(1)
@@ -54,7 +54,7 @@ export function createStatConfig(
             getValue: () => getValueFn('mainStat'),
             applyToStats: (stats: BaseStats, value: number) => {
                 const service = new StatCalculationService(stats);
-                service.addMainStat(value);
+                service.add('mainStat', value);
                 return service.getStats();
             },
             formatValue: (val: number) => val.toFixed(1)
@@ -64,7 +64,7 @@ export function createStatConfig(
             getValue: () => getValueFn('mainStatPct'),
             applyToStats: (stats: BaseStats, value: number) => {
                 const service = new StatCalculationService(stats);
-                service.addMainStatPct(value);
+                service.add('mainStatPct', value);
                 return service.getStats();
             },
             formatValue: (val: number) => `${val.toFixed(1)}%`
@@ -74,7 +74,7 @@ export function createStatConfig(
             getValue: () => getValueFn('skillCoeff'),
             applyToStats: (stats: BaseStats, value: number) => {
                 const service = new StatCalculationService(stats);
-                service.addPercentageStat(STAT.SKILL_COEFFICIENT.id, value);
+                service.add(STAT.SKILL_COEFFICIENT.id, value);
                 return service.getStats();
             },
             formatValue: (val: number) => `${val.toFixed(1)}%`
@@ -84,7 +84,7 @@ export function createStatConfig(
             getValue: () => getValueFn('skillMastery'),
             applyToStats: (stats: BaseStats, value: number) => {
                 const service = new StatCalculationService(stats);
-                service.addPercentageStat(STAT.MASTERY.id, value);
+                service.add(STAT.MASTERY.id, value);
                 return service.getStats();
             },
             formatValue: (val: number) => `${val.toFixed(1)}%`
@@ -94,7 +94,7 @@ export function createStatConfig(
             getValue: () => getValueFn('damage'),
             applyToStats: (stats: BaseStats, value: number) => {
                 const service = new StatCalculationService(stats);
-                service.addPercentageStat(STAT.DAMAGE.id, value);
+                service.add(STAT.DAMAGE.id, value);
                 return service.getStats();
             },
             formatValue: (val: number) => `${val.toFixed(1)}%`
@@ -104,7 +104,7 @@ export function createStatConfig(
             getValue: () => getValueFn('finalDamage'),
             applyToStats: (stats: BaseStats, value: number) => {
                 const service = new StatCalculationService(stats);
-                service.addMultiplicativeStat(STAT.FINAL_DAMAGE.id, value);
+                service.add(STAT.FINAL_DAMAGE.id, value);
                 return service.getStats();
             },
             formatValue: (val: number) => `${val.toFixed(1)}%`
@@ -114,7 +114,7 @@ export function createStatConfig(
             getValue: () => getValueFn('bossDamage'),
             applyToStats: (stats: BaseStats, value: number) => {
                 const service = new StatCalculationService(stats);
-                service.addPercentageStat(STAT.BOSS_DAMAGE.id, value);
+                service.add(STAT.BOSS_DAMAGE.id, value);
                 return service.getStats();
             },
             formatValue: (val: number) => `${val.toFixed(1)}%`
@@ -124,7 +124,7 @@ export function createStatConfig(
             getValue: () => getValueFn('normalDamage'),
             applyToStats: (stats: BaseStats, value: number) => {
                 const service = new StatCalculationService(stats);
-                service.addPercentageStat(STAT.NORMAL_DAMAGE.id, value);
+                service.add(STAT.NORMAL_DAMAGE.id, value);
                 return service.getStats();
             },
             formatValue: (val: number) => `${val.toFixed(1)}%`
@@ -134,7 +134,7 @@ export function createStatConfig(
             getValue: () => getValueFn('damageAmp'),
             applyToStats: (stats: BaseStats, value: number) => {
                 const service = new StatCalculationService(stats);
-                service.addPercentageStat(STAT.DAMAGE_AMP.id, value);
+                service.add(STAT.DAMAGE_AMP.id, value);
                 return service.getStats();
             },
             formatValue: (val: number) => `${val.toFixed(1)}x`
@@ -144,7 +144,7 @@ export function createStatConfig(
             getValue: () => getValueFn('minDamage'),
             applyToStats: (stats: BaseStats, value: number) => {
                 const service = new StatCalculationService(stats);
-                service.addPercentageStat(STAT.MIN_DAMAGE.id, value);
+                service.add(STAT.MIN_DAMAGE.id, value);
                 return service.getStats();
             },
             formatValue: (val: number) => `${val.toFixed(1)}%`
@@ -154,7 +154,7 @@ export function createStatConfig(
             getValue: () => getValueFn('maxDamage'),
             applyToStats: (stats: BaseStats, value: number) => {
                 const service = new StatCalculationService(stats);
-                service.addPercentageStat(STAT.MAX_DAMAGE.id, value);
+                service.add(STAT.MAX_DAMAGE.id, value);
                 return service.getStats();
             },
             formatValue: (val: number) => `${val.toFixed(1)}%`
@@ -164,7 +164,7 @@ export function createStatConfig(
             getValue: () => getValueFn('critRate'),
             applyToStats: (stats: BaseStats, value: number) => {
                 const service = new StatCalculationService(stats);
-                service.addPercentageStat(STAT.CRIT_RATE.id, value);
+                service.add(STAT.CRIT_RATE.id, value);
                 return service.getStats();
             },
             formatValue: (val: number) => `${val.toFixed(1)}%`
@@ -174,7 +174,7 @@ export function createStatConfig(
             getValue: () => getValueFn('critDamage'),
             applyToStats: (stats: BaseStats, value: number) => {
                 const service = new StatCalculationService(stats);
-                service.addPercentageStat(STAT.CRIT_DAMAGE.id, value);
+                service.add(STAT.CRIT_DAMAGE.id, value);
                 return service.getStats();
             },
             formatValue: (val: number) => `${val.toFixed(1)}%`
@@ -184,7 +184,7 @@ export function createStatConfig(
             getValue: () => getValueFn('attackSpeed'),
             applyToStats: (stats: BaseStats, value: number) => {
                 const service = new StatCalculationService(stats);
-                service.addDiminishingReturnStat(STAT.ATTACK_SPEED.id, value, 150);
+                service.add(STAT.ATTACK_SPEED.id, value);
                 return service.getStats();
             },
             formatValue: (val: number) => `${val.toFixed(1)}%`
@@ -194,7 +194,7 @@ export function createStatConfig(
             getValue: () => getValueFn('defPen'),
             applyToStats: (stats: BaseStats, value: number) => {
                 const service = new StatCalculationService(stats);
-                service.addDiminishingReturnStat(STAT.DEF_PEN.id, value, 100);
+                service.add(STAT.DEF_PEN.id, value);
                 return service.getStats();
             },
             formatValue: (val: number) => `${val.toFixed(1)}%`
@@ -227,7 +227,7 @@ export function calculateTargetDPSGain(
     let newDPS: number;
     if (sourceStat === STAT.MAIN_STAT_PCT.id) {
         const modifiedService = new StatCalculationService(stats);
-        modifiedService.addMainStatPct(sourceValue);
+        modifiedService.add(STAT.MAIN_STAT_PCT.id, sourceValue);
         newDPS = modifiedService.computeDPS(monsterType);
     } else {
         const modifiedStats = statConfig[sourceStat].applyToStats(stats, sourceValue);

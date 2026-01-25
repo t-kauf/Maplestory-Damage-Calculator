@@ -1,32 +1,77 @@
-import { RARITY_UPGRADE_RATES, equipmentPotentialData, slotSpecificPotentials } from './cube-potential-data.js';
-import { StatCalculationService } from '@core/services/stat-calculation-service.js';
-import { potentialStatToDamageStat } from './cube-logic.js';
-import { getStats } from '@core/state/state.js';
+/**
+ * Cube Expected Value - Monte Carlo Expected DPS Gain Calculations
+ * Calculates expected value and marginal gain for cube usage decisions
+ */
 
-// Cache for expected DPS values by slot+rarity
-const expectedDPSCache = {};
+import { StatCalculationService } from '@ts/services/stat-calculation-service.js';
+import {
+    RARITY_UPGRADE_RATES,
+    EQUIPMENT_POTENTIAL_DATA,
+    SLOT_SPECIFIC_POTENTIALS
+} from '@ts/page/cube-potential/cube-potential-data.js';
+import { potentialStatToDamageStat } from '@ts/page/cube-potential/cube-potential.js';
+import type { BaseStats } from '@ts/types/loadout.js';
+import type { CubeSlotId, Rarity, PotentialLineEntry } from '@ts/types/page/gear-lab/gear-lab.types';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export interface ExpectedGainResult {
+    expectedDPSAfterCube: number;
+    marginalGain: number;
+    tierUpProb: number;
+    currentSlotDPSGain: number;
+}
+
+export interface SlotState {
+    id: CubeSlotId;
+    name: string;
+    rarity: Rarity;
+    rollCount: number;
+    dpsGain: number;
+    cubesAtCurrentRarity?: number;
+}
+
+export interface OptimalSlotResult {
+    slot: SlotState | null;
+    marginalGain: number;
+}
+
+// ============================================================================
+// STATE
+// ============================================================================
+
+/**
+ * Cache for expected DPS values by slot+rarity
+ */
+const expectedDPSCache: Record<string, number> = {};
+
+// ============================================================================
+// EXPECTED VALUE CALCULATIONS
+// ============================================================================
 
 /**
  * Calculate expected MARGINAL DPS gain from using one cube on a slot.
  * Uses Monte Carlo sampling with actual DPS calculations.
  *
- * @param {string} slotId - Equipment slot ID
- * @param {string} currentRarity - Current rarity of the slot
- * @param {number} currentRollCount - Rolls at current rarity (for pity)
- * @param {number} currentSlotDPSGain - Current DPS% this slot provides
- * @param {object} baseStats - Base character stats
- * @param {number} baseDPS - Base DPS without any potential bonuses
- * @param {number} sampleSize - Monte Carlo samples (default 100)
+ * @param slotId - Equipment slot ID
+ * @param currentRarity - Current rarity of the slot
+ * @param currentRollCount - Rolls at current rarity (for pity)
+ * @param currentSlotDPSGain - Current DPS% this slot provides
+ * @param baseStats - Base character stats
+ * @param baseDPS - Base DPS without any potential bonuses
+ * @param sampleSize - Monte Carlo samples (default 100)
  */
 export function calculateExpectedMarginalGain(
-    slotId,
-    currentRarity,
-    currentRollCount,
-    currentSlotDPSGain,
-    baseStats,
-    baseDPS,
-    sampleSize = 100
-) {
+    slotId: CubeSlotId,
+    currentRarity: Rarity,
+    currentRollCount: number,
+    currentSlotDPSGain: number,
+    baseStats: BaseStats,
+    baseDPS: number,
+    sampleSize: number = 100
+): ExpectedGainResult {
     const upgradeData = RARITY_UPGRADE_RATES[currentRarity];
 
     // Calculate tier-up probability
@@ -55,7 +100,6 @@ export function calculateExpectedMarginalGain(
     const expectedDPSAfterCube = totalSampledGain / sampleSize;
 
     // Marginal gain = expected outcome - what we currently have
-    // This is the key fix: we're comparing expected NEW state vs CURRENT state
     const marginalGain = expectedDPSAfterCube - currentSlotDPSGain;
 
     return {
@@ -69,8 +113,8 @@ export function calculateExpectedMarginalGain(
 /**
  * Sample a random set of 3 potential lines for a slot at given rarity
  */
-function samplePotentialLines(slotId, rarity) {
-    const potentialData = equipmentPotentialData[rarity];
+function samplePotentialLines(slotId: CubeSlotId, rarity: Rarity): (PotentialLineEntry | null)[] {
+    const potentialData = EQUIPMENT_POTENTIAL_DATA[rarity];
     if (!potentialData) return [null, null, null];
 
     // Get line options with slot-specific additions
@@ -78,11 +122,11 @@ function samplePotentialLines(slotId, rarity) {
     let line2Options = [...(potentialData.line2 || [])];
     let line3Options = [...(potentialData.line3 || [])];
 
-    if (slotSpecificPotentials[slotId]?.[rarity]) {
-        const specific = slotSpecificPotentials[slotId][rarity];
-        if (specific.line1) line1Options = [...line1Options, ...specific.line1];
-        if (specific.line2) line2Options = [...line2Options, ...specific.line2];
-        if (specific.line3) line3Options = [...line3Options, ...specific.line3];
+    const slotSpecific = SLOT_SPECIFIC_POTENTIALS[slotId]?.[rarity];
+    if (slotSpecific) {
+        if (slotSpecific.line1) line1Options = [...line1Options, ...slotSpecific.line1];
+        if (slotSpecific.line2) line2Options = [...line2Options, ...slotSpecific.line2];
+        if (slotSpecific.line3) line3Options = [...line3Options, ...slotSpecific.line3];
     }
 
     return [
@@ -95,7 +139,7 @@ function samplePotentialLines(slotId, rarity) {
 /**
  * Roll a single line based on weights
  */
-function rollWeightedLine(options) {
+function rollWeightedLine(options: PotentialLineEntry[]): PotentialLineEntry | null {
     if (!options || options.length === 0) return null;
 
     const totalWeight = options.reduce((sum, opt) => sum + opt.weight, 0);
@@ -113,7 +157,11 @@ function rollWeightedLine(options) {
  * Calculate actual DPS gain from a set of potential lines
  * Uses StatCalculationService for accurate calculations
  */
-function calculateActualDPSGain(lines, baseStats, baseDPS) {
+function calculateActualDPSGain(
+    lines: (PotentialLineEntry | null)[],
+    baseStats: BaseStats,
+    baseDPS: number
+): number {
     const slotService = new StatCalculationService(baseStats);
     let accumulatedMainStatPct = 0;
 
@@ -123,10 +171,10 @@ function calculateActualDPSGain(lines, baseStats, baseDPS) {
         const mapped = potentialStatToDamageStat(line.stat, line.value, accumulatedMainStatPct);
         if (mapped.stat) {
             if (mapped.isMainStatPct) {
-                slotService.addPercentageStat('statDamage', mapped.value);
+                slotService.add(mapped.stat, mapped.value);
                 accumulatedMainStatPct += line.value;
             } else {
-                slotService.addPercentageStat(mapped.stat, mapped.value);
+                slotService.add(mapped.stat, mapped.value);
             }
         }
     }
@@ -139,7 +187,13 @@ function calculateActualDPSGain(lines, baseStats, baseDPS) {
  * Sample expected DPS gain for a slot at given rarity
  * Takes average of multiple samples
  */
-export function sampleExpectedDPSGain(slotId, rarity, baseStats, baseDPS, samples = 20) {
+export function sampleExpectedDPSGain(
+    slotId: CubeSlotId,
+    rarity: Rarity,
+    baseStats: BaseStats,
+    baseDPS: number,
+    samples: number = 20
+): number {
     let total = 0;
     for (let i = 0; i < samples; i++) {
         const lines = samplePotentialLines(slotId, rarity);
@@ -151,7 +205,12 @@ export function sampleExpectedDPSGain(slotId, rarity, baseStats, baseDPS, sample
 /**
  * Get cached expected DPS value for a slot+rarity combination
  */
-function getCachedExpectedDPS(slotId, rarity, baseStats, baseDPS) {
+function getCachedExpectedDPS(
+    slotId: CubeSlotId,
+    rarity: Rarity,
+    baseStats: BaseStats,
+    baseDPS: number
+): number {
     const key = `${slotId}-${rarity}`;
     if (!expectedDPSCache[key]) {
         expectedDPSCache[key] = sampleExpectedDPSGain(slotId, rarity, baseStats, baseDPS, 200);
@@ -163,7 +222,7 @@ function getCachedExpectedDPS(slotId, rarity, baseStats, baseDPS) {
  * Clear the expected DPS cache
  * Call this when stats change significantly
  */
-export function clearExpectedDPSCache() {
+export function clearExpectedDPSCache(): void {
     Object.keys(expectedDPSCache).forEach(k => delete expectedDPSCache[k]);
 }
 
@@ -171,13 +230,18 @@ export function clearExpectedDPSCache() {
  * Find the optimal slot to cube given current states
  * Uses Monte Carlo expected value to find highest marginal gain
  *
- * @param {Array} slots - Array of slot objects with id, rarity, rollCount, dpsGain
- * @param {object} baseStats - Base character stats
- * @param {number} baseDPS - Base DPS without potential bonuses
- * @param {number} sampleSize - Monte Carlo sample size (default 50)
+ * @param slots - Array of slot objects with id, rarity, rollCount, dpsGain
+ * @param baseStats - Base character stats
+ * @param baseDPS - Base DPS without potential bonuses
+ * @param sampleSize - Monte Carlo sample size (default 50)
  */
-export function findOptimalSlotToCube(slots, baseStats, baseDPS, sampleSize = 50) {
-    let bestSlot = null;
+export function findOptimalSlotToCube(
+    slots: SlotState[],
+    baseStats: BaseStats,
+    baseDPS: number,
+    sampleSize: number = 50
+): OptimalSlotResult {
+    let bestSlot: SlotState | null = null;
     let bestMarginalGain = -Infinity;
 
     for (const slot of slots) {
@@ -191,7 +255,7 @@ export function findOptimalSlotToCube(slots, baseStats, baseDPS, sampleSize = 50
             sampleSize
         );
 
-        // The key insight: we compare marginal gains across slots
+        // Compare marginal gains across slots
         // A slot at 0% DPS with expected 2% gain beats a slot at 5% with expected 5.3% gain
         // because marginalGain = 2 - 0 = 2 vs 5.3 - 5 = 0.3
         if (ev.marginalGain > bestMarginalGain) {

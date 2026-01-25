@@ -11,6 +11,7 @@ import { StatCalculationService } from '@ts/services/stat-calculation-service.js
 import type { InnerAbilityLine, PresetComparisonResult, TheoreticalRollResult, BestCombinationResult } from '@ts/types/page/gear-lab/gear-lab.types.js';
 import type { BaseStats } from '@ts/types/loadout.js';
 import { loadoutStore } from '@ts/store/loadout.store';
+import { STAT } from '@ts/types/constants';
 
 // ============================================================================
 // STAT MAPPING
@@ -18,55 +19,56 @@ import { loadoutStore } from '@ts/store/loadout.store';
 
 /**
  * Map an inner ability stat to base stats using StatCalculationService
- * @param statName - Name of the stat (e.g., "Boss Monster Damage")
+ * @param statIdentifier - STAT.X.id or display name (e.g., "Boss Monster Damage")
  * @param value - Value of the stat
  * @param baseStats - Base stats to modify
  * @returns Modified base stats
  */
-export function mapInnerAbilityStat(statName: string, value: number, baseStats: BaseStats): BaseStats {
+export function mapInnerAbilityStat(statIdentifier: string, value: number, baseStats: BaseStats): BaseStats {
     const service = new StatCalculationService(baseStats);
 
-    switch (statName) {
-        case 'Attack Speed':
-            // Attack Speed uses diminishing returns with factor 150
-            service.addDiminishingReturnStat('attackSpeed', value, 150);
-            break;
-        case 'Boss Monster Damage':
-            service.addPercentageStat('bossDamage', value);
-            break;
-        case 'Critical Rate':
-            service.addPercentageStat('critRate', value);
-            break;
-        case 'Damage':
-            service.addPercentageStat('damage', value);
-            break;
-        case 'Defense Penetration':
-            // Defense Penetration uses diminishing returns with factor 100
-            service.addDiminishingReturnStat('defPen', value, 100);
-            break;
-        case 'Min Damage Multiplier':
-            service.addPercentageStat('minDamage', value);
-            break;
-        case 'Max Damage Multiplier':
-            service.addPercentageStat('maxDamage', value);
-            break;
-        case 'Normal Monster Damage':
-            service.addPercentageStat('normalDamage', value);
-            break;
-        case 'Main Stat':
-            // Convert Main Stat to Stat Damage % at 100:1 ratio
-            service.addMainStat(value);
-            break;
-        // Ignored stats: Max HP, Max MP, Accuracy, Evasion, MP Recovery Per Sec,
-        // Meso Drop, EXP Gain, Debuff Tolerance, Critical Resistance,
-        // Damage Tolerance, Damage Taken Decrease
-        default:
-            // No effect on damage
-            break;
+    // If statIdentifier is already a STAT.X.id, use it directly
+    // Otherwise, look up the display name in the mapping
+    let statId = statIdentifier;
+    if (!isKnownStatId(statIdentifier)) {
+        // Check if this is a display name that needs mapping
+        const mappedId = INNER_ABILITY_DISPLAY_NAME_TO_ID[statIdentifier];
+        if (mappedId) {
+            statId = mappedId;
+        } else {
+            // Ignored stats: Max HP, Max MP, Accuracy, Evasion, MP Recovery Per Sec,
+            // Meso Drop, EXP Gain, Debuff Tolerance, Critical Resistance,
+            // Damage Tolerance, Damage Taken Decrease
+            return baseStats;
+        }
     }
 
+    service.add(statId, value);
     return service.getStats();
 }
+
+/**
+ * Check if a string is a known STAT.X.id
+ */
+function isKnownStatId(statId: string): boolean {
+    return Object.values(STAT).some(stat => stat.id === statId);
+}
+
+/**
+ * Mapping of inner ability display names to STAT.X.id constants
+ * Used for backward compatibility with legacy data
+ */
+export const INNER_ABILITY_DISPLAY_NAME_TO_ID: Record<string, string> = {
+    'Attack Speed': STAT.ATTACK_SPEED.id,
+    'Boss Monster Damage': STAT.BOSS_DAMAGE.id,
+    'Critical Rate': STAT.CRIT_RATE.id,
+    'Damage': STAT.DAMAGE.id,
+    'Defense Penetration': STAT.DEF_PEN.id,
+    'Min Damage Multiplier': STAT.MIN_DAMAGE.id,
+    'Max Damage Multiplier': STAT.MAX_DAMAGE.id,
+    'Normal Monster Damage': STAT.NORMAL_DAMAGE.id,
+    'Main Stat': STAT.PRIMARY_MAIN_STAT.id,
+};
 
 /**
  * Apply multiple inner ability lines to base stats
@@ -215,6 +217,7 @@ export function calculateTheoreticalBest(): TheoreticalRollResult[] {
     // Calculate baseline damage using StatCalculationService
     const baselineService = new StatCalculationService(baseline);
     const baselineBossDamage = baselineService.compute('boss');
+    const baselineNormalDamage = baselineService.compute('normal');
 
     // Iterate through each rarity and stat
     Object.entries(innerAbilitiesData).forEach(([rarity, rarityData]) => {
@@ -233,9 +236,13 @@ export function calculateTheoreticalBest(): TheoreticalRollResult[] {
             ].forEach(({ roll, value }) => {
                 const modifiedStats = mapInnerAbilityStat(statName, value, baseline);
                 const testService = new StatCalculationService(modifiedStats);
-                const damage = testService.compute('boss');
-                const dpsGain = damage.dps - baselineBossDamage.dps;
-                const percentIncrease = dpsGain / baselineBossDamage.dps * 100;
+
+                const isNormalTarget = statName === 'Normal Monster Damage';
+                const baselineDamage = isNormalTarget ? baselineNormalDamage : baselineBossDamage;
+
+                const damage = testService.compute(isNormalTarget ? 'normal' : 'boss');
+                const dpsGain = damage.dps - baselineDamage.dps;
+                const percentIncrease = dpsGain / baselineDamage.dps * 100;
 
                 results.push({
                     stat: statName,

@@ -74,7 +74,7 @@ export function calculateAttackWeights(
         const oldValue = stats.ATTACK;
         const effectiveIncrease = increase * (1 + service.weaponAttackBonus / 100);
 
-        const newDPS = service.addAttack(increase).computeDPS(MONSTER_TYPE.BOSS);
+        const newDPS = service.add('attack', increase).computeDPS(MONSTER_TYPE.BOSS);
         const newValue = service.getStats().ATTACK;
         const gainPercentage = (newDPS - baseBossDPS) / baseBossDPS * 100;
 
@@ -108,7 +108,7 @@ export function calculateMainStatWeights(
         const service = new StatCalculationService(stats);
         const actualMainStatGain = service.calculateMainStatIncreaseWithPct(increase);
 
-        const newDPS = service.addMainStat(increase).computeDPS(MONSTER_TYPE.BOSS);
+        const newDPS = service.add('mainStat', increase).computeDPS(MONSTER_TYPE.BOSS);
         const gainPercentage = (newDPS - baseBossDPS) / baseBossDPS * 100;
 
         results.push({
@@ -142,17 +142,8 @@ export function calculatePercentageStatWeight(
     increases.forEach(increase => {
         const service = new StatCalculationService(stats);
 
-        // Apply the stat increase based on type
-        if (statKey === STAT.STAT_DAMAGE.id) {
-            service.addMainStatPct(increase);
-        } else if (MULTIPLICATIVE_STATS[statKey]) {
-            service.addMultiplicativeStat(statKey, increase);
-        } else if (DIMINISHING_RETURN_STATS[statKey]) {
-            const factor = DIMINISHING_RETURN_STATS[statKey].denominator;
-            service.addDiminishingReturnStat(statKey, increase, factor);
-        } else {
-            service.addPercentageStat(statKey, increase);
-        }
+        // Apply the stat increase using the unified add() API
+        service.add(statKey, increase);
 
         const monsterType = isNormalDamage ? MONSTER_TYPE.NORMAL : MONSTER_TYPE.BOSS;
         const newDPS = service.computeDPS(monsterType);

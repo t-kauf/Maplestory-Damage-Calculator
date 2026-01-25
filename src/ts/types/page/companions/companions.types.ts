@@ -216,3 +216,34 @@ export const DEFAULT_COMPANION_STATE: CompanionState = {
         'optimal-normal': null
     }
 };
+
+/**
+ * Mapping from companion effect stat keys to STAT.X.id format
+ *
+ * Companion data uses mixed PascalCase/camelCase keys (e.g., 'Attack', 'bossDamage')
+ * while the STAT constant uses camelCase IDs (e.g., 'attack', 'bossDamage')
+ *
+ * This mapping enables proper routing to StatCalculationService methods.
+ *
+ * Keys not mapped:
+ * - 'MaxHp', 'MaxHpR': Not part of base stats (ignored)
+ * - 'HitChance', 'damageInCc': Not part of base stats (ignored)
+ *
+ * Generated from companion-data.ts stat keys and STAT constants
+ */
+export const COMPANION_STAT_KEY_TO_STAT_ID: Record<string, string> = {
+    // Core stats
+    'Attack': 'attack',
+    'MainStat': 'mainStat',
+
+    // Damage stats
+    'damage': 'damage',
+    'bossDamage': 'bossDamage',
+    'normalDamage': 'normalDamage',
+    'minDamage': 'minDamage',
+    'maxDamage': 'maxDamage',
+
+    // Combat stats
+    'critRate': 'critRate',
+    'attackSpeed': 'attackSpeed',
+};

@@ -8,6 +8,7 @@ const EMPTY_POTENTIAL_SET = {
   line2: { ...EMPTY_POTENTIAL_LINE },
   line3: { ...EMPTY_POTENTIAL_LINE }
 };
+const VALID_EQUIPMENT_SLOTS = ["head", "cape", "chest", "shoulders", "legs", "belt", "gloves", "boots", "ring", "neck", "eye-accessory"];
 const DEFAULT_POTENTIAL_TYPE_DATA = {
   rarity: "normal",
   rollCount: 0,
@@ -31,6 +32,32 @@ const createDefaultCubeSlotData = () => ({
   necklace: { ...DEFAULT_CUBE_SLOT_DATA },
   "eye-accessory": { ...DEFAULT_CUBE_SLOT_DATA }
 });
+const createDefaultEquipmentSlotData = () => ({
+  head: { attack: 0, mainStat: 0, damageAmp: 0 },
+  cape: { attack: 0, mainStat: 0, damageAmp: 0 },
+  chest: { attack: 0, mainStat: 0, damageAmp: 0 },
+  shoulders: { attack: 0, mainStat: 0, damageAmp: 0 },
+  legs: { attack: 0, mainStat: 0, damageAmp: 0 },
+  belt: { attack: 0, mainStat: 0, damageAmp: 0 },
+  gloves: { attack: 0, mainStat: 0, damageAmp: 0 },
+  boots: { attack: 0, mainStat: 0, damageAmp: 0 },
+  ring: { attack: 0, mainStat: 0, damageAmp: 0 },
+  neck: { attack: 0, mainStat: 0, damageAmp: 0 },
+  "eye-accessory": { attack: 0, mainStat: 0, damageAmp: 0 }
+});
+const createDefaultComparisonEquipment = () => ({
+  head: [],
+  cape: [],
+  chest: [],
+  shoulders: [],
+  legs: [],
+  belt: [],
+  gloves: [],
+  boots: [],
+  ring: [],
+  neck: [],
+  "eye-accessory": []
+});
 const DEFAULT_GEAR_LAB_DATA = {
   innerAbility: {
     presets: {
@@ -46,11 +73,14 @@ const DEFAULT_GEAR_LAB_DATA = {
       10: { id: 10, isEquipped: false, lines: [] }
     }
   },
-  cubePotential: createDefaultCubeSlotData()
+  cubePotential: createDefaultCubeSlotData(),
+  equipmentSlots: createDefaultEquipmentSlotData(),
+  comparisonEquipment: createDefaultComparisonEquipment()
 };
 export {
   DEFAULT_GEAR_LAB_DATA,
   EMPTY_POTENTIAL_LINE,
-  EMPTY_POTENTIAL_SET
+  EMPTY_POTENTIAL_SET,
+  VALID_EQUIPMENT_SLOTS
 };
 //# sourceMappingURL=gear-lab.types.js.map

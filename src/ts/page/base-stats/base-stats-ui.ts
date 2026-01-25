@@ -26,7 +26,7 @@ const DAMAGE_MODIFIERS: StatKey[] = [
     'STAT_DAMAGE', 'DAMAGE', 'DAMAGE_AMP', 'BASIC_ATTACK_DAMAGE', 'SKILL_DAMAGE',
     'DEF_PEN', 'BOSS_DAMAGE', 'NORMAL_DAMAGE', 'MIN_DAMAGE', 'MAX_DAMAGE', 'FINAL_DAMAGE'
 ];
-const SKILL_LEVELS: StatKey[] = ['SKILL_LEVEL_1ST', 'SKILL_LEVEL_2ND', 'SKILL_LEVEL_3RD', 'SKILL_LEVEL_4TH'];
+const SKILL_LEVELS: StatKey[] = ['SKILL_LEVEL_1ST', 'SKILL_LEVEL_2ND', 'SKILL_LEVEL_3RD', 'SKILL_LEVEL_4TH', 'SKILL_LEVEL_ALL'];
 const MAIN_STAT_PCT: StatKey[] = ['MAIN_STAT_PCT'];
 
 // All visible stat categories combined (for event listeners)
@@ -91,7 +91,7 @@ function generateStatInputsHTML(): string {
 
     // Hidden fields
     html += `
-        <input type="hidden" id="primaryMainStat" value="${STAT.PRIMARY_MAIN_STAT.defaultValue}">
+        <input type="hidden" id="mainStat" value="${STAT.PRIMARY_MAIN_STAT.defaultValue}">
         <input type="hidden" id="secondaryMainStat" value="${STAT.SECONDARY_MAIN_STAT.defaultValue}">
         ${generateMasteryHiddenInputs()}
         <input type="hidden" id="skillCoeff" value="0">
@@ -379,7 +379,7 @@ export function syncMainStatsToHidden() {
     const dexInput = document.getElementById('dex') as HTMLInputElement;
     const intInput = document.getElementById('int') as HTMLInputElement;
     const lukInput = document.getElementById('luk') as HTMLInputElement;
-    const primaryInput = document.getElementById('primaryMainStat') as HTMLInputElement;
+    const primaryInput = document.getElementById('mainStat') as HTMLInputElement;
     const secondaryInput = document.getElementById('secondaryMainStat') as HTMLInputElement;
 
     if (!primaryInput || !secondaryInput) return;

@@ -1,0 +1,921 @@
+/**
+ * Scroll Optimizer UI - Pure UI Layer
+ *
+ * Handles all HTML generation and UI event handling for the scrolling optimizer tab.
+ */
+
+import { formatNumber } from '@ts/utils/formatters.js';
+import { getScrollsForLevel, calculateScrollDamageGain } from '@ts/page/scrolling/scrolling.js';
+import { gearLabStore } from '@ts/store/gear-lab-store.js';
+import { loadoutStore } from '@ts/store/loadout.store.js';
+import { VALID_EQUIPMENT_SLOTS } from '@ts/types/page/gear-lab/gear-lab.types.js';
+import type { EquipmentSlotId, EquipmentSlotData } from '@ts/types/page/gear-lab/gear-lab.types.js';
+import type {
+    ScrollStrategy,
+    SimulationResult,
+    ScrollLevel,
+    EnhancementBonus,
+    ScrollRunResult
+} from '@ts/types/page/scrolling/scrolling.types.js';
+import { STAT } from '@ts/types/constants.js';
+import { StatCalculationService } from '@ts/services/stat-calculation-service.js';
+
+// Re-import simulation functions from logic layer
+import {
+    simulateScrollWithResets,
+    createL65Strategies,
+    createL85Strategies
+} from '@ts/page/scrolling/scrolling.js';
+
+// ============================================================================
+// STATE
+// ============================================================================
+
+let currentScrollLevel: ScrollLevel = '85';
+
+// ============================================================================
+// HTML GENERATION
+// ============================================================================
+
+/**
+ * Generate HTML for scroll level info display
+ */
+function generateScrollLevelInfoHTML(level: ScrollLevel, enhancementBonus: EnhancementBonus): string {
+    const bonusDisplay = enhancementBonus.total > 0
+        ? `<br><strong class="scrolling-level-info__bonus">Enhancement Bonus: +${(enhancementBonus.total * 100).toFixed(0)}% success rate</strong>`
+        : '';
+
+    if (level === '65') {
+        const scrolls = getScrollsForLevel('65');
+        const l65_70_rate = ((scrolls.L65_70.baseSuccess + enhancementBonus.total) * 100).toFixed(0);
+        const l65_30_rate = ((scrolls.L65_30.baseSuccess + enhancementBonus.total) * 100).toFixed(0);
+
+        return `
+            <strong>Level 65 Scrolls:</strong>${bonusDisplay}<br>
+            • 70%: <strong>${l65_70_rate}%</strong> effective rate (+100 ATK, 250 spell trace)<br>
+            • 30%: <strong>${l65_30_rate}%</strong> effective rate (+200 ATK, +0.1% Damage Amp, 300 spell trace)
+        `;
+    } else {
+        const scrolls = getScrollsForLevel('85');
+        const l85_70_rate = ((scrolls.L85_70.baseSuccess + enhancementBonus.total) * 100).toFixed(0);
+        const l85_30_rate = ((scrolls.L85_30.baseSuccess + enhancementBonus.total) * 100).toFixed(0);
+        const l85_15_rate = ((scrolls.L85_15.baseSuccess + enhancementBonus.total) * 100).toFixed(0);
+
+        return `
+            <strong>Level 85 Scrolls:</strong>${bonusDisplay}<br>
+            • 70%: <strong>${l85_70_rate}%</strong> effective rate (+200 ATK, +0.2% Damage Amp, 500 spell trace)<br>
+            • 30%: <strong>${l85_30_rate}%</strong> effective rate (+400 ATK, +0.4% Damage Amp, 650 spell trace)<br>
+            • 15%: <strong>${l85_15_rate}%</strong> effective rate (+800 ATK, +0.8% Damage Amp, 800 spell trace)
+        `;
+    }
+}
+
+/**
+ * Generate HTML for My Slot Performance tab
+ */
+function generateMySlotPerformanceHTML(): string {
+    return `
+        <div class="optimization-info-banner">
+            <span class="optimization-info-banner-icon">ℹ️</span>
+            <div class="optimization-info-banner__text">
+                <strong>Equipment Slot Analysis:</strong> Track individual equipment slot values in isolation. Each slot's DPS gain is calculated by comparing damage WITH that slot's stats vs damage WITH zero stats from that slot. DPS updates automatically as you type.
+            </div>
+        </div>
+
+        <!-- Summary Header -->
+        <div class="slot-summary-header">
+            <div class="summary-metric">
+                <div class="summary-metric-label">Total Attack</div>
+                <div class="summary-metric-value atk" id="total-attack">0</div>
+            </div>
+            <div class="summary-metric">
+                <div class="summary-metric-label">Total Main Stat</div>
+                <div class="summary-metric-value main" id="total-main">0</div>
+            </div>
+            <div class="summary-metric">
+                <div class="summary-metric-label">Total Dmg Amp</div>
+                <div class="summary-metric-value amp" id="total-amp">0%</div>
+            </div>
+            <div class="summary-metric">
+                <div class="summary-metric-label">Total DPS Gain</div>
+                <div class="summary-metric-value dps" id="total-dps">0%</div>
+            </div>
+        </div>
+
+        <div id="equipment-slots-grid" class="scrolling-slots-grid">
+            <!-- Slot cards generated by JavaScript -->
+        </div>
+    `;
+}
+
+/**
+ * Generate HTML for Simulation tab
+ */
+function generateSimulationHTML(): string {
+    return `
+        <div class="optimization-info-banner">
+            <span class="optimization-info-banner-icon">⚡</span>
+            <div class="optimization-info-banner__text">
+                <strong>Scroll Optimizer:</strong> Simulates different scrolling strategies using Level 65 scrolls to find the optimal approach. The damage gain shows how much your DPS will increase from the average scroll results.
+            </div>
+        </div>
+
+        <div class="scrolling-inputs-grid">
+            <div class="input-group">
+                <label>Spell Trace Budget</label>
+                <input type="number" id="scroll-spell-trace-budget" value="7000" min="500" max="50000" step="100">
+            </div>
+            <div class="input-group">
+                <label>Number of Simulations</label>
+                <input type="number" id="scroll-simulations" value="500" min="100" max="10000" step="100">
+            </div>
+        </div>
+
+        <div class="scrolling-enhancements">
+            <div class="scrolling-enhancements__grid">
+                <label class="scrolling-premium__label">
+                    <input type="checkbox" id="scroll-premium-membership" class="scrolling-premium__checkbox" onchange="window.updateScrollLevelInfo()">
+                    <span class="scrolling-premium__text">
+                        Premium
+                        <span class="scrolling-premium__badge">+2%</span>
+                    </span>
+                </label>
+
+                <div class="scrolling-guild">
+                    <span class="scrolling-guild__icon">⚔️</span>
+                    <span class="scrolling-guild__label">Guild Skill</span>
+                    <div class="scrolling-guild__slider-container">
+                        <input type="range" id="scroll-guild-skill" class="scrolling-guild__slider" min="0" max="3" step="1" value="0"
+                               oninput="window.updateGuildSkillDisplay(); window.updateScrollLevelInfo();"
+                               data-value="0">
+                    </div>
+                    <span id="guild-skill-value" class="scrolling-guild__value">0%</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="scrolling-level-selector">
+            <label class="scrolling-level-selector__label">Scroll Level</label>
+            <div class="scrolling-level-selector__options">
+                <label class="scrolling-level-radio">
+                    <input type="radio" name="scroll-level" value="65" onchange="window.updateScrollLevelInfo()">
+                    <span>Level 65 Scrolls</span>
+                </label>
+                <label class="scrolling-level-radio">
+                    <input type="radio" name="scroll-level" value="85" checked onchange="window.updateScrollLevelInfo()">
+                    <span>Level 85 Scrolls</span>
+                </label>
+            </div>
+            <div id="scroll-level-info" class="scrolling-level-info">
+                <!-- Info populated by JavaScript -->
+            </div>
+        </div>
+
+        <button class="calculate-btn scrolling-run-btn" onclick="window.runScrollSimulation()" id="scroll-run-btn">Run Simulation</button>
+
+        <div id="scroll-progress-container" class="scrolling-progress" style="display: none;">
+            <div class="scrolling-progress__track">
+                <div id="scroll-progress-bar" class="scrolling-progress__bar"></div>
+            </div>
+            <p id="scroll-progress-text" class="scrolling-progress__text"></p>
+        </div>
+
+        <div id="scroll-results-container" class="scrolling-results">
+            <!-- Results populated by JavaScript -->
+        </div>
+    `;
+}
+
+/**
+ * Generate the complete HTML for the scrolling optimizer tab
+ */
+export function generateScrollingHTML(): string {
+    return `
+        <div class="tab-navigation">
+            <button id="scrolling-tab-button" class="tab-button active" onclick="window.switchScrollingSubTab('my-slot-performance')">My Slot Performance</button>
+            <button id="scrolling-tab-button" class="tab-button" onclick="window.switchScrollingSubTab('simulation')">Simulation</button>
+        </div>
+
+        <!-- My Slot Performance Sub-Tab -->
+        <div id="scrolling-my-slot-performance" class="scrolling-subtab active">
+            ${generateMySlotPerformanceHTML()}
+        </div>
+
+        <!-- Simulation Sub-Tab -->
+        <div id="scrolling-simulation" class="scrolling-subtab" style="display: none;">
+            ${generateSimulationHTML()}
+        </div>
+    `;
+}
+
+// ============================================================================
+// UI FUNCTIONS
+// ============================================================================
+
+/**
+ * Update Guild Skill display value
+ */
+export function updateGuildSkillDisplay(): void {
+    const slider = document.getElementById('scroll-guild-skill') as HTMLInputElement;
+    const display = document.getElementById('guild-skill-value');
+    if (slider && display) {
+        const value = slider.value;
+        display.textContent = value + '%';
+
+        // Update styling based on value
+        if (parseInt(value) > 0) {
+            display.classList.add('boosted');
+        } else {
+            display.classList.remove('boosted');
+        }
+
+        // Update slider data attribute for CSS styling
+        slider.setAttribute('data-value', value);
+
+        // Update tick marks
+        const ticks = document.querySelectorAll('.scrolling-guild__tick');
+        ticks.forEach((tick, index) => {
+            if (index <= parseInt(value)) {
+                tick.classList.add('active');
+            } else {
+                tick.classList.remove('active');
+            }
+        });
+    }
+}
+
+/**
+ * Update scroll level info display
+ */
+export function updateScrollLevelInfo(): void {
+    const levelRadio = document.querySelector<HTMLInputElement>('input[name="scroll-level"]:checked');
+    const level = (levelRadio?.value || '65') as ScrollLevel;
+    currentScrollLevel = level;
+
+    const infoDiv = document.getElementById('scroll-level-info');
+    if (!infoDiv) return;
+
+    const enhancementBonus = getEnhancementBonus();
+    infoDiv.innerHTML = generateScrollLevelInfoHTML(level, enhancementBonus);
+}
+
+/**
+ * Get enhancement bonus from UI
+ */
+function getEnhancementBonus(): EnhancementBonus {
+    const premiumCheckbox = document.getElementById('scroll-premium-membership') as HTMLInputElement;
+    const guildSlider = document.getElementById('scroll-guild-skill') as HTMLInputElement;
+
+    const premium = premiumCheckbox && premiumCheckbox.checked ? 0.02 : 0;
+    const guild = guildSlider ? (parseInt(guildSlider.value) / 100) : 0;
+
+    return {
+        premium,
+        guild,
+        total: premium + guild
+    };
+}
+
+/**
+ * Switch scrolling sub-tabs
+ */
+export function switchScrollingSubTab(tabName: string): void {
+    const allSubTabContent = document.querySelectorAll('.scrolling-subtab');
+    const allSubTabButtons = document.querySelectorAll('#scrolling-tab-button');
+
+    // Hide all subtabs
+    allSubTabContent.forEach(tab => {
+        tab.classList.remove('active');
+        (tab as HTMLElement).style.display = 'none';
+    });
+
+    // Remove active from all buttons
+    allSubTabButtons.forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    // Show selected subtab
+    const selectedTab = document.getElementById(`scrolling-${tabName}`);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+        selectedTab.style.display = 'block';
+    }
+
+    // Activate button
+    allSubTabButtons.forEach(btn => {
+        const onclickAttr = btn.getAttribute('onclick');
+        if (onclickAttr && onclickAttr.includes(`'${tabName}'`)) {
+            btn.classList.add('active');
+        }
+    });
+
+    // Render content
+    if (tabName === 'my-slot-performance') {
+        renderMySlotPerformance();
+    } else if (tabName === 'simulation') {
+        renderSimulation();
+    }
+}
+
+/**
+ * Render My Slot Performance tab
+ */
+function renderMySlotPerformance(): void {
+    const container = document.getElementById('scrolling-my-slot-performance');
+    if (!container) return;
+
+    container.innerHTML = generateMySlotPerformanceHTML();
+
+    // Initialize equipment slots after DOM is ready
+    setTimeout(() => {
+        initializeEquipmentSlots();
+        loadEquipmentSlots();
+    }, 0);
+}
+
+function initializeEquipmentSlots() {
+    const slots = ['Head', 'Cape', 'Chest', 'Shoulders', 'Legs', 'Belt', 'Gloves', 'Boots', 'Ring', 'Neck', 'Eye Accessory'];
+    const container = document.getElementById('equipment-slots-grid');
+    if (!container) return;
+
+    let html = '';
+    slots.forEach((slotName) => {
+        const slotId = slotName.toLowerCase().replace(/\s+/g, '-');
+        html += `
+            <div class="slot-card" data-slot-id="${slotId}">
+                <div class="slot-card-header">
+                    <div class="slot-name">${slotName}</div>
+                    <div class="slot-dps" id="slot-${slotId}-dps">+0.00%</div>
+                </div>
+                <div class="slot-inputs">
+                    <div class="slot-input-row">
+                        <label class="slot-input-label atk">ATTACK</label>
+                        <input type="number" class="slot-input" id="slot-${slotId}-attack" data-slot="${slotId}" step="0.1" min="0" value="0">
+                    </div>
+                    <div class="slot-input-row">
+                        <label class="slot-input-label main">MAIN STAT</label>
+                        <input type="number" class="slot-input" id="slot-${slotId}-main-stat" data-slot="${slotId}" step="1" min="0" value="0">
+                    </div>
+                    <div class="slot-input-row">
+                        <label class="slot-input-label amp">DAMAGE AMP</label>
+                        <input type="number" class="slot-input" id="slot-${slotId}-damage-amp" data-slot="${slotId}" step="0.1" min="0" value="0">
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+
+    // Attach input listeners for real-time calculation
+    setTimeout(() => {
+        slots.forEach(slot => {
+            const slotId = slot.toLowerCase().replace(/\s+/g, '-');
+            const attackInput = document.getElementById(`slot-${slotId}-attack`);
+            const mainStatInput = document.getElementById(`slot-${slotId}-main-stat`);
+            const damageAmpInput = document.getElementById(`slot-${slotId}-damage-amp`);
+
+            if (attackInput) {
+                attackInput.addEventListener('input', (e) => handleSlotInputChange(slotId as EquipmentSlotId));
+            }
+            if (mainStatInput) {
+                mainStatInput.addEventListener('input', (e) => handleSlotInputChange(slotId as EquipmentSlotId));
+            }
+            if (damageAmpInput) {
+                damageAmpInput.addEventListener('input', (e) => handleSlotInputChange(slotId as EquipmentSlotId));
+            }
+        });
+
+        // Initial calculation
+        updateAllSlotCalculations();
+    }, 0);
+}
+
+/**
+ * Handle individual slot input change - calculate DPS in real-time
+ */
+function handleSlotInputChange(slotId: EquipmentSlotId): void {
+    // Save to store
+    saveEquipmentSlots();
+
+    // Calculate this slot's DPS
+    calculateSlotDPS(slotId);
+
+    // Update totals
+    updateSlotTotals();
+}
+
+/**
+ * Calculate DPS gain for a single slot
+ */
+function calculateSlotDPS(slotId: EquipmentSlotId): void {
+    const attackInput = document.getElementById(`slot-${slotId}-attack`) as HTMLInputElement | null;
+    const mainStatInput = document.getElementById(`slot-${slotId}-main-stat`) as HTMLInputElement | null;
+    const damageAmpInput = document.getElementById(`slot-${slotId}-damage-amp`) as HTMLInputElement | null;
+    const dpsDisplay = document.getElementById(`slot-${slotId}-dps`);
+
+    if (!attackInput || !mainStatInput || !damageAmpInput || !dpsDisplay) return;
+
+    const attack = parseFloat(attackInput.value) || 0;
+    const mainStat = parseFloat(mainStatInput.value) || 0;
+    const damageAmp = parseFloat(damageAmpInput.value) || 0;
+
+    // Calculate DPS gain for this slot using StatCalculationService
+    const baseStats = loadoutStore.getBaseStats();
+    const service = new StatCalculationService(baseStats);
+
+    // Base DPS without this slot
+    const baseDPS = service.computeDPS('boss');
+
+    // Add this slot's stats
+    service.add(STAT.ATTACK.id, attack);
+    service.add(STAT.PRIMARY_MAIN_STAT.id, mainStat);
+    service.add(STAT.DAMAGE_AMP.id, damageAmp);
+
+    // New DPS with this slot
+    const newDPS = service.computeDPS('boss');
+    const dpsGain = ((newDPS - baseDPS) / baseDPS * 100);
+
+    dpsDisplay.textContent = `+${dpsGain.toFixed(2)}%`;
+}
+
+/**
+ * Update all slot calculations
+ */
+function updateAllSlotCalculations(): void {
+    VALID_EQUIPMENT_SLOTS.forEach(slotId => {
+        calculateSlotDPS(slotId);
+    });
+    updateSlotTotals();
+}
+
+/**
+ * Update summary totals for all slots
+ */
+function updateSlotTotals(): void {
+    let totalAttack = 0;
+    let totalMainStat = 0;
+    let totalDamageAmp = 0;
+    let totalDPSGain = 0;
+
+    VALID_EQUIPMENT_SLOTS.forEach(slotId => {
+        const attackInput = document.getElementById(`slot-${slotId}-attack`) as HTMLInputElement | null;
+        const mainStatInput = document.getElementById(`slot-${slotId}-main-stat`) as HTMLInputElement | null;
+        const damageAmpInput = document.getElementById(`slot-${slotId}-damage-amp`) as HTMLInputElement | null;
+        const dpsDisplay = document.getElementById(`slot-${slotId}-dps`);
+
+        if (attackInput) totalAttack += parseFloat(attackInput.value) || 0;
+        if (mainStatInput) totalMainStat += parseFloat(mainStatInput.value) || 0;
+        if (damageAmpInput) totalDamageAmp += parseFloat(damageAmpInput.value) || 0;
+        if (dpsDisplay) {
+            const dpsText = dpsDisplay.textContent || '+0.00%';
+            totalDPSGain += parseFloat(dpsText.replace('+', '').replace('%', '')) || 0;
+        }
+    });
+
+    const totalAttackEl = document.getElementById('total-attack');
+    const totalMainEl = document.getElementById('total-main');
+    const totalAmpEl = document.getElementById('total-amp');
+    const totalDpsEl = document.getElementById('total-dps');
+
+    if (totalAttackEl) totalAttackEl.textContent = totalAttack.toFixed(1);
+    if (totalMainEl) totalMainEl.textContent = totalMainStat.toFixed(0);
+    if (totalAmpEl) totalAmpEl.textContent = totalDamageAmp.toFixed(1) + '%';
+    if (totalDpsEl) totalDpsEl.textContent = '+' + totalDPSGain.toFixed(2) + '%';
+}
+
+export function saveEquipmentSlots() {
+    const slots: Partial<Record<EquipmentSlotId, EquipmentSlotData>> = {};
+
+    VALID_EQUIPMENT_SLOTS.forEach(slotId => {
+        const attackInput = document.getElementById(`slot-${slotId}-attack`) as HTMLInputElement | null;
+        const mainStatInput = document.getElementById(`slot-${slotId}-main-stat`) as HTMLInputElement | null;
+        const damageAmpInput = document.getElementById(`slot-${slotId}-damage-amp`) as HTMLInputElement | null;
+
+        slots[slotId] = {
+            attack: attackInput ? parseFloat(attackInput.value) || 0 : 0,
+            mainStat: mainStatInput ? parseFloat(mainStatInput.value) || 0 : 0,
+            damageAmp: damageAmpInput ? parseFloat(damageAmpInput.value) || 0 : 0
+        };
+    });
+
+    gearLabStore.updateAllEquipmentSlots(slots);
+
+    // Notify stat contributors to update stat breakdown
+    if (window.notifyStatContributors) {
+        window.notifyStatContributors();
+    }
+}
+
+function loadEquipmentSlots() {
+    const slots = gearLabStore.getEquipmentSlots();
+
+    VALID_EQUIPMENT_SLOTS.forEach(slotId => {
+        if (slots[slotId]) {
+            const attackInput = document.getElementById(`slot-${slotId}-attack`) as HTMLInputElement | null;
+            const mainStatInput = document.getElementById(`slot-${slotId}-main-stat`) as HTMLInputElement | null;
+            const damageAmpInput = document.getElementById(`slot-${slotId}-damage-amp`) as HTMLInputElement | null;
+
+            if (attackInput) attackInput.value = String(slots[slotId].attack || 0);
+            if (mainStatInput) mainStatInput.value = String(slots[slotId].mainStat || 0);
+            if (damageAmpInput) damageAmpInput.value = String(slots[slotId].damageAmp || 0);
+        }
+    });
+
+    // Recalculate all slots after loading
+    updateAllSlotCalculations();
+}
+
+
+
+/**
+ * Render Simulation tab
+ */
+function renderSimulation(): void {
+    const container = document.getElementById('scrolling-simulation');
+    if (!container) return;
+
+    container.innerHTML = generateSimulationHTML();
+
+    // Initialize scroll level info after DOM is ready
+    setTimeout(() => {
+        updateScrollLevelInfo();
+    }, 0);
+}
+
+/**
+ * Generate histogram HTML for attack distribution
+ */
+function generateHistogramHTML(attacks: number[], numSimulations: number): string {
+    const binSize = 50;
+    const maxAttack = Math.max(...attacks);
+    const numBins = Math.ceil(maxAttack / binSize) + 1;
+    const bins = new Array(numBins).fill(0);
+
+    // Count simulations in each bin
+    attacks.forEach(attack => {
+        const binIndex = Math.floor(attack / binSize);
+        bins[binIndex]++;
+    });
+
+    // Find max count for scaling
+    const maxCount = Math.max(...bins);
+
+    // Generate histogram HTML
+    let histogramHTML = '<div class="scrolling-histogram">';
+
+    // Only show bins that have at least 1 simulation
+    bins.forEach((count, index) => {
+        if (count > 0) {
+            const rangeStart = index * binSize;
+            const rangeEnd = (index + 1) * binSize;
+            const percentage = (count / numSimulations * 100).toFixed(1);
+            const barWidth = (count / maxCount * 100).toFixed(1);
+
+            histogramHTML += `
+                <div class="scrolling-histogram__bar-row">
+                    <div class="scrolling-histogram__label">${rangeStart}-${rangeEnd}:</div>
+                    <div class="scrolling-histogram__bar-track">
+                        <div class="scrolling-histogram__bar-fill" style="width: ${barWidth}%"></div>
+                    </div>
+                    <div class="scrolling-histogram__count">${count} (${percentage}%)</div>
+                </div>
+            `;
+        }
+    });
+
+    histogramHTML += '</div>';
+    return histogramHTML;
+}
+
+/**
+ * Display simulation results
+ */
+export function displayScrollResults(
+    results: Record<string, SimulationResult>,
+    budget: number,
+    numSimulations: number
+): void {
+    const container = document.getElementById('scroll-results-container');
+    if (!container) return;
+
+    container.innerHTML = '';
+
+    // Find best strategy by DPS gain
+    let bestStrategy: string | null = null;
+    let bestDPSGain = -Infinity;
+
+    for (const strategyId in results) {
+        if (results[strategyId].dpsGain > bestDPSGain) {
+            bestDPSGain = results[strategyId].dpsGain;
+            bestStrategy = strategyId;
+        }
+    }
+
+    // Create summary table
+    let tableHTML = `
+        <div class="scrolling-table-wrapper">
+            <table class="scrolling-results-table">
+                <thead>
+                    <tr>
+                        <th>Strategy</th>
+                        <th>DPS Gain</th>
+                        <th>Avg Attack</th>
+                        <th>Avg Damage Amp</th>
+                        <th>Avg Success</th>
+                        <th>Avg Resets</th>
+                        <th>Avg Trace Used</th>
+                    </tr>
+                </thead>
+                <tbody>
+    `;
+
+    // Sort strategies by DPS gain (descending)
+    const sortedStrategies = Object.entries(results).sort((a, b) => b[1].dpsGain - a[1].dpsGain);
+
+    for (const [strategyId, data] of sortedStrategies) {
+        const isBest = strategyId === bestStrategy;
+        const rowClass = isBest ? 'scrolling-results-table__row--best' : '';
+
+        tableHTML += `
+            <tr class="${rowClass}">
+                <td class="scrolling-results-table__cell--strategy" title="${data.strategy.description}">
+                    ${data.strategy.name}${isBest ? ' ⭐' : ''}
+                </td>
+                <td class="scrolling-results-table__cell--gain">
+                    +${data.dpsGain.toFixed(2)}%
+                </td>
+                <td>${data.avgAttack.toFixed(1)}</td>
+                <td>${data.avgDamageAmp.toFixed(2)}%</td>
+                <td>${data.avgSuccess.toFixed(1)} / 10</td>
+                <td>${data.avgResets.toFixed(1)}</td>
+                <td>${data.avgTraceUsed.toFixed(0)} / ${budget}</td>
+            </tr>
+        `;
+    }
+
+    tableHTML += '</tbody></table></div>';
+
+    // Add tabbed breakdown for top 5 strategies
+    tableHTML += `
+        <div class="scrolling-strategy-tabs">
+            <div class="scrolling-strategy-tabs__header">
+                <div id="scroll-strategy-tabs" class="scrolling-strategy-tabs__buttons">
+    `;
+
+    const top5 = sortedStrategies.slice(0, 5);
+
+    // Create tab buttons
+    top5.forEach(([strategyId, data], index) => {
+        const isBest = strategyId === bestStrategy;
+        const isActive = index === 0;
+
+        tableHTML += `
+            <button
+                class="scrolling-strategy-tab-btn ${isActive ? 'active' : ''}"
+                data-strategy-id="${strategyId}"
+                onclick="window.switchScrollStrategyTab('${strategyId}')">
+                ${data.strategy.name}${isBest ? ' ⭐' : ''}
+            </button>
+        `;
+    });
+
+    tableHTML += `
+                </div>
+            </div>
+            <div id="scroll-strategy-tab-contents" class="scrolling-strategy-tabs__content">
+    `;
+
+    // Create tab content for each strategy
+    top5.forEach(([strategyId, data], index) => {
+        const isBest = strategyId === bestStrategy;
+        const isActive = index === 0;
+        const displayStyle = isActive ? 'display: block' : 'display: none';
+
+        // Calculate percentiles for attack
+        const sortedAttacks = [...data.attacks].sort((a, b) => a - b);
+        const p10 = sortedAttacks[Math.floor(sortedAttacks.length * 0.10)];
+        const p50 = sortedAttacks[Math.floor(sortedAttacks.length * 0.50)];
+        const p90 = sortedAttacks[Math.floor(sortedAttacks.length * 0.90)];
+
+        tableHTML += `
+            <div id="scroll-strategy-tab-${strategyId}" class="scrolling-strategy-tab-content" style="${displayStyle};">
+                <p class="scrolling-strategy-description">
+                    ${data.strategy.description}
+                </p>
+
+                <div class="scrolling-metrics-grid">
+                    <div class="scrolling-metric-card scrolling-metric-card--highlight">
+                        <div class="scrolling-metric-card__value">+${data.dpsGain.toFixed(2)}%</div>
+                        <div class="scrolling-metric-card__label">DPS Gain</div>
+                    </div>
+                    <div class="scrolling-metric-card">
+                        <div class="scrolling-metric-card__value">${data.avgAttack.toFixed(1)}</div>
+                        <div class="scrolling-metric-card__label">Avg Attack</div>
+                    </div>
+                    <div class="scrolling-metric-card">
+                        <div class="scrolling-metric-card__value">${data.avgDamageAmp.toFixed(2)}%</div>
+                        <div class="scrolling-metric-card__label">Avg Damage Amp</div>
+                    </div>
+                    <div class="scrolling-metric-card">
+                        <div class="scrolling-metric-card__value">${data.avgSuccess.toFixed(1)}</div>
+                        <div class="scrolling-metric-card__label">Avg Success Slots</div>
+                    </div>
+                    <div class="scrolling-metric-card">
+                        <div class="scrolling-metric-card__value">${data.avgResets.toFixed(1)}</div>
+                        <div class="scrolling-metric-card__label">Avg Resets</div>
+                    </div>
+                    <div class="scrolling-metric-card">
+                        <div class="scrolling-metric-card__value">${data.avgTraceUsed.toFixed(0)}</div>
+                        <div class="scrolling-metric-card__label">Avg Trace Used</div>
+                    </div>
+                </div>
+
+                <div class="scrolling-distribution">
+                    <div class="scrolling-distribution__title">
+                        Attack Distribution (across ${numSimulations.toLocaleString()} simulations):
+                    </div>
+                    <div class="scrolling-distribution__percentiles">
+                        10th percentile: ${p10} | Median: ${p50} | 90th percentile: ${p90}
+                    </div>
+                    ${generateHistogramHTML(data.attacks, numSimulations)}
+                </div>
+
+                <div class="scrolling-damage-breakdown">
+                    <div class="scrolling-damage-breakdown__title">Damage Breakdown:</div>
+                    <div class="scrolling-damage-breakdown__stats">
+                        Base DPS: ${formatNumber(data.baseDPS)}<br>
+                        New DPS: ${formatNumber(data.newDPS)}<br>
+                        Effective Attack Increase (with weapon bonus): +${formatNumber(data.effectiveAttackIncrease)}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    tableHTML += `
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = tableHTML;
+}
+
+/**
+ * Switch between strategy detail tabs
+ */
+export function switchScrollStrategyTab(strategyId: string): void {
+    // Hide all tab contents
+    const allContents = document.querySelectorAll('.scrolling-strategy-tab-content');
+    allContents.forEach(content => {
+        (content as HTMLElement).style.display = 'none';
+    });
+
+    // Remove active state from all tab buttons
+    const allButtons = document.querySelectorAll('.scrolling-strategy-tab-btn');
+    allButtons.forEach(btn => {
+        btn.classList.remove('active');
+    });
+
+    // Show selected tab content
+    const selectedContent = document.getElementById(`scroll-strategy-tab-${strategyId}`);
+    if (selectedContent) {
+        selectedContent.style.display = 'block';
+    }
+
+    // Highlight selected tab button
+    const selectedButton = document.querySelector(`[data-strategy-id="${strategyId}"]`);
+    if (selectedButton) {
+        selectedButton.classList.add('active');
+    }
+}
+
+/**
+ * Main simulation runner
+ */
+export async function runScrollSimulation(): Promise<void> {
+    const budgetInput = document.getElementById('scroll-spell-trace-budget') as HTMLInputElement;
+    const numSimsInput = document.getElementById('scroll-simulations') as HTMLInputElement;
+
+    if (!budgetInput || !numSimsInput) return;
+
+    const budget = parseInt(budgetInput.value);
+    const numSimulations = parseInt(numSimsInput.value);
+    const scrolls = getScrollsForLevel(currentScrollLevel);
+
+    const button = document.getElementById('scroll-run-btn') as HTMLButtonElement;
+    const progressContainer = document.getElementById('scroll-progress-container') as HTMLElement;
+    const progressBar = document.getElementById('scroll-progress-bar') as HTMLElement;
+    const progressText = document.getElementById('scroll-progress-text') as HTMLElement;
+
+    if (button) button.disabled = true;
+    if (progressContainer) progressContainer.style.display = 'block';
+
+    // Get strategies based on selected scroll level
+    const strategies = currentScrollLevel === '65' ? createL65Strategies() : createL85Strategies();
+    const enhancementBonus = getEnhancementBonus();
+
+    const results: Record<string, SimulationResult> = {};
+
+    // Initialize results tracking
+    for (const strategy of strategies) {
+        results[strategy.id] = {
+            strategy,
+            attacks: [],
+            damageAmps: [],
+            successCounts: [],
+            resetCounts: [],
+            traceUsed: [],
+            avgAttack: 0,
+            avgDamageAmp: 0,
+            avgSuccess: 0,
+            avgResets: 0,
+            avgTraceUsed: 0,
+            dpsGain: 0,
+            baseDPS: 0,
+            newDPS: 0,
+            effectiveAttackIncrease: 0,
+            exampleResult: null
+        };
+    }
+
+    // Run simulations
+    for (let sim = 0; sim < numSimulations; sim++) {
+        if (sim % 50 === 0) {
+            const progress = (sim / numSimulations) * 100;
+            if (progressBar) progressBar.style.width = progress + '%';
+            if (progressText) progressText.textContent = `${sim} / ${numSimulations}`;
+            await new Promise(resolve => setTimeout(resolve, 0));
+        }
+
+        for (const strategy of strategies) {
+            const result = simulateScrollWithResets(strategy, budget, scrolls, enhancementBonus);
+
+            const data = results[strategy.id];
+            data.attacks.push(result.totalAttack);
+            data.damageAmps.push(result.totalDamageAmp);
+            data.successCounts.push(result.successfulSlots);
+            data.resetCounts.push(result.resetCount);
+            data.traceUsed.push(result.traceUsed);
+
+            // Store last result as example
+            if (sim === numSimulations - 1) {
+                data.exampleResult = result;
+            }
+        }
+    }
+
+    // Calculate averages and damage gains
+    for (const strategyId in results) {
+        const data = results[strategyId];
+        data.avgAttack = data.attacks.reduce((a, b) => a + b, 0) / numSimulations;
+        data.avgDamageAmp = data.damageAmps.reduce((a, b) => a + b, 0) / numSimulations;
+        data.avgSuccess = data.successCounts.reduce((a, b) => a + b, 0) / numSimulations;
+        data.avgResets = data.resetCounts.reduce((a, b) => a + b, 0) / numSimulations;
+        data.avgTraceUsed = data.traceUsed.reduce((a, b) => a + b, 0) / numSimulations;
+
+        // Calculate damage gain
+        const damageGain = calculateScrollDamageGain(data.avgAttack, data.avgDamageAmp);
+        data.dpsGain = damageGain.dpsGain;
+        data.baseDPS = damageGain.baseDPS;
+        data.newDPS = damageGain.newDPS;
+        data.effectiveAttackIncrease = damageGain.effectiveAttackIncrease;
+    }
+
+    displayScrollResults(results, budget, numSimulations);
+
+    if (button) button.disabled = false;
+    if (progressContainer) progressContainer.style.display = 'none';
+}
+
+/**
+ * Initialize the scrolling optimizer UI
+ */
+export function initializeScrollingUI(): void {
+    const container = document.getElementById('optimization-scroll-optimizer');
+    if (!container) {
+        console.error('Scrolling optimizer container not found');
+        return;
+    }
+
+    // Generate HTML
+    container.innerHTML = generateScrollingHTML();
+
+    // Initialize default tab
+    renderMySlotPerformance();
+    renderSimulation();
+}
+
+// ============================================================================
+// WINDOW EXPORTS
+// ============================================================================
+
+// Export functions to window for onclick handlers
+if (typeof window !== 'undefined') {
+    (window as any).switchScrollingSubTab = switchScrollingSubTab;
+    (window as any).runScrollSimulation = runScrollSimulation;
+    (window as any).updateScrollLevelInfo = updateScrollLevelInfo;
+    (window as any).switchScrollStrategyTab = switchScrollStrategyTab;
+    (window as any).updateGuildSkillDisplay = updateGuildSkillDisplay;
+    (window as any).saveEquipmentSlots = saveEquipmentSlots;
+}

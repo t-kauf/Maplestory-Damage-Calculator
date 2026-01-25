@@ -6,13 +6,16 @@ declare global {
 }
 
 interface ImportData {
+    "gear-lab-data": string | null;    
+    "loadout-data": string | null;
+    theme?: string;
+
     damageCalculatorData?: string | unknown;
     heroPowerPresets?: string | unknown;
     cubePotentialData?: string | unknown;
     comparisonItems?: unknown;
     selectedClass?: string;
     selectedJobTier?: string;
-    theme?: string;
     equipmentSlots?: string;
     "equipped.head"?: unknown;
     "equipped.shoulders"?: unknown;
@@ -28,17 +31,10 @@ interface ImportData {
 }
 
 interface ExportData {
-    damageCalculatorData: string | null;
-    heroPowerPresets: string | null;
-    cubePotentialData: string | null;
-    comparisonItems: unknown;
-    selectedClass: string | null;
-    selectedJobTier: string | null;
+    "gear-lab-data": string | null;
+    "loadout-data": string | null;
     theme: string | null;
 }
-
-// Forward declaration for external function
-declare function exportComparisonItems(): unknown;
 
 window.importData = importData;
 window.exportData = exportData;
@@ -51,9 +47,6 @@ export function importData(): void {
 
             // Validate the data structure
             const importData = data as ImportData;
-            if (!importData.damageCalculatorData && !importData.heroPowerPresets && !importData.cubePotentialData && !importData.comparisonItems) {
-                throw new Error('Invalid data format');
-            }
 
             // Confirm before overwriting
             if (!confirm('⚠️ This will overwrite your current data. Are you sure you want to continue?')) {
@@ -87,10 +80,7 @@ export function importData(): void {
             }
             if (importData.selectedJobTier) {
                 localStorage.setItem('selectedJobTier', importData.selectedJobTier);
-            }
-            if (importData.theme) {
-                localStorage.setItem('theme', importData.theme);
-            }
+            }     
 
             if (importData.equipmentSlots) {
                 localStorage.setItem('equipmentSlots', JSON.stringify(importData.equipmentSlots));
@@ -98,17 +88,31 @@ export function importData(): void {
 
             if(importData["equipped.head"])
             {
-      localStorage.setItem('equipped.head',         JSON.stringify(importData["equipped.head"]));
-      localStorage.setItem('equipped.cape',         JSON.stringify(importData["equipped.cape"]));
-      localStorage.setItem('equipped.chest',        JSON.stringify(importData["equipped.chest"]));
-      localStorage.setItem('equipped.legs',         JSON.stringify(importData["equipped.legs"]));
-      localStorage.setItem('equipped.belt',         JSON.stringify(importData["equipped.belt"]));
-      localStorage.setItem('equipped.gloves',       JSON.stringify(importData["equipped.gloves"]));
-      localStorage.setItem('equipped.boots',        JSON.stringify(importData["equipped.boots"]));
-      localStorage.setItem('equipped.shoulders',    JSON.stringify(importData["equipped.shoulders"]));
-      localStorage.setItem('equipped.ring',         JSON.stringify(importData["equipped.ring"]));
-      localStorage.setItem('equipped.neck',         JSON.stringify(importData["equipped.neck"]));
-      localStorage.setItem('equipped.eye-accessory',    JSON.stringify(importData["equipped.eye-accessory"]));
+                localStorage.setItem('equipped.head',         JSON.stringify(importData["equipped.head"]));
+                localStorage.setItem('equipped.cape',         JSON.stringify(importData["equipped.cape"]));
+                localStorage.setItem('equipped.chest',        JSON.stringify(importData["equipped.chest"]));
+                localStorage.setItem('equipped.legs',         JSON.stringify(importData["equipped.legs"]));
+                localStorage.setItem('equipped.belt',         JSON.stringify(importData["equipped.belt"]));
+                localStorage.setItem('equipped.gloves',       JSON.stringify(importData["equipped.gloves"]));
+                localStorage.setItem('equipped.boots',        JSON.stringify(importData["equipped.boots"]));
+                localStorage.setItem('equipped.shoulders',    JSON.stringify(importData["equipped.shoulders"]));
+                localStorage.setItem('equipped.ring',         JSON.stringify(importData["equipped.ring"]));
+                localStorage.setItem('equipped.neck',         JSON.stringify(importData["equipped.neck"]));
+                localStorage.setItem('equipped.eye-accessory',    JSON.stringify(importData["equipped.eye-accessory"]));
+            }
+
+            if (importData.theme) {
+                localStorage.setItem('theme', importData.theme);
+            }
+
+            if(importData["loadout-data"])
+            {
+                localStorage.setItem("loadout-data", JSON.stringify(importData["loadout-data"]));
+            }
+
+              if(importData["gear-lab-data"])
+            {
+                localStorage.setItem("gear-lab-data", JSON.stringify(importData["gear-lab-data"]));
             }
 
             alert('✅ Data imported successfully! Refreshing page...');
@@ -126,12 +130,8 @@ export function importData(): void {
 // Export all local storage data to clipboard
 export function exportData(): void {
     const allData: ExportData = {
-        damageCalculatorData: localStorage.getItem('damageCalculatorData'),
-        heroPowerPresets: localStorage.getItem('heroPowerPresets'),
-        cubePotentialData: localStorage.getItem('cubePotentialData'),
-        comparisonItems: exportComparisonItems(),
-        selectedClass: localStorage.getItem('selectedClass'),
-        selectedJobTier: localStorage.getItem('selectedJobTier'),
+        "loadout-data": localStorage.getItem('loadout-data'),
+        "gear-lab-data": localStorage.getItem('gear-lab-data'),
         theme: localStorage.getItem('theme')
     };
 

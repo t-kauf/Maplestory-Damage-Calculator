@@ -21,9 +21,19 @@ import type {
     PotentialSet,
     CubeSlotData,
     AllCubeSlotData,
-    Rarity
+    Rarity,
+    EquipmentSlotId,
+    EquipmentSlotData,
+    AllEquipmentSlotData,
+    LegacyEquipmentSlotData,
+    ComparisonItem,
+    ComparisonEquipment,
+    ComparisonStatLine,
+    LegacyComparisonItem
 } from '@ts/types/page/gear-lab/gear-lab.types';
-import { DEFAULT_GEAR_LAB_DATA, EMPTY_POTENTIAL_LINE, EMPTY_POTENTIAL_SET } from '@ts/types/page/gear-lab/gear-lab.types';
+import { DEFAULT_GEAR_LAB_DATA, EMPTY_POTENTIAL_LINE, EMPTY_POTENTIAL_SET, VALID_EQUIPMENT_SLOTS } from '@ts/types/page/gear-lab/gear-lab.types';
+import { INNER_ABILITY_DISPLAY_NAME_TO_ID } from '@ts/page/inner-ability/inner-ability';
+import { STAT, type StatId } from '@ts/types/constants';
 
 export class GearLabStore {
     private data: GearLabData;
@@ -93,10 +103,17 @@ export class GearLabStore {
                 Object.entries(legacy).forEach(([key, preset]) => {
                     const presetId = parseInt(key);
                     if (presetId >= 1 && presetId <= 10) {
+                        // Migrate lines to include statId field
+                        const migratedLines = (preset.lines || []).map((line: any) => ({
+                            stat: line.stat || '',
+                            statId: line.stat ? INNER_ABILITY_DISPLAY_NAME_TO_ID[line.stat] || '' : '',
+                            value: line.value || 0
+                        }));
+
                         this.data.innerAbility.presets[presetId] = {
                             id: presetId,
                             isEquipped: preset.isEquipped || false,
-                            lines: preset.lines || []
+                            lines: migratedLines
                         };
                     }
                 });
@@ -116,8 +133,70 @@ export class GearLabStore {
         // Migrate Cube Potential from old state.js format
         this.migrateCubePotentialFromLegacy();
 
+        // Migrate Equipment Slots from old format
+        this.migrateEquipmentSlotsFromLegacy();
+
+        // Migrate Comparison Items from old format
+        this.migrateComparisonItemsFromLegacy();
+
         console.log('GearLabStore: Migration complete, saving to new format...');
         this.saveDualWrite();
+    }
+
+    /**
+     * Migrate comparison items from legacy comparison-state.js format
+     */
+    private migrateComparisonItemsFromLegacy(): void {
+        // Try to read from localStorage with keys 'comparisonItems.{slotId}'
+        const slotIds: EquipmentSlotId[] = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck', 'eye-accessory'];
+
+        let migratedCount = 0;
+
+        slotIds.forEach(slotId => {
+            const legacyKey = `comparisonItems.${slotId}`;
+            const legacyDataStr = localStorage.getItem(legacyKey);
+
+            if (legacyDataStr) {
+                try {
+                    const legacyItems: LegacyComparisonItem[] = JSON.parse(legacyDataStr);
+
+                    // Migrate each item to new format
+                    legacyItems.forEach(legacyItem => {
+                        // Convert legacy stats format to new statLines format
+                        const statLines: ComparisonStatLine[] = (legacyItem.stats || []).map(stat => ({
+                            type: stat.type as StatId,
+                            value: parseFloat(stat.value) || 0
+                        }));
+
+                        const newItem: Omit<ComparisonItem, 'guid'> = {
+                            name: legacyItem.name || 'Item',
+                            attack: legacyItem.attack || 0,
+                            mainStat: 0,  // Legacy format didn't track main stat separately
+                            statLines
+                        };
+
+                        // Add to comparison equipment (will generate new GUID)
+                        this.addComparisonItem(slotId, newItem);
+                        migratedCount++;
+                    });
+
+                    console.log(`GearLabStore: Migrated ${legacyItems.length} comparison items for slot ${slotId}`);
+
+                    // Clean up old localStorage key after successful migration
+                    localStorage.removeItem(legacyKey);
+                    console.log(`GearLabStore: Deleted ${legacyKey} key`);
+
+                } catch (error) {
+                    console.error(`GearLabStore: Failed to migrate comparison items for ${slotId}:`, error);
+                }
+            }
+        });
+
+        if (migratedCount > 0) {
+            console.log(`GearLabStore: Total ${migratedCount} comparison items migrated`);
+        } else {
+            console.log('GearLabStore: No legacy comparison items found');
+        }
     }
 
     /**
@@ -163,6 +242,49 @@ export class GearLabStore {
         } catch (error) {
             console.error('GearLabStore: Failed to migrate cube potential:', error);
         }
+    }
+
+    /**
+     * Migrate equipment slot data from legacy format
+     */
+    private migrateEquipmentSlotsFromLegacy(): void {
+        // Try to read from localStorage with key 'equipmentSlots'
+        const legacyDataStr = localStorage.getItem('equipmentSlots');
+        if (!legacyDataStr) {
+            console.log('GearLabStore: No legacy equipmentSlots found in localStorage');
+            return;
+        }
+
+        try {
+            const legacyData: Record<string, LegacyEquipmentSlotData> = JSON.parse(legacyDataStr);
+
+            // Migrate each slot
+            Object.entries(legacyData).forEach(([slotId, slotData]) => {
+                // Validate slotId is a valid EquipmentSlotId
+                if (this.isValidEquipmentSlotId(slotId)) {
+                    this.data.equipmentSlots[slotId as EquipmentSlotId] = {
+                        attack: typeof slotData.attack === 'number' ? slotData.attack : 0,
+                        mainStat: typeof slotData.mainStat === 'number' ? slotData.mainStat : 0,
+                        damageAmp: typeof slotData.damageAmp === 'number' ? slotData.damageAmp : 0
+                    };
+                }
+            });
+
+            console.log('GearLabStore: Equipment slots migration complete');
+
+            // Clean up old localStorage key after successful migration
+            localStorage.removeItem('equipmentSlots');
+            console.log('GearLabStore: Deleted equipmentSlots key');
+        } catch (error) {
+            console.error('GearLabStore: Failed to migrate equipment slots:', error);
+        }
+    }
+
+    /**
+     * Validate if a string is a valid EquipmentSlotId
+     */
+    private isValidEquipmentSlotId(slotId: string): boolean {
+        return VALID_EQUIPMENT_SLOTS.includes(slotId as EquipmentSlotId);
     }
 
     /**
@@ -268,6 +390,53 @@ export class GearLabStore {
                         typeData.setA = this.validatePotentialSet(typeData.setA);
                         typeData.setB = this.validatePotentialSet(typeData.setB);
                     }
+                });
+            }
+        });
+
+        // Validate equipmentSlots
+        if (!this.data.equipmentSlots) {
+            this.data.equipmentSlots = { ...defaults.equipmentSlots };
+        }
+
+        // Ensure all equipment slots exist with valid data
+        VALID_EQUIPMENT_SLOTS.forEach(slotId => {
+            if (!this.data.equipmentSlots[slotId]) {
+                this.data.equipmentSlots[slotId] = { ...defaults.equipmentSlots[slotId] };
+            } else {
+                // Validate slot data structure
+                const slot = this.data.equipmentSlots[slotId];
+                if (typeof slot.attack !== 'number') slot.attack = 0;
+                if (typeof slot.mainStat !== 'number') slot.mainStat = 0;
+                if (typeof slot.damageAmp !== 'number') slot.damageAmp = 0;
+            }
+        });
+
+        // Validate comparisonEquipment
+        if (!this.data.comparisonEquipment) {
+            this.data.comparisonEquipment = { ...defaults.comparisonEquipment };
+        }
+
+        // Ensure all comparison equipment slots exist with valid arrays
+        VALID_EQUIPMENT_SLOTS.forEach(slotId => {
+            if (!Array.isArray(this.data.comparisonEquipment[slotId])) {
+                this.data.comparisonEquipment[slotId] = [];
+            } else {
+                // Validate each item in the array
+                this.data.comparisonEquipment[slotId] = this.data.comparisonEquipment[slotId].filter(item => {
+                    // Validate item structure
+                    if (typeof item.guid !== 'string' || !item.guid) return false;
+                    if (typeof item.name !== 'string') return false;
+                    if (typeof item.attack !== 'number') return false;
+                    if (typeof item.mainStat !== 'number') return false;
+                    if (!Array.isArray(item.statLines)) return false;
+
+                    // Validate stat lines
+                    item.statLines = item.statLines.filter(statLine => {
+                        return typeof statLine.type === 'string' && typeof statLine.value === 'number';
+                    });
+
+                    return true;
                 });
             }
         });
@@ -393,10 +562,13 @@ export class GearLabStore {
 
         // Extend array if needed
         while (preset.lines.length <= lineIndex) {
-            preset.lines.push({ stat: '', value: 0 });
+            preset.lines.push({ stat: '', statId: '', value: 0 });
         }
 
-        preset.lines[lineIndex] = line;
+        // Populate statId based on stat name using the mapping
+        const statId = line.stat ? INNER_ABILITY_DISPLAY_NAME_TO_ID[line.stat] || '' : '';
+        preset.lines[lineIndex] = { ...line, statId };
+
         this.saveDualWrite();
     }
 
@@ -526,8 +698,248 @@ export class GearLabStore {
             return;
         }
 
-        this.data.cubePotential[slotId][potentialType][setName] = set;
+            this.data.cubePotential[slotId][potentialType][setName] = set;
         this.saveDualWrite();
+    }
+
+    // ========================================================================
+    // EQUIPMENT SLOTS
+    // ========================================================================
+
+    /**
+     * Get all equipment slot data
+     * @returns Deep clone of all equipment slot data
+     */
+    getEquipmentSlots(): AllEquipmentSlotData {
+        return JSON.parse(JSON.stringify(this.data.equipmentSlots));
+    }
+
+    /**
+     * Get data for a specific equipment slot
+     * @param slotId - Equipment slot ID
+     * @returns Equipment slot data or null if not found
+     */
+    getEquipmentSlot(slotId: EquipmentSlotId): EquipmentSlotData | null {
+        const slot = this.data.equipmentSlots[slotId];
+        return slot ? JSON.parse(JSON.stringify(slot)) : null;
+    }
+
+    /**
+     * Update equipment slot data
+     * @param slotId - Equipment slot ID
+     * @param data - Partial equipment slot data to update
+     */
+    updateEquipmentSlot(slotId: EquipmentSlotId, data: Partial<EquipmentSlotData>): void {
+        if (!VALID_EQUIPMENT_SLOTS.includes(slotId)) {
+            console.error(`GearLabStore: Invalid slot ID ${slotId}`);
+            return;
+        }
+
+        if (!this.data.equipmentSlots[slotId]) {
+            this.data.equipmentSlots[slotId] = { attack: 0, mainStat: 0, damageAmp: 0 };
+        }
+
+        // Merge update with existing slot data
+        this.data.equipmentSlots[slotId] = {
+            ...this.data.equipmentSlots[slotId],
+            ...data
+        };
+
+        this.saveDualWrite();
+    }
+
+    /**
+     * Update all equipment slots at once
+     * @param slots - Complete equipment slot data
+     */
+    updateAllEquipmentSlots(slots: Partial<AllEquipmentSlotData>): void {
+        VALID_EQUIPMENT_SLOTS.forEach(slotId => {
+            if (slots[slotId]) {
+                if (!this.data.equipmentSlots[slotId]) {
+                    this.data.equipmentSlots[slotId] = { attack: 0, mainStat: 0, damageAmp: 0 };
+                }
+
+                this.data.equipmentSlots[slotId] = {
+                    ...this.data.equipmentSlots[slotId],
+                    ...slots[slotId]
+                };
+            }
+        });
+
+        this.saveDualWrite();
+    }
+
+    // ========================================================================
+    // COMPARISON EQUIPMENT
+    // ========================================================================
+
+    /**
+     * Get all comparison equipment data
+     * @returns Deep clone of all comparison equipment
+     */
+    getComparisonEquipment(): ComparisonEquipment {
+        return JSON.parse(JSON.stringify(this.data.comparisonEquipment));
+    }
+
+    /**
+     * Get comparison items for a specific slot
+     * @param slotId - Equipment slot ID
+     * @returns Array of comparison items for the slot
+     */
+    getComparisonItems(slotId: EquipmentSlotId): ComparisonItem[] {
+        if (!this.data.comparisonEquipment[slotId]) {
+            this.data.comparisonEquipment[slotId] = [];
+        }
+        return JSON.parse(JSON.stringify(this.data.comparisonEquipment[slotId]));
+    }
+
+    /**
+     * Get a specific comparison item by GUID
+     * @param slotId - Equipment slot ID
+     * @param guid - Item GUID
+     * @returns Item data or null if not found
+     */
+    getComparisonItem(slotId: EquipmentSlotId, guid: string): ComparisonItem | null {
+        const items = this.data.comparisonEquipment[slotId];
+        if (!items) return null;
+
+        const item = items.find(i => i.guid === guid);
+        return item ? JSON.parse(JSON.stringify(item)) : null;
+    }
+
+    /**
+     * Add a new comparison item to a slot
+     * @param slotId - Equipment slot ID
+     * @param item - Item data (guid will be generated)
+     * @returns The created item with generated guid
+     */
+    addComparisonItem(slotId: EquipmentSlotId, item: Omit<ComparisonItem, 'guid'>): ComparisonItem {
+        if (!this.data.comparisonEquipment[slotId]) {
+            this.data.comparisonEquipment[slotId] = [];
+        }
+
+        // Generate UUID v4 (parameter type excludes guid, so we always generate)
+        const guid = this.generateUUID();
+
+        const newItem: ComparisonItem = {
+            guid,
+            name: item.name,
+            attack: item.attack,
+            mainStat: item.mainStat,
+            statLines: item.statLines || []
+        };
+
+        this.data.comparisonEquipment[slotId].push(newItem);
+        this.saveDualWrite();
+
+        return JSON.parse(JSON.stringify(newItem));
+    }
+
+    /**
+     * Update an existing comparison item
+     * @param slotId - Equipment slot ID
+     * @param guid - Item GUID
+     * @param data - Partial item data to update
+     * @returns True if successful, false if item not found
+     */
+    updateComparisonItem(slotId: EquipmentSlotId, guid: string, data: Partial<ComparisonItem>): boolean {
+        const items = this.data.comparisonEquipment[slotId];
+        if (!items) return false;
+
+        const index = items.findIndex(i => i.guid === guid);
+        if (index === -1) return false;
+
+        // Merge update with existing item
+        items[index] = {
+            ...items[index],
+            ...data,
+            guid  // Ensure guid cannot be changed
+        };
+
+        this.saveDualWrite();
+        return true;
+    }
+
+    /**
+     * Remove a comparison item from a slot
+     * @param slotId - Equipment slot ID
+     * @param guid - Item GUID
+     * @returns True if successful, false if item not found
+     */
+    removeComparisonItem(slotId: EquipmentSlotId, guid: string): boolean {
+        const items = this.data.comparisonEquipment[slotId];
+        if (!items) return false;
+
+        const index = items.findIndex(i => i.guid === guid);
+        if (index === -1) return false;
+
+        items.splice(index, 1);
+        this.saveDualWrite();
+        return true;
+    }
+
+    /**
+     * Clear all comparison items from a slot
+     * @param slotId - Equipment slot ID
+     */
+    clearComparisonItems(slotId: EquipmentSlotId): void {
+        if (this.data.comparisonEquipment[slotId]) {
+            this.data.comparisonEquipment[slotId] = [];
+            this.saveDualWrite();
+        }
+    }
+
+    /**
+     * Add a stat line to a comparison item
+     * @param slotId - Equipment slot ID
+     * @param guid - Item GUID
+     * @param statLine - Stat line data
+     * @returns True if successful, false if item not found
+     */
+    addComparisonItemStatLine(slotId: EquipmentSlotId, guid: string, statLine: ComparisonStatLine): boolean {
+        const items = this.data.comparisonEquipment[slotId];
+        if (!items) return false;
+
+        const item = items.find(i => i.guid === guid);
+        if (!item) return false;
+
+        item.statLines.push(statLine);
+        this.saveDualWrite();
+        return true;
+    }
+
+    /**
+     * Remove a stat line from a comparison item by index
+     * @param slotId - Equipment slot ID
+     * @param guid - Item GUID
+     * @param statLineIndex - Index of stat line to remove
+     * @returns True if successful, false if item or stat line not found
+     */
+    removeComparisonItemStatLine(slotId: EquipmentSlotId, guid: string, statLineIndex: number): boolean {
+        const items = this.data.comparisonEquipment[slotId];
+        if (!items) return false;
+
+        const item = items.find(i => i.guid === guid);
+        if (!item) return false;
+
+        if (statLineIndex < 0 || statLineIndex >= item.statLines.length) return false;
+
+        item.statLines.splice(statLineIndex, 1);
+        this.saveDualWrite();
+        return true;
+    }
+
+    /**
+     * Generate a UUID v4
+     * @returns UUID v4 string
+     */
+    private generateUUID(): string {
+        // UUID v4 implementation
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+            const r = Math.random() * 16 | 0;
+            const v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
     }
 
     // ========================================================================

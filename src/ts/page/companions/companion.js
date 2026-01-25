@@ -1,36 +1,36 @@
 import { StatCalculationService } from "@ts/services/stat-calculation-service.js";
+import { COMPANION_STAT_KEY_TO_STAT_ID } from "@ts/types/page/companions/companions.types.js";
 import { loadoutStore } from "@ts/store/loadout.store.js";
 function applyEffectsToService(service, effects, isRemoving = false) {
   if (!effects) return service;
   const statTypes = {
     // Flat attack - applies weapon attack bonus
-    attack: (value) => isRemoving ? service.subtractAttack(Math.abs(value)) : service.addAttack(value, true),
+    attack: (value) => isRemoving ? service.subtract("attack", Math.abs(value)) : service.add("attack", value),
     // Flat main stat - converts to stat damage (100 main stat = 1% stat damage)
-    mainStat: (value) => service.addMainStat(isRemoving ? -Math.abs(value) : value),
+    mainStat: (value) => service.add("mainStat", isRemoving ? -Math.abs(value) : value),
     // Main stat % with diminishing returns
-    statDamage: (value) => service.addMainStatPct(isRemoving ? -Math.abs(value) : value),
-    // Multiplicative stat (Final Damage) - for removal, we need special handling
-    // Since multiplicative stats can't be easily reversed, we use subtractStat for removal
+    statDamage: (value) => service.add("mainStatPct", isRemoving ? -Math.abs(value) : value),
+    // Multiplicative stat (Final Damage) - for removal, we use subtract
     finalDamage: (value) => {
       if (isRemoving) {
-        service.subtractStat("finalDamage", value);
+        service.subtract("finalDamage", value);
       } else {
-        service.addMultiplicativeStat("finalDamage", value);
+        service.add("finalDamage", value);
       }
     },
-    // Diminishing returns stats - for removal, use subtractStat
+    // Diminishing returns stats - for removal, use subtract
     attackSpeed: (value) => {
       if (isRemoving) {
-        service.subtractStat("attackSpeed", value);
+        service.subtract("attackSpeed", value);
       } else {
-        service.addDiminishingReturnStat("attackSpeed", value, 150);
+        service.add("attackSpeed", value);
       }
     },
     defPenMultiplier: (value) => {
       if (isRemoving) {
-        service.subtractStat("defPenMultiplier", value);
+        service.subtract("defPenMultiplier", value);
       } else {
-        service.addDiminishingReturnStat("defPenMultiplier", value, 100);
+        service.add("defPenMultiplier", value);
       }
     }
   };
@@ -40,7 +40,7 @@ function applyEffectsToService(service, effects, isRemoving = false) {
       statTypes[statKey](value);
     } else {
       const adjustedValue = isRemoving ? -Math.abs(value) : value;
-      service.addPercentageStat(statKey, adjustedValue);
+      service.add(statKey, adjustedValue);
     }
   });
   return service;
@@ -121,9 +121,51 @@ function generateOptimalPreset(targetStat, getCompanionEffects, getCompanion, ge
   if (unlockedCompanions.length === 0) {
     return { main: null, subs: [null, null, null, null, null, null] };
   }
+  let lockedMain = null;
+  if (lockedMainCompanion) {
+    const lockedMainData = unlockedCompanions.find((c) => c.companionKey === lockedMainCompanion);
+    if (!lockedMainData) {
+      console.warn(`[generateOptimalPreset] Locked main companion ${lockedMainCompanion} not found or not unlocked`);
+      return { main: null, subs: [null, null, null, null, null, null] };
+    }
+    lockedMain = lockedMainData;
+    const lockedIndex = unlockedCompanions.indexOf(lockedMainData);
+    unlockedCompanions.splice(lockedIndex, 1);
+    console.log(`[generateOptimalPreset] Locked main companion: ${lockedMainCompanion}`);
+  }
+  const minRequired = lockedMain ? 6 : 7;
+  if (unlockedCompanions.length < minRequired) {
+    console.warn(`[generateOptimalPreset] Only ${unlockedCompanions.length} companions available, filling all available slots`);
+    const allKeys = unlockedCompanions.map((c) => c.companionKey);
+    if (lockedMain) {
+      return {
+        main: lockedMain.companionKey,
+        subs: [
+          allKeys[0] || null,
+          allKeys[1] || null,
+          allKeys[2] || null,
+          allKeys[3] || null,
+          allKeys[4] || null,
+          allKeys[5] || null
+        ]
+      };
+    } else {
+      return {
+        main: allKeys[0] || null,
+        subs: [
+          allKeys[1] || null,
+          allKeys[2] || null,
+          allKeys[3] || null,
+          allKeys[4] || null,
+          allKeys[5] || null,
+          allKeys[6] || null
+        ]
+      };
+    }
+  }
   const baseStats = loadoutStore.getBaseStats();
-  let bestDps = 0;
-  let bestPreset = { main: null, subs: [null, null, null, null, null, null] };
+  const baselineService = new StatCalculationService(baseStats, null);
+  const baselineDps = baselineService.computeDPS(monsterType);
   function* generateCombinations(companions, size, start = 0) {
     if (size === 0) {
       yield [];
@@ -135,81 +177,128 @@ function generateOptimalPreset(targetStat, getCompanionEffects, getCompanion, ge
       }
     }
   }
-  if (lockedMainCompanion) {
-    const lockedMainData = unlockedCompanions.find((c) => c.companionKey === lockedMainCompanion);
-    if (!lockedMainData) {
-      return { main: null, subs: [null, null, null, null, null, null] };
+  const scoredCompanions = unlockedCompanions.map((comp) => {
+    const service2 = new StatCalculationService(baseStats, null);
+    applyEffectsToService(service2, comp.effects, false);
+    const dps = service2.computeDPS(monsterType);
+    const gain = dps - baselineDps;
+    return {
+      companion: comp,
+      individualDps: dps,
+      dpsGain: gain
+    };
+  });
+  scoredCompanions.sort((a, b) => b.dpsGain - a.dpsGain);
+  console.log(`[Phase 1] Scored ${scoredCompanions.length} companions individually`);
+  console.log(`[Phase 1] Top 5: ${scoredCompanions.slice(0, 5).map((s) => `${s.companion.companionKey}: +${(s.dpsGain / baselineDps * 100).toFixed(2)}%`).join(", ")}`);
+  const locked = [];
+  const pool = [...scoredCompanions];
+  let prevGain = Infinity;
+  const MIN_LOCKED = 2;
+  const MAX_LOCKED = 4;
+  const MARGINAL_GAIN_THRESHOLD = 0.6;
+  const MIN_GAIN_PERCENT = 8e-3;
+  for (let i = 0; i < scoredCompanions.length && locked.length < MAX_LOCKED; i++) {
+    const score = scoredCompanions[i];
+    const gainPercent = score.dpsGain / baselineDps;
+    const shouldLock = locked.length < MIN_LOCKED || // Always lock at least 2
+    score.dpsGain > prevGain * MARGINAL_GAIN_THRESHOLD || // High marginal value
+    gainPercent > MIN_GAIN_PERCENT;
+    if (shouldLock) {
+      locked.push(score);
+      pool.splice(pool.indexOf(score), 1);
+      prevGain = score.dpsGain;
     }
-    const subCandidates = unlockedCompanions.filter((c) => c.companionKey !== lockedMainCompanion);
-    const maxCombinationsToTest = 5e4;
-    let combinationsTested = 0;
-    const service = new StatCalculationService(baseStats, null);
-    for (const subCombination of generateCombinations(subCandidates, 6)) {
-      combinationsTested++;
-      if (combinationsTested > maxCombinationsToTest) {
-        console.warn(`Reached max combinations limit (${maxCombinationsToTest}), using best found so far`);
-        break;
-      }
-      const totalEffects = {};
-      Object.entries(lockedMainData.effects).forEach(([stat, value]) => {
+  }
+  console.log(`[Phase 2] Locked ${locked.length} companions`);
+  const selectedKeys = /* @__PURE__ */ new Set();
+  if (lockedMain) {
+    selectedKeys.add(lockedMain.companionKey);
+  }
+  locked.forEach((s) => selectedKeys.add(s.companion.companionKey));
+  const POOL_SIZE = Math.min(15, unlockedCompanions.length);
+  const candidates = locked.concat(pool.slice(0, Math.min(POOL_SIZE - locked.length, pool.length)));
+  const totalSlots = lockedMain ? 6 : 7;
+  const numToSelect = totalSlots - locked.length;
+  const remaining = candidates.slice(locked.length).map((s) => s.companion).filter((comp) => !selectedKeys.has(comp.companionKey));
+  let bestDps = 0;
+  let bestPreset = { main: null, subs: [null, null, null, null, null, null] };
+  const service = new StatCalculationService(baseStats, null);
+  let combinationsTested = 0;
+  const maxCombinations = 15e3;
+  console.log(`[Phase 3] Testing combinations from ${candidates.length} candidates (selecting ${numToSelect} from ${remaining.length} remaining)`);
+  const calculateDpsForCombination = (companions) => {
+    const totalEffects = {};
+    companions.forEach((comp) => {
+      Object.entries(comp.effects).forEach(([stat, value]) => {
         totalEffects[stat] = (totalEffects[stat] || 0) + value;
       });
-      subCombination.forEach((comp) => {
-        Object.entries(comp.effects).forEach(([stat, value]) => {
-          totalEffects[stat] = (totalEffects[stat] || 0) + value;
-        });
-      });
-      service.reset();
-      applyEffectsToService(service, totalEffects, false);
-      const dps = service.computeDPS(monsterType);
-      if (dps > bestDps) {
-        bestDps = dps;
+    });
+    service.reset();
+    applyEffectsToService(service, totalEffects, false);
+    return service.computeDPS(monsterType);
+  };
+  for (const combination of generateCombinations(remaining, numToSelect)) {
+    combinationsTested++;
+    if (combinationsTested > maxCombinations) {
+      console.warn(`[Phase 3] Reached max combinations limit (${maxCombinations}), using best found so far`);
+      break;
+    }
+    let fullSelection;
+    if (lockedMain) {
+      fullSelection = [lockedMain, ...locked.map((s) => s.companion), ...combination];
+    } else {
+      fullSelection = locked.map((s) => s.companion).concat(combination);
+    }
+    const dps = calculateDpsForCombination(fullSelection);
+    if (dps > bestDps) {
+      bestDps = dps;
+      if (lockedMain) {
         bestPreset = {
-          main: lockedMainCompanion,
-          subs: subCombination.map((c) => c.companionKey)
+          main: lockedMain.companionKey,
+          subs: fullSelection.slice(1).map((c) => c.companionKey)
         };
-      }
-    }
-  } else {
-    const maxCombinationsToTest = 5e4;
-    let combinationsTested = 0;
-    const service = new StatCalculationService(baseStats, null);
-    for (const combination of generateCombinations(unlockedCompanions, 7)) {
-      combinationsTested++;
-      if (combinationsTested > maxCombinationsToTest) {
-        console.warn(`Reached max combinations limit (${maxCombinationsToTest}), using best found so far`);
-        break;
-      }
-      const mainCompanion = combination[0];
-      const subCompanions = combination.slice(1);
-      const totalEffects = {};
-      Object.entries(mainCompanion.effects).forEach(([stat, value]) => {
-        totalEffects[stat] = (totalEffects[stat] || 0) + value;
-      });
-      subCompanions.forEach((comp) => {
-        Object.entries(comp.effects).forEach(([stat, value]) => {
-          totalEffects[stat] = (totalEffects[stat] || 0) + value;
-        });
-      });
-      service.reset();
-      applyEffectsToService(service, totalEffects, false);
-      const dps = service.computeDPS(monsterType);
-      if (dps > bestDps) {
-        bestDps = dps;
+      } else {
         bestPreset = {
-          main: mainCompanion.companionKey,
-          subs: subCompanions.map((c) => c.companionKey)
+          main: fullSelection[0].companionKey,
+          subs: fullSelection.slice(1).map((c) => c.companionKey)
         };
       }
     }
   }
+  const totalGainPercent = (bestDps - baselineDps) / baselineDps * 100;
+  console.log(`[Phase 3] Tested ${combinationsTested} combinations, best DPS: ${bestDps.toFixed(0)} (+${totalGainPercent.toFixed(2)}%)`);
   return bestPreset;
+}
+function swapCompanionPresetEffects(currentEffects, newEffects) {
+  const baseStats = loadoutStore.getBaseStats();
+  const service = new StatCalculationService(baseStats, null);
+  Object.entries(currentEffects).forEach(([statKey, value]) => {
+    if (value === 0 || value === void 0 || value === null) return;
+    const mappedId = COMPANION_STAT_KEY_TO_STAT_ID[statKey];
+    if (!mappedId) {
+      console.warn(`[swapCompanionPresetEffects] Unknown companion stat key: ${statKey}, skipping removal`);
+      return;
+    }
+    service.subtract(mappedId, value);
+  });
+  Object.entries(newEffects).forEach(([statKey, value]) => {
+    if (value === 0 || value === void 0 || value === null) return;
+    const mappedId = COMPANION_STAT_KEY_TO_STAT_ID[statKey];
+    if (!mappedId) {
+      console.warn(`[swapCompanionPresetEffects] Unknown companion stat key: ${statKey}, skipping addition`);
+      return;
+    }
+    service.add(mappedId, value);
+  });
+  return service.getStats();
 }
 export {
   calculateBothDpsDifferences,
   calculateDpsDifference,
   calculatePresetStatValue,
   generateOptimalPreset,
-  presetHasAnyCompanion
+  presetHasAnyCompanion,
+  swapCompanionPresetEffects
 };
 //# sourceMappingURL=companion.js.map

@@ -1,7 +1,6 @@
 import { getCompanionEffects, getMaxCompanionLevel } from "@ts/services/index.js";
 import { loadoutStore } from "@ts/store/loadout.store.js";
-import { addStat, subtractStat } from "@core/services/stat-inputs-service.js";
-import { calculateBothDpsDifferences, presetHasAnyCompanion, generateOptimalPreset } from "./companion.js";
+import { calculateBothDpsDifferences, presetHasAnyCompanion, generateOptimalPreset, swapCompanionPresetEffects } from "./companion.js";
 import { CLASS_DISPLAY_NAMES, RARITY_CONFIG } from "@ts/types/page/companions/companions.types.js";
 let currentCompanion = null;
 function initializeCompanionsUI() {
@@ -315,33 +314,6 @@ function initializePresetsUI() {
 function renderPresetsPanel() {
   const container = document.getElementById("companions-presets-container");
   if (!container) return;
-  const companionsTab = document.getElementById("setup-companions");
-  const isTabVisible = companionsTab && companionsTab.classList.contains("active");
-  if (!isTabVisible) {
-    const showDpsComparison2 = loadoutStore.getShowPresetDpsComparison();
-    const equippedPresetId2 = loadoutStore.getEquippedPresetId();
-    const currentPresetEffects2 = getPresetEquipEffects(equippedPresetId2);
-    let html2 = '<div style="display: flex; flex-direction: column; gap: 12px;">';
-    html2 += `
-            <header style="margin-bottom: 8px; padding: 10px 12px; background: rgba(0, 122, 255, 0.08); border: 1px solid rgba(0, 122, 255, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-weight: 600; color: var(--text-primary);">Show DPS Comparison</span>
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" id="preset-dps-comparison-toggle" onchange="window.togglePresetDpsComparison(this.checked)" ${showDpsComparison2 ? "checked" : ""}>
-                    <span style="font-size: 0.9em; color: var(--text-secondary);">Enable DPS info below each preset</span>
-                </label>
-            </header>
-        `;
-    for (let i = 1; i <= 5; i++) {
-      const presetId = `preset${i}`;
-      const presetData = loadoutStore.getPreset(presetId);
-      const isEquipped = presetId === equippedPresetId2;
-      html2 += renderPresetRow(presetId, presetData, isEquipped, showDpsComparison2, currentPresetEffects2, false);
-    }
-    html2 += "</div>";
-    container.innerHTML = html2;
-    attachPresetEventListeners();
-    return;
-  }
   const showDpsComparison = loadoutStore.getShowPresetDpsComparison();
   const equippedPresetId = loadoutStore.getEquippedPresetId();
   const currentPresetEffects = getPresetEquipEffects(equippedPresetId);
@@ -829,6 +801,17 @@ function attachCompanionIconListeners() {
       const selectedSlot = getSelectedSlotInfo();
       if (selectedSlot) {
         const companionData = loadoutStore.getCompanion(companionKey);
+        const isOptimalPreset = selectedSlot.presetId === "optimal-boss" || selectedSlot.presetId === "optimal-normal";
+        if (isOptimalPreset && selectedSlot.type === "main") {
+          const currentLock = loadoutStore.getLockedMainCompanion(selectedSlot.presetId);
+          if (currentLock === companionKey) {
+            target.style.animation = "shake 0.5s ease-in-out";
+            setTimeout(() => {
+              target.style.animation = "";
+            }, 500);
+            return;
+          }
+        }
         if (!companionData?.unlocked) {
           target.style.animation = "shake 0.5s ease-in-out";
           setTimeout(() => {
@@ -1105,10 +1088,22 @@ function showTooltip(slotElement, text) {
   slotElement.appendChild(tooltip);
 }
 function highlightSourceIcons() {
+  const slotInfo = getSelectedSlotInfo();
+  let excludedCompanion = null;
+  if (slotInfo && (slotInfo.presetId === "optimal-boss" || slotInfo.presetId === "optimal-normal")) {
+    excludedCompanion = loadoutStore.getLockedMainCompanion(slotInfo.presetId);
+  }
   document.querySelectorAll(".companion-icon").forEach((icon) => {
     const target = icon;
     const companionKey = target.dataset.companion;
     const companionData = loadoutStore.getCompanion(companionKey);
+    if (companionKey === excludedCompanion) {
+      target.style.transition = "all 0.3s ease";
+      target.style.opacity = "0.3";
+      target.style.transform = "scale(0.9)";
+      target.style.boxShadow = "none";
+      return;
+    }
     if (companionData?.unlocked) {
       target.style.transition = "all 0.3s ease";
       target.style.boxShadow = "0 0 20px 5px rgba(187, 119, 255, 0.4)";
@@ -1128,6 +1123,7 @@ function clearSelectionFeedback() {
     const target = icon;
     target.style.boxShadow = "";
     target.style.transform = "";
+    target.style.opacity = "";
   });
   const clearBtnContainer = document.getElementById("clear-slot-selection-container");
   if (clearBtnContainer) {
@@ -1150,6 +1146,21 @@ function assignCompanionToSlot(companionKey) {
       }, 1500);
     }
     return;
+  }
+  if (isOptimalPreset && slotInfo.type === "main") {
+    const currentLock = loadoutStore.getLockedMainCompanion(slotInfo.presetId);
+    if (currentLock === companionKey) {
+      const slotSelector = `.optimal-main-slot[data-preset="${slotInfo.presetId}"]`;
+      const slotElement = document.querySelector(slotSelector);
+      if (slotElement) {
+        showTooltip(slotElement, "\u274C This companion is already locked!");
+        setTimeout(() => {
+          const tooltip = document.getElementById("preset-selection-tooltip");
+          if (tooltip) tooltip.remove();
+        }, 1500);
+      }
+      return;
+    }
   }
   if (isOptimalPreset && slotInfo.type === "main") {
     loadoutStore.setLockedMainCompanion(slotInfo.presetId, companionKey);
@@ -1293,16 +1304,8 @@ window.equipPreset = async function(presetId) {
       updateContributedStatsForPreset(presetId);
       renderPresetsPanel();
     } else if (userChoice === "yes") {
-      Object.entries(currentPresetEffects).forEach(([stat, value]) => {
-        if (stat !== "Attack") {
-          subtractStat(stat, value);
-        }
-      });
-      Object.entries(newPresetEffects).forEach(([stat, value]) => {
-        if (stat !== "Attack") {
-          addStat(stat, value);
-        }
-      });
+      const newStats = swapCompanionPresetEffects(currentPresetEffects, newPresetEffects);
+      loadoutStore.updateBaseStats(newStats);
       loadoutStore.setEquippedPresetId(presetId);
       updateContributedStatsForPreset(presetId);
       renderPresetsPanel();

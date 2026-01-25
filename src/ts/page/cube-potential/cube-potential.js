@@ -47,6 +47,34 @@ function getStatIdFromPotentialStat(potentialStat, mainStat) {
   }
   return POTENTIAL_STAT_TO_STAT_ID[potentialStat] || null;
 }
+function potentialStatToDamageStat(potentialStat, value, accumulatedMainStatPct = 0) {
+  const mainStat = getMainStatForClass();
+  if (!mainStat) return { stat: null, value: 0, isMainStatPct: false };
+  const statMap = {
+    "Critical Rate %": STAT.CRIT_RATE.id,
+    "Critical Damage %": STAT.CRIT_DAMAGE.id,
+    "Attack Speed %": STAT.ATTACK_SPEED.id,
+    "Damage %": STAT.DAMAGE.id,
+    "Final Damage %": STAT.FINAL_DAMAGE.id,
+    "Min Damage Multiplier %": STAT.MIN_DAMAGE.id,
+    "Max Damage Multiplier %": STAT.MAX_DAMAGE.id,
+    "Defense %": STAT.DEFENSE.id,
+    "Defense Penetration": STAT.DEF_PEN.id
+    // Max HP % and Max MP % are non-combat stats, skip them
+  };
+  if (potentialStat === `${mainStat} %`) {
+    return { stat: STAT.STAT_DAMAGE.id, value: value / 100, isMainStatPct: true };
+  }
+  if (potentialStat === mainStat) {
+    return { stat: STAT.STAT_DAMAGE.id, value: value / 100, isMainStatPct: false };
+  }
+  const statId = statMap[potentialStat];
+  return {
+    stat: statId || null,
+    value: statId ? value : 0,
+    isMainStatPct: false
+  };
+}
 function lineExistsInRarity(slotId, rarity, lineNum, lineStat, lineValue, linePrime) {
   if (!lineStat) return false;
   const potentialData = EQUIPMENT_POTENTIAL_DATA[rarity];
@@ -73,7 +101,7 @@ function calculateSlotSetGain(slotId, rarity, setData, currentStats) {
     if (!lineExistsInRarity(slotId, rarity, lineNum, line.stat, line.value, line.prime)) continue;
     const statId = getStatIdFromPotentialStat(line.stat, mainStat);
     if (!statId) continue;
-    baselineService.subtractStat(statId, line.value);
+    baselineService.subtract(statId, line.value);
   }
   const baselineDPS = baselineService.computeDPS("boss");
   const setService = new StatCalculationService(baselineService.getStats());
@@ -84,7 +112,7 @@ function calculateSlotSetGain(slotId, rarity, setData, currentStats) {
     if (!lineExistsInRarity(slotId, rarity, lineNum, line.stat, line.value, line.prime)) continue;
     const statId = getStatIdFromPotentialStat(line.stat, mainStat);
     if (!statId) continue;
-    setService.addPercentageStat(statId, line.value);
+    setService.add(statId, line.value);
   }
   const setDPS = setService.computeDPS("boss");
   const gain = (setDPS - baselineDPS) / baselineDPS * 100;
@@ -178,6 +206,7 @@ export {
   getStatIdFromPotentialStat,
   initializeCubePotential,
   lineExistsInRarity,
+  potentialStatToDamageStat,
   rankingsCache,
   rankingsInProgress,
   selectCubeSlot,

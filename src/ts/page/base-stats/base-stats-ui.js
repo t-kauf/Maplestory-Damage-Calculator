@@ -28,7 +28,7 @@ const DAMAGE_MODIFIERS = [
   "MAX_DAMAGE",
   "FINAL_DAMAGE"
 ];
-const SKILL_LEVELS = ["SKILL_LEVEL_1ST", "SKILL_LEVEL_2ND", "SKILL_LEVEL_3RD", "SKILL_LEVEL_4TH"];
+const SKILL_LEVELS = ["SKILL_LEVEL_1ST", "SKILL_LEVEL_2ND", "SKILL_LEVEL_3RD", "SKILL_LEVEL_4TH", "SKILL_LEVEL_ALL"];
 const MAIN_STAT_PCT = ["MAIN_STAT_PCT"];
 const ALL_VISIBLE_STATS = [
   ...CORE_COMBAT_STATS,
@@ -64,7 +64,7 @@ function generateStatInputsHTML() {
   html += '<div class="bgstats-divider"></div>';
   html += MAIN_STAT_PCT.map(generateStatInputHTML).join("");
   html += `
-        <input type="hidden" id="primaryMainStat" value="${STAT.PRIMARY_MAIN_STAT.defaultValue}">
+        <input type="hidden" id="mainStat" value="${STAT.PRIMARY_MAIN_STAT.defaultValue}">
         <input type="hidden" id="secondaryMainStat" value="${STAT.SECONDARY_MAIN_STAT.defaultValue}">
         ${generateMasteryHiddenInputs()}
         <input type="hidden" id="skillCoeff" value="0">
@@ -290,7 +290,7 @@ function syncMainStatsToHidden() {
   const dexInput = document.getElementById("dex");
   const intInput = document.getElementById("int");
   const lukInput = document.getElementById("luk");
-  const primaryInput = document.getElementById("primaryMainStat");
+  const primaryInput = document.getElementById("mainStat");
   const secondaryInput = document.getElementById("secondaryMainStat");
   if (!primaryInput || !secondaryInput) return;
   if (isStrMainStatClass(className)) {

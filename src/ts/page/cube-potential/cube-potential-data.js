@@ -1,4 +1,5 @@
 import { STAT } from "@ts/types/constants.js";
+const RARITIES = ["normal", "rare", "epic", "unique", "legendary", "mystic"];
 const SLOT_NAMES = [
   { id: "helm", name: "Helm" },
   { id: "cape", name: "Cape" },
@@ -13,14 +14,14 @@ const SLOT_NAMES = [
   { id: "eye-accessory", name: "Eye Accessory" }
 ];
 const CLASS_MAIN_STAT_MAP = {
-  "hero": "Str",
-  "dark-knight": "Str",
-  "bowmaster": "Dex",
-  "marksman": "Dex",
-  "night-lord": "Luk",
-  "shadower": "Luk",
-  "arch-mage-il": "Int",
-  "arch-mage-fp": "Int"
+  "hero": STAT.STR.id,
+  "dark-knight": STAT.STR.id,
+  "bowmaster": STAT.DEX.id,
+  "marksman": STAT.DEX.id,
+  "night-lord": STAT.LUK.id,
+  "shadower": STAT.LUK.id,
+  "arch-mage-il": STAT.INT.id,
+  "arch-mage-fp": STAT.INT.id
 };
 const SLOT_SPECIFIC_POTENTIALS = {
   "cape": {
@@ -583,7 +584,15 @@ EQUIPMENT_POTENTIAL_DATA.normal.line2 = EQUIPMENT_POTENTIAL_DATA.normal.line1;
 EQUIPMENT_POTENTIAL_DATA.normal.line3 = EQUIPMENT_POTENTIAL_DATA.normal.line1;
 const NON_COMBAT_POTENTIAL_STATS = [
   "Max HP %",
-  "Max MP %"
+  "Max MP %",
+  "Str %",
+  "Dex %",
+  "Int %",
+  "Luk %",
+  "Str",
+  "Dex",
+  "Int",
+  "Luk"
 ];
 const POTENTIAL_STAT_TO_STAT_ID = {
   "Critical Rate %": STAT.CRIT_RATE.id,
@@ -604,6 +613,7 @@ export {
   NON_COMBAT_POTENTIAL_STATS,
   POTENTIAL_STAT_TO_STAT_ID,
   RANKINGS_PER_PAGE,
+  RARITIES,
   RARITY_UPGRADE_RATES,
   SLOT_NAMES,
   SLOT_SPECIFIC_POTENTIALS

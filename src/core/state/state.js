@@ -57,9 +57,6 @@ export function getItemStats(prefix) {
     return stats;
 }
 
-// Companions state
-let companionsState = {};
-
 // Optimal preset cache - stores calculated optimal presets to avoid recalculation
 let optimalPresetCache = {
     boss: null,
@@ -107,69 +104,6 @@ export function getCachedOptimalPreset(monsterType, generator) {
     }
 
     return optimalPresetCache[cacheKey];
-}
-
-/**
- * Ensure default unlocked companions are initialized in state
- * Normal, Rare, and Epic rarities default to unlocked at level 1
- */
-function initializeDefaultCompanions() {
-    const defaultRarities = ['Normal', 'Rare', 'Epic'];
-    const classOrder = ['Hero', 'DarkKnight', 'ArchMageIL', 'ArchMageFP', 'BowMaster', 'Marksman', 'NightLord', 'Shadower'];
-
-    defaultRarities.forEach(rarity => {
-        classOrder.forEach(className => {
-            const companionKey = `${className}-${rarity}`;
-            // Only initialize if not already in state
-            if (!companionsState[companionKey]) {
-                companionsState[companionKey] = { unlocked: true, level: 1, equipped: false };
-            }
-        });
-    });
-}
-
-/**
- * Get all companions state
- */
-export function getCompanionsState() {
-    initializeDefaultCompanions();
-    return companionsState;
-}
-
-/**
- * Set companions state (used for loading saved data)
- */
-export function setCompanionsState(state) {
-    companionsState = state || {};
-    // Ensure default companions are initialized after loading saved data
-    initializeDefaultCompanions();
-    // Invalidate cache when companions state is loaded
-    invalidateOptimalPresetCache();
-}
-
-/**
- * Update a specific companion
- */
-export function updateCompanion(companionKey, data) {
-    companionsState[companionKey] = data;
-    // Invalidate cache when a companion changes
-    invalidateOptimalPresetCache();
-}
-
-/**
- * Get a specific companion's data
- * Normal, Rare, and Epic rarities default to unlocked at level 1
- */
-export function getCompanion(companionKey) {
-    // Ensure default companions are initialized
-    initializeDefaultCompanions();
-
-    if (companionsState[companionKey]) {
-        return companionsState[companionKey];
-    }
-
-    // For Unique and Legendary rarities, default to locked
-    return { unlocked: false, level: 1, equipped: false };
 }
 
 // Unlockable stats state
@@ -223,91 +157,6 @@ export function updateGuildBonus(bonusKey, data) {
     guildBonusesState[bonusKey] = data;
 }
 
-// Cube Slot Data state
-let cubeSlotData = {};
-
-export function getCubeSlotData() {
-    return cubeSlotData;
-}
-
-export function setCubeSlotData(data) {
-    cubeSlotData = data || {};
-}
-
-export function initializeCubeSlotData(slotNames) {
-    // Initialize all slots with default data (both regular and bonus potential)
-    // Also handles migration from old format (no regular/bonus split)
-    slotNames.forEach(slot => {
-        const defaultSlotData = {
-            regular: {
-                rarity: 'normal',
-                rollCount: 0,
-                setA: {
-                    line1: { stat: '', value: 0 },
-                    line2: { stat: '', value: 0 },
-                    line3: { stat: '', value: 0 }
-                },
-                setB: {
-                    line1: { stat: '', value: 0 },
-                    line2: { stat: '', value: 0 },
-                    line3: { stat: '', value: 0 }
-                }
-            },
-            bonus: {
-                rarity: 'normal',
-                rollCount: 0,
-                setA: {
-                    line1: { stat: '', value: 0 },
-                    line2: { stat: '', value: 0 },
-                    line3: { stat: '', value: 0 }
-                },
-                setB: {
-                    line1: { stat: '', value: 0 },
-                    line2: { stat: '', value: 0 },
-                    line3: { stat: '', value: 0 }
-                }
-            }
-        };
-
-        if (!cubeSlotData[slot.id]) {
-            // Slot doesn't exist, initialize with defaults
-            cubeSlotData[slot.id] = defaultSlotData;
-        } else {
-            // Slot exists - check if it's old format (no regular/bonus split)
-            if (!cubeSlotData[slot.id].regular && !cubeSlotData[slot.id].bonus) {
-                // Old format - migrate to regular potential only
-                cubeSlotData[slot.id] = {
-                    regular: {
-                        rarity: cubeSlotData[slot.id].rarity || 'normal',
-                        rollCount: cubeSlotData[slot.id].rollCount || 0,
-                        setA: cubeSlotData[slot.id].setA || defaultSlotData.regular.setA,
-                        setB: cubeSlotData[slot.id].setB || defaultSlotData.regular.setB
-                    },
-                    bonus: defaultSlotData.bonus
-                };
-            } else {
-                // New format - ensure both regular and bonus exist, and rollCount is present
-                if (!cubeSlotData[slot.id].regular) {
-                    cubeSlotData[slot.id].regular = defaultSlotData.regular;
-                } else {
-                    // Ensure rollCount exists
-                    if (typeof cubeSlotData[slot.id].regular.rollCount !== 'number') {
-                        cubeSlotData[slot.id].regular.rollCount = 0;
-                    }
-                }
-                if (!cubeSlotData[slot.id].bonus) {
-                    cubeSlotData[slot.id].bonus = defaultSlotData.bonus;
-                } else {
-                    // Ensure rollCount exists
-                    if (typeof cubeSlotData[slot.id].bonus.rollCount !== 'number') {
-                        cubeSlotData[slot.id].bonus.rollCount = 0;
-                    }
-                }
-            }
-        }
-    });
-}
-
 // Presets state
 let presetsState = {};
 let selectedPreset = null;
@@ -325,80 +174,6 @@ function initializePresets() {
             };
         }
     }
-}
-
-/**
- * Get all presets
- */
-export function getPresets() {
-    initializePresets();
-    return presetsState;
-}
-
-/**
- * Get a specific preset
- */
-export function getPreset(presetId) {
-    initializePresets();
-    return presetsState[presetId] || { main: null, subs: [null, null, null, null, null, null] };
-}
-
-/**
- * Set presets state (used for loading saved data)
- */
-export function setPresetsState(state) {
-    presetsState = state || {};
-    initializePresets();
-}
-
-/**
- * Set a companion to a preset slot
- */
-export function setPresetSlot(presetId, slotType, slotIndex, companionKey) {
-    initializePresets();
-    if (slotType === 'main') {
-        presetsState[presetId].main = companionKey;
-    } else if (slotType === 'sub') {
-        presetsState[presetId].subs[slotIndex] = companionKey;
-    }
-}
-
-/**
- * Clear a preset slot
- */
-export function clearPresetSlot(presetId, slotType, slotIndex) {
-    initializePresets();
-    if (slotType === 'main') {
-        presetsState[presetId].main = null;
-    } else if (slotType === 'sub') {
-        presetsState[presetId].subs[slotIndex] = null;
-    }
-}
-
-/**
- * Get currently selected slot info
- */
-export function getSelectedSlotInfo() {
-    if (selectedPreset && selectedSlot) {
-        return { presetId: selectedPreset, ...selectedSlot };
-    }
-    return null;
-}
-
-/**
- * Set the selected slot
- */
-export function setSelectedSlot(presetId, slotType, slotIndex) {
-    selectedPreset = presetId;
-    selectedSlot = { type: slotType, index: slotIndex };
-}
-
-/**
- * Clear the selected slot
- */
-export function clearSelectedSlot() {
-    selectedPreset = null;
-    selectedSlot = null;
 }
 
 // Contributed stats tracking
@@ -585,37 +360,6 @@ export function getShowPresetDpsComparison() {
 export function setShowPresetDpsComparison(show) {
     showPresetDpsComparison = show;
 }
-
-// Locked main companion state for optimal presets
-let lockedMainForOptimalBoss = null;
-let lockedMainForOptimalNormal = null;
-
-/**
- * Get locked main companion for optimal preset
- * @param {string} optimalType - 'optimal-boss' or 'optimal-normal'
- */
-export function getLockedMainCompanion(optimalType) {
-    if (optimalType === 'optimal-boss') {
-        return lockedMainForOptimalBoss;
-    } else if (optimalType === 'optimal-normal') {
-        return lockedMainForOptimalNormal;
-    }
-    return null;
-}
-
-/**
- * Set locked main companion for optimal preset
- * @param {string} optimalType - 'optimal-boss' or 'optimal-normal'
- * @param {string|null} companionKey - Companion key or null to clear
- */
-export function setLockedMainCompanion(optimalType, companionKey) {
-    if (optimalType === 'optimal-boss') {
-        lockedMainForOptimalBoss = companionKey;
-    } else if (optimalType === 'optimal-normal') {
-        lockedMainForOptimalNormal = companionKey;
-    }
-}
-
 
 /**
  * Calculate total scrolling contributions from all equipment slots

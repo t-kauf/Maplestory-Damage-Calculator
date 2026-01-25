@@ -7,6 +7,15 @@ import { STAT } from '@ts/types/constants';
 import type { CubeSlotConfig, Rarity } from '@ts/types/page/gear-lab/gear-lab.types';
 
 // ============================================================================
+// RARITY VALUES
+// ============================================================================
+
+/**
+ * All rarity values in order
+ */
+export const RARITIES: Rarity[] = ['normal', 'rare', 'epic', 'unique', 'legendary', 'mystic'];
+
+// ============================================================================
 // SLOT NAMES
 // ============================================================================
 
@@ -33,16 +42,17 @@ export const SLOT_NAMES: CubeSlotConfig[] = [
 
 /**
  * Class to main stat mapping
+ * Returns STAT.X.id values for consistency
  */
 export const CLASS_MAIN_STAT_MAP: Record<string, string> = {
-    'hero': 'Str',
-    'dark-knight': 'Str',
-    'bowmaster': 'Dex',
-    'marksman': 'Dex',
-    'night-lord': 'Luk',
-    'shadower': 'Luk',
-    'arch-mage-il': 'Int',
-    'arch-mage-fp': 'Int'
+    'hero': STAT.STR.id,
+    'dark-knight': STAT.STR.id,
+    'bowmaster': STAT.DEX.id,
+    'marksman': STAT.DEX.id,
+    'night-lord': STAT.LUK.id,
+    'shadower': STAT.LUK.id,
+    'arch-mage-il': STAT.INT.id,
+    'arch-mage-fp': STAT.INT.id
 };
 
 // ============================================================================
@@ -696,10 +706,19 @@ EQUIPMENT_POTENTIAL_DATA.normal.line3 = EQUIPMENT_POTENTIAL_DATA.normal.line1;
 
 /**
  * Potential stat names that have no combat impact and should be skipped
+ * These are display names that don't map to STAT constants
  */
 export const NON_COMBAT_POTENTIAL_STATS = [
     'Max HP %',
-    'Max MP %'
+    'Max MP %',
+    'Str %',
+    'Dex %',
+    'Int %',
+    'Luk %',
+    'Str',
+    'Dex',
+    'Int',
+    'Luk'
 ] as const;
 
 /**

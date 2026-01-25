@@ -320,6 +320,12 @@ const _LoadoutStore = class _LoadoutStore {
         if (!preset.subs || preset.subs.length !== 6) {
           preset.subs = [null, null, null, null, null, null];
         }
+        if (presetId === "optimal-boss" || presetId === "optimal-normal") {
+          this.data.companions.presets[presetId] = {
+            main: null,
+            subs: [null, null, null, null, null, null]
+          };
+        }
       }
     });
     if (!this.data.companions.equippedPresetId || !presetIds.includes(this.data.companions.equippedPresetId)) {
@@ -359,7 +365,7 @@ const _LoadoutStore = class _LoadoutStore {
             if (legacyData) {
               const statLines = [];
               if (legacyData.damageAmp > 0) {
-                statLines.push({ type: "damage-amp", value: legacyData.damageAmp });
+                statLines.push({ type: STAT.DAMAGE_AMP.id, value: legacyData.damageAmp });
               }
               this.data.equipment[slotId] = {
                 name: "",
@@ -697,6 +703,10 @@ const _LoadoutStore = class _LoadoutStore {
    * @param companionKey - Companion key or null to clear
    */
   setPresetSlot(presetId, slotType, slotIndex, companionKey) {
+    if (presetId === "optimal-boss" || presetId === "optimal-normal") {
+      console.warn(`[LoadoutStore] Cannot modify optimal preset ${presetId} - it is calculated dynamically`);
+      return;
+    }
     const preset = this.data.companions.presets[presetId];
     if (!preset) return;
     if (slotType === "main") {
@@ -713,6 +723,10 @@ const _LoadoutStore = class _LoadoutStore {
    * @param slotIndex - Slot index (0 for main, 0-5 for subs)
    */
   clearPresetSlot(presetId, slotType, slotIndex) {
+    if (presetId === "optimal-boss" || presetId === "optimal-normal") {
+      console.warn(`[LoadoutStore] Cannot clear optimal preset ${presetId} - it is calculated dynamically`);
+      return;
+    }
     this.setPresetSlot(presetId, slotType, slotIndex, null);
   }
   /**
@@ -831,6 +845,7 @@ _LoadoutStore.STAT_KEY_MIGRATION = {
   "min-damage": "MIN_DAMAGE",
   "max-damage": "MAX_DAMAGE",
   "primary-main-stat": "PRIMARY_MAIN_STAT",
+  "main-stat": "PRIMARY_MAIN_STAT",
   "secondary-main-stat": "SECONDARY_MAIN_STAT",
   "final-damage": "FINAL_DAMAGE",
   "main-stat-pct": "MAIN_STAT_PCT",
@@ -838,6 +853,7 @@ _LoadoutStore.STAT_KEY_MIGRATION = {
   "skill-level-2nd": "SKILL_LEVEL_2ND",
   "skill-level-3rd": "SKILL_LEVEL_3RD",
   "skill-level-4th": "SKILL_LEVEL_4TH",
+  "skill-level-all": "SKILL_LEVEL_ALL",
   "basic-attack-damage": "BASIC_ATTACK_DAMAGE",
   "skill-damage": "SKILL_DAMAGE",
   "final-attack": "FINAL_ATTACK",

@@ -42,7 +42,7 @@ function calculateAttackWeights(stats, baseBossDPS, increases) {
     const service = new StatCalculationService(stats);
     const oldValue = stats.ATTACK;
     const effectiveIncrease = increase * (1 + service.weaponAttackBonus / 100);
-    const newDPS = service.addAttack(increase).computeDPS(MONSTER_TYPE.BOSS);
+    const newDPS = service.add("attack", increase).computeDPS(MONSTER_TYPE.BOSS);
     const newValue = service.getStats().ATTACK;
     const gainPercentage = (newDPS - baseBossDPS) / baseBossDPS * 100;
     results.push({
@@ -63,7 +63,7 @@ function calculateMainStatWeights(stats, baseBossDPS, increases) {
   increases.forEach((increase) => {
     const service = new StatCalculationService(stats);
     const actualMainStatGain = service.calculateMainStatIncreaseWithPct(increase);
-    const newDPS = service.addMainStat(increase).computeDPS(MONSTER_TYPE.BOSS);
+    const newDPS = service.add("mainStat", increase).computeDPS(MONSTER_TYPE.BOSS);
     const gainPercentage = (newDPS - baseBossDPS) / baseBossDPS * 100;
     results.push({
       statLabel: "Main Stat",
@@ -82,16 +82,7 @@ function calculatePercentageStatWeight(stats, baseBossDPS, baseNormalDPS, statKe
   const baseDPS = isNormalDamage ? baseNormalDPS : baseBossDPS;
   increases.forEach((increase) => {
     const service = new StatCalculationService(stats);
-    if (statKey === STAT.STAT_DAMAGE.id) {
-      service.addMainStatPct(increase);
-    } else if (MULTIPLICATIVE_STATS[statKey]) {
-      service.addMultiplicativeStat(statKey, increase);
-    } else if (DIMINISHING_RETURN_STATS[statKey]) {
-      const factor = DIMINISHING_RETURN_STATS[statKey].denominator;
-      service.addDiminishingReturnStat(statKey, increase, factor);
-    } else {
-      service.addPercentageStat(statKey, increase);
-    }
+    service.add(statKey, increase);
     const monsterType = isNormalDamage ? MONSTER_TYPE.NORMAL : MONSTER_TYPE.BOSS;
     const newDPS = service.computeDPS(monsterType);
     const gainPercentage = (newDPS - baseDPS) / baseDPS * 100;

@@ -91,11 +91,26 @@ const DEFAULT_COMPANION_STATE = {
     "optimal-normal": null
   }
 };
+const COMPANION_STAT_KEY_TO_STAT_ID = {
+  // Core stats
+  "Attack": "attack",
+  "MainStat": "mainStat",
+  // Damage stats
+  "damage": "damage",
+  "bossDamage": "bossDamage",
+  "normalDamage": "normalDamage",
+  "minDamage": "minDamage",
+  "maxDamage": "maxDamage",
+  // Combat stats
+  "critRate": "critRate",
+  "attackSpeed": "attackSpeed"
+};
 export {
   CLASS_DISPLAY_NAMES,
   CLASS_ORDER,
   COMPANION_CLASSES,
   COMPANION_RARITIES,
+  COMPANION_STAT_KEY_TO_STAT_ID,
   DEFAULT_COMPANION_STATE,
   EMPTY_PRESET,
   RARITY_CONFIG

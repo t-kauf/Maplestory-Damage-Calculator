@@ -59,6 +59,7 @@ export class LoadoutStore {
         'min-damage': 'MIN_DAMAGE',
         'max-damage': 'MAX_DAMAGE',
         'primary-main-stat': 'PRIMARY_MAIN_STAT',
+        'main-stat': 'PRIMARY_MAIN_STAT',
         'secondary-main-stat': 'SECONDARY_MAIN_STAT',
         'final-damage': 'FINAL_DAMAGE',
         'main-stat-pct': 'MAIN_STAT_PCT',
@@ -66,6 +67,7 @@ export class LoadoutStore {
         'skill-level-2nd': 'SKILL_LEVEL_2ND',
         'skill-level-3rd': 'SKILL_LEVEL_3RD',
         'skill-level-4th': 'SKILL_LEVEL_4TH',
+        'skill-level-all': 'SKILL_LEVEL_ALL',
         'basic-attack-damage': 'BASIC_ATTACK_DAMAGE',
         'skill-damage': 'SKILL_DAMAGE',
         'final-attack': 'FINAL_ATTACK',
@@ -490,6 +492,15 @@ export class LoadoutStore {
                 if (!preset.subs || preset.subs.length !== 6) {
                     preset.subs = [null, null, null, null, null, null];
                 }
+
+                // IMPORTANT: Always reset optimal presets to empty
+                // They are calculated dynamically on every render, not stored
+                if (presetId === 'optimal-boss' || presetId === 'optimal-normal') {
+                    this.data.companions.presets[presetId] = {
+                        main: null,
+                        subs: [null, null, null, null, null, null]
+                    };
+                }
             }
         });
 
@@ -535,7 +546,7 @@ export class LoadoutStore {
                             // Convert legacy format to new EquipmentSlotData format
                             const statLines: StatLine[] = [];
                             if (legacyData.damageAmp > 0) {
-                                statLines.push({ type: 'damage-amp', value: legacyData.damageAmp });
+                                statLines.push({ type: STAT.DAMAGE_AMP.id, value: legacyData.damageAmp });
                             }
 
                             this.data.equipment[slotId] = {
@@ -937,6 +948,12 @@ export class LoadoutStore {
         slotIndex: number,
         companionKey: CompanionKey | null
     ): void {
+        // Optimal presets are calculated dynamically, never saved
+        if (presetId === 'optimal-boss' || presetId === 'optimal-normal') {
+            console.warn(`[LoadoutStore] Cannot modify optimal preset ${presetId} - it is calculated dynamically`);
+            return;
+        }
+
         const preset = this.data.companions.presets[presetId];
         if (!preset) return;
 
@@ -959,6 +976,11 @@ export class LoadoutStore {
         slotType: 'main' | 'sub',
         slotIndex: number
     ): void {
+        // Optimal presets are calculated dynamically, never saved
+        if (presetId === 'optimal-boss' || presetId === 'optimal-normal') {
+            console.warn(`[LoadoutStore] Cannot clear optimal preset ${presetId} - it is calculated dynamically`);
+            return;
+        }
         this.setPresetSlot(presetId, slotType, slotIndex, null);
     }
 

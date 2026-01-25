@@ -5,6 +5,8 @@ import { Chart, ChartType, ChartData, ChartOptions } from 'chart.js/auto';
 // Store chart instances with proper typing
 const statWeightCharts: Record<string, Chart> = {};
 
+window.toggleStatChart = toggleStatChart;
+
 // Toggle stat weight chart visibility
 export function toggleStatChart(statKey: string, statLabel: string, isFlat: boolean = false): void {
     const chartId = `chart-${statKey}`;

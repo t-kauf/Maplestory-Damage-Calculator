@@ -5,9 +5,6 @@ function importData() {
     try {
       const data = JSON.parse(text);
       const importData2 = data;
-      if (!importData2.damageCalculatorData && !importData2.heroPowerPresets && !importData2.cubePotentialData && !importData2.comparisonItems) {
-        throw new Error("Invalid data format");
-      }
       if (!confirm("\u26A0\uFE0F This will overwrite your current data. Are you sure you want to continue?")) {
         return;
       }
@@ -31,9 +28,6 @@ function importData() {
       if (importData2.selectedJobTier) {
         localStorage.setItem("selectedJobTier", importData2.selectedJobTier);
       }
-      if (importData2.theme) {
-        localStorage.setItem("theme", importData2.theme);
-      }
       if (importData2.equipmentSlots) {
         localStorage.setItem("equipmentSlots", JSON.stringify(importData2.equipmentSlots));
       }
@@ -50,6 +44,15 @@ function importData() {
         localStorage.setItem("equipped.neck", JSON.stringify(importData2["equipped.neck"]));
         localStorage.setItem("equipped.eye-accessory", JSON.stringify(importData2["equipped.eye-accessory"]));
       }
+      if (importData2.theme) {
+        localStorage.setItem("theme", importData2.theme);
+      }
+      if (importData2["loadout-data"]) {
+        localStorage.setItem("loadout-data", JSON.stringify(importData2["loadout-data"]));
+      }
+      if (importData2["gear-lab-data"]) {
+        localStorage.setItem("gear-lab-data", JSON.stringify(importData2["gear-lab-data"]));
+      }
       alert("\u2705 Data imported successfully! Refreshing page...");
       location.reload();
     } catch (err) {
@@ -63,12 +66,8 @@ function importData() {
 }
 function exportData() {
   const allData = {
-    damageCalculatorData: localStorage.getItem("damageCalculatorData"),
-    heroPowerPresets: localStorage.getItem("heroPowerPresets"),
-    cubePotentialData: localStorage.getItem("cubePotentialData"),
-    comparisonItems: exportComparisonItems(),
-    selectedClass: localStorage.getItem("selectedClass"),
-    selectedJobTier: localStorage.getItem("selectedJobTier"),
+    "loadout-data": localStorage.getItem("loadout-data"),
+    "gear-lab-data": localStorage.getItem("gear-lab-data"),
     theme: localStorage.getItem("theme")
   };
   Object.keys(allData).forEach((key) => {

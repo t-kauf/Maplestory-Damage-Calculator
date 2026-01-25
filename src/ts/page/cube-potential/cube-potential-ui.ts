@@ -23,16 +23,14 @@ import {
     EQUIPMENT_POTENTIAL_DATA,
     RANKINGS_PER_PAGE
 } from '@ts/page/cube-potential/cube-potential-data.js';
+import { calculateRankingsForRarity, runCubeSimulation } from '@ts/page/cube-potential/cube-simulation.js';
 import type {
     CubeSlotId,
     PotentialType,
     Rarity,
-    PotentialLine,
-    PotentialLineEntry,
-    PotentialSet
+    PotentialLineEntry
 } from '@ts/types/page/gear-lab/gear-lab.types';
-import { StatCalculationService } from '@ts/services/stat-calculation-service.js';
-import { lineExistsInRarity, calculateSlotSetGain } from '@ts/page/cube-potential/cube-potential.js';
+import { calculateSlotSetGain } from '@ts/page/cube-potential/cube-potential.js';
 import { loadoutStore } from '@ts/store/loadout.store';
 
 // ============================================================================
@@ -82,7 +80,7 @@ export function generateCubePotentialHTML(): string {
             <button id="cube-main-tab-simulation" class="tab-button" data-tab="simulation">
                 <span class="cube-tab-label">Simulation</span>
             </button>
-            <button id="cube-main-tab-optimal" class="tab-button" data-tab="optimal">
+            <button id="cube-main-tab-optimal" class="tab-button" style="display:none;" data-tab="optimal">
                 <span class="cube-tab-label">Optimal Strategy</span>
             </button>
         </div>
@@ -601,6 +599,15 @@ function setupTabNavigation(): void {
             // Handle tab-specific initialization
             if (tabName === 'summary') {
                 displayAllSlotsSummary();
+                loadAllRankingsForSummary();
+            } else if (tabName === 'rankings') {
+                // Ensure selectors are initialized before accessing them
+                setupRankingsControls();
+                const raritySelector = document.getElementById('cube-rankings-rarity-selector') as HTMLSelectElement;
+                if (raritySelector) {
+                    const rarity = raritySelector.value as Rarity;
+                    displayOrCalculateRankingsForRarity(rarity);
+                }
             }
         });
     });
@@ -613,28 +620,414 @@ function setupRankingsControls(): void {
     const slotSelector = document.getElementById('cube-rankings-slot-selector') as HTMLSelectElement;
     const raritySelector = document.getElementById('cube-rankings-rarity-selector') as HTMLSelectElement;
 
-    if (!slotSelector || !raritySelector) return;
+    if (!slotSelector) {
+        console.error('Rankings slot selector (cube-rankings-slot-selector) not found in DOM');
+        return;
+    }
+    if (!raritySelector) {
+        console.error('Rankings rarity selector (cube-rankings-rarity-selector) not found in DOM');
+        return;
+    }
 
-    // Populate slot selector
-    SLOT_NAMES.forEach(slot => {
-        const option = document.createElement('option');
-        option.value = slot.id;
-        option.textContent = slot.name;
-        slotSelector.appendChild(option);
+    // Only populate if not already populated (check if empty)
+    if (slotSelector.options.length === 0) {
+        // Populate slot selector
+        SLOT_NAMES.forEach(slot => {
+            const option = document.createElement('option');
+            option.value = slot.id;
+            option.textContent = slot.name;
+            slotSelector.appendChild(option);
+        });
+
+        // Set default to current slot
+        slotSelector.value = currentCubeSlot;
+
+        // Verify the value was set successfully, fallback to first slot if not
+        if (!slotSelector.value && SLOT_NAMES.length > 0) {
+            slotSelector.value = SLOT_NAMES[0].id;
+            console.warn(`currentCubeSlot "${currentCubeSlot}" not found in options, defaulting to "${SLOT_NAMES[0].id}"`);
+        }
+
+        console.log(`Rankings slot selector populated with ${SLOT_NAMES.length} options, current value: ${slotSelector.value}`);
+    }
+
+    // Add event listeners if not already attached (using defensive element lookup)
+    if (!slotSelector.hasAttribute('data-listener-attached')) {
+        slotSelector.addEventListener('change', () => {
+            currentRankingsPage = 1;
+            // Defensively get current references to selectors
+            const currentRaritySelector = document.getElementById('cube-rankings-rarity-selector') as HTMLSelectElement;
+            const currentSlotSelector = document.getElementById('cube-rankings-slot-selector') as HTMLSelectElement;
+            if (currentRaritySelector && currentSlotSelector) {
+                const rarity = currentRaritySelector.value as Rarity;
+                const slotId = currentSlotSelector.value as CubeSlotId;
+                // Trigger calculation for the new slot
+                displayOrCalculateRankingsForSlotAndRarity(slotId, rarity);
+            }
+        });
+        slotSelector.setAttribute('data-listener-attached', 'true');
+    }
+
+    if (!raritySelector.hasAttribute('data-listener-attached')) {
+        raritySelector.addEventListener('change', () => {
+            currentRankingsPage = 1;
+            // Defensively get current references to selectors
+            const currentRaritySelector = document.getElementById('cube-rankings-rarity-selector') as HTMLSelectElement;
+            const currentSlotSelector = document.getElementById('cube-rankings-slot-selector') as HTMLSelectElement;
+            if (currentRaritySelector && currentSlotSelector) {
+                const rarity = currentRaritySelector.value as Rarity;
+                const slotId = currentSlotSelector.value as CubeSlotId;
+                // Trigger calculation for the new rarity
+                displayOrCalculateRankingsForSlotAndRarity(slotId, rarity);
+            }
+        });
+        raritySelector.setAttribute('data-listener-attached', 'true');
+    }
+}
+
+// Store simulation parameters for display
+let cubeBudget = 1000;
+let simulationCount = 1000;
+
+/**
+ * Handle run simulation button click
+ */
+async function handleRunSimulation(): Promise<void> {
+    const budgetInput = document.getElementById('simulation-cube-budget') as HTMLInputElement;
+    const countInput = document.getElementById('simulation-count') as HTMLInputElement;
+    const potentialTypeInputs = document.querySelectorAll('input[name="sim-potential-type"]');
+    const useUserDataCheckbox = document.getElementById('sim-use-my-data') as HTMLInputElement;
+
+    if (!budgetInput || !countInput || !potentialTypeInputs.length) {
+        console.error('Simulation inputs not found');
+        return;
+    }
+
+    cubeBudget = parseInt(budgetInput.value) || 1000;
+    simulationCount = parseInt(countInput.value) || 1000;
+
+    let potentialType: 'regular' | 'bonus' = 'regular';
+    for (const input of potentialTypeInputs) {
+        if ((input as HTMLInputElement).checked) {
+            potentialType = (input as HTMLInputElement).value as 'regular' | 'bonus';
+            break;
+        }
+    }
+
+    const useUserData = useUserDataCheckbox?.checked || false;
+
+    const cubeSlotData = gearLabStore.getCubeSlotData();
+    if (!cubeSlotData) {
+        console.error('Cube slot data not found');
+        return;
+    }
+
+    // Include base stats which is required by runCubeSimulation
+    const baseStats = loadoutStore.getBaseStats();
+    const cubeSlotDataWithStats = {
+        ...cubeSlotData,
+        baseStats
+    };
+
+    const results = await runCubeSimulation(
+        cubeBudget,
+        simulationCount,
+        potentialType,
+        useUserData,
+        cubeSlotDataWithStats
+    );
+
+    // Display results (includes chart creation)
+    displaySimulationResults(results);
+}
+
+/**
+ * Display simulation results with full breakdown
+ */
+function displaySimulationResults(results: Record<string, any>): void {
+    const resultsDiv = document.getElementById('cube-simulation-results');
+    if (!resultsDiv) return;
+
+    // Find best strategy
+    let bestStrategy = Object.keys(results)[0];
+    let bestAvg = results[bestStrategy]?.avgGain || 0;
+
+    for (const strategy of Object.keys(results)) {
+        if ((results[strategy]?.avgGain || 0) > bestAvg) {
+            bestStrategy = strategy;
+            bestAvg = results[strategy]?.avgGain || 0;
+        }
+    }
+
+    const formatStrategy = (strategyKey: string, name: string, data: any, isBest: boolean): string => {
+        const gains = [...(data.totalGains || [])].sort((a: number, b: number) => a - b);
+        if (gains.length === 0) return '';
+
+        const min = gains[0];
+        const max = gains[gains.length - 1];
+        const median = gains[Math.floor(gains.length / 2)];
+        const p25 = gains[Math.floor(gains.length * 0.25)];
+        const p75 = gains[Math.floor(gains.length * 0.75)];
+
+        // Find simulations for each percentile
+        const simulations = data.simulations || [];
+        const minSimIdx = simulations.findIndex((s: any) => Math.abs(s.totalGain - min) < 0.01);
+        const p25SimIdx = simulations.findIndex((s: any) => Math.abs(s.totalGain - p25) < 0.01);
+        const medianSimIdx = simulations.findIndex((s: any) => Math.abs(s.totalGain - median) < 0.01);
+        const p75SimIdx = simulations.findIndex((s: any) => Math.abs(s.totalGain - p75) < 0.01);
+        const maxSimIdx = simulations.findIndex((s: any) => Math.abs(s.totalGain - max) < 0.01);
+
+        const detailsId = `sim-details-${strategyKey}`;
+        const chartCanvasId = `sim-chart-${strategyKey}`;
+
+        return `
+            <details style="background: linear-gradient(135deg, ${isBest ? 'rgba(52, 199, 89, 0.1), rgba(0, 122, 255, 0.05)' : 'rgba(59, 130, 246, 0.1), rgba(147, 51, 234, 0.05)'}); border: 2px solid ${isBest ? 'var(--accent-success)' : 'rgba(59, 130, 246, 0.3)'}; border-radius: 12px; margin-bottom: 12px; transition: all 0.3s;">
+                <summary style="cursor: pointer; padding: 16px 20px; user-select: none; list-style: none; display: flex; align-items: center; justify-content: space-between; gap: 15px;">
+                    <div style="display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0;">
+                        <span style="color: ${isBest ? 'var(--accent-success)' : 'var(--accent-primary)'}; font-size: 1.05em; font-weight: 700;">
+                            ${isBest ? '⭐ ' : ''}${name}
+                        </span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 20px; font-size: 0.95em; flex-shrink: 0;">
+                        <div style="text-align: right;">
+                            <span style="color: var(--text-secondary); font-size: 0.85em;">Avg:</span>
+                            <span style="color: ${isBest ? 'var(--accent-success)' : 'var(--accent-primary)'}; font-weight: 700; margin-left: 6px;">+${data.avgGain.toFixed(2)}%</span>
+                        </div>
+                        <div style="text-align: right;">
+                            <span style="color: var(--text-secondary); font-size: 0.85em;">Range:</span>
+                            <span style="color: var(--text-primary); font-weight: 600; margin-left: 6px;">+${min.toFixed(2)}% - +${max.toFixed(2)}%</span>
+                        </div>
+                    </div>
+                </summary>
+
+                <div style="padding: 0 20px 20px 20px; border-top: 1px solid rgba(0, 0, 0, 0.1); margin-top: -5px; padding-top: 20px;">
+                    <!-- Stats Grid -->
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 15px;">
+                        <div class="sim-stat-card">
+                            <div class="sim-stat-card-label">Average Gain</div>
+                            <div class="sim-stat-card-value">+${data.avgGain.toFixed(2)}%</div>
+                        </div>
+                        <div class="sim-stat-card">
+                            <div class="sim-stat-card-label">Median</div>
+                            <div class="sim-stat-card-value sim-stat-card-value--secondary">+${median.toFixed(2)}%</div>
+                        </div>
+                        <div class="sim-stat-card">
+                            <div class="sim-stat-card-label">Min / Max</div>
+                            <div class="sim-stat-card-value sim-stat-card-value--secondary">+${min.toFixed(2)}% / +${max.toFixed(2)}%</div>
+                        </div>
+                        <div class="sim-stat-card">
+                            <div class="sim-stat-card-label">P25 / P75</div>
+                            <div class="sim-stat-card-value sim-stat-card-value--secondary">+${p25.toFixed(2)}% / +${p75.toFixed(2)}%</div>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Results Dropdown -->
+                    <details style="background: rgba(0, 0, 0, 0.05); border-radius: 8px; padding: 10px; margin-top: 10px;">
+                        <summary style="cursor: pointer; font-weight: 600; color: var(--accent-primary); user-select: none; font-size: 0.95em;">
+                            View Detailed Results (Slot Stats & Distribution)
+                        </summary>
+                        <div id="${detailsId}" style="margin-top: 15px;">
+                            <!-- Sub-tabs -->
+                            <div style="display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 2px solid rgba(0, 0, 0, 0.1); padding-bottom: 0; overflow-x: auto;">
+                                <button class="sim-detail-tab active" data-strategy="${strategyKey}" data-tab="distribution" onclick="window.switchSimDetailTab('${strategyKey}', 'distribution')" style="padding: 8px 16px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-primary); transition: all 0.3s; white-space: nowrap;">Distribution</button>
+                                <button class="sim-detail-tab" data-strategy="${strategyKey}" data-tab="min" onclick="window.switchSimDetailTab('${strategyKey}', 'min')" style="padding: 8px 16px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-primary); transition: all 0.3s; white-space: nowrap;">Min (+${min.toFixed(2)}%)</button>
+                                <button class="sim-detail-tab" data-strategy="${strategyKey}" data-tab="p25" onclick="window.switchSimDetailTab('${strategyKey}', 'p25')" style="padding: 8px 16px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-primary); transition: all 0.3s; white-space: nowrap;">P25 (+${p25.toFixed(2)}%)</button>
+                                <button class="sim-detail-tab" data-strategy="${strategyKey}" data-tab="median" onclick="window.switchSimDetailTab('${strategyKey}', 'median')" style="padding: 8px 16px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-primary); transition: all 0.3s; white-space: nowrap;">Median (+${median.toFixed(2)}%)</button>
+                                <button class="sim-detail-tab" data-strategy="${strategyKey}" data-tab="p75" onclick="window.switchSimDetailTab('${strategyKey}', 'p75')" style="padding: 8px 16px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-primary); transition: all 0.3s; white-space: nowrap;">P75 (+${p75.toFixed(2)}%)</button>
+                                <button class="sim-detail-tab" data-strategy="${strategyKey}" data-tab="max" onclick="window.switchSimDetailTab('${strategyKey}', 'max')" style="padding: 8px 16px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-primary); transition: all 0.3s; white-space: nowrap;">Max (+${max.toFixed(2)}%)</button>
+                            </div>
+
+                            <!-- Distribution Tab -->
+                            <div class="sim-detail-content" data-strategy="${strategyKey}" data-tab="distribution" style="display: block;">
+                                <canvas id="${chartCanvasId}" style="max-height: 300px;"></canvas>
+                            </div>
+
+                            <!-- Min Tab -->
+                            <div class="sim-detail-content" data-strategy="${strategyKey}" data-tab="min" style="display: none;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
+                                    ${minSimIdx >= 0 ? formatSlotDetails(simulations[minSimIdx].slots) : 'No data'}
+                                </div>
+                            </div>
+
+                            <!-- P25 Tab -->
+                            <div class="sim-detail-content" data-strategy="${strategyKey}" data-tab="p25" style="display: none;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
+                                    ${p25SimIdx >= 0 ? formatSlotDetails(simulations[p25SimIdx].slots) : 'No data'}
+                                </div>
+                            </div>
+
+                            <!-- Median Tab -->
+                            <div class="sim-detail-content" data-strategy="${strategyKey}" data-tab="median" style="display: none;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
+                                    ${medianSimIdx >= 0 ? formatSlotDetails(simulations[medianSimIdx].slots) : 'No data'}
+                                </div>
+                            </div>
+
+                            <!-- P75 Tab -->
+                            <div class="sim-detail-content" data-strategy="${strategyKey}" data-tab="p75" style="display: none;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
+                                    ${p75SimIdx >= 0 ? formatSlotDetails(simulations[p75SimIdx].slots) : 'No data'}
+                                </div>
+                            </div>
+
+                            <!-- Max Tab -->
+                            <div class="sim-detail-content" data-strategy="${strategyKey}" data-tab="max" style="display: none;">
+                                <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px;">
+                                    ${maxSimIdx >= 0 ? formatSlotDetails(simulations[maxSimIdx].slots) : 'No data'}
+                                </div>
+                            </div>
+                        </div>
+                    </details>
+                </div>
+            </details>
+        `;
+    };
+
+    // Strategy names and descriptions
+    const strategyInfo: Record<string, { name: string; desc: string }> = {
+        worstFirst: { name: 'Worst First', desc: 'Always upgrades the slot currently providing the least DPS gain with a single cube at a time.' },
+        balancedThreshold: { name: 'Balanced Threshold', desc: 'Keeps all slots within a certain DPS gain range of each other, preventing over-investment in terrible slots.' },
+        hybridFastRarity: { name: 'Hybrid: Fast Rarity + Worst First', desc: 'First rushes all slots to Epic rarity, then switches to Worst First strategy for remaining cubes.' },
+        rarityWeightedWorstFirst: { name: 'Rarity-Weighted Worst First', desc: 'Like Worst First but factors in how close a slot is to its next rarity upgrade, prioritizing slots near upgrade thresholds.' },
+        dpOptimal: { name: 'DP Optimal', desc: 'Mathematically optimal strategy that cubes the slot with highest expected marginal DPS gain, accounting for tier-up probability and future rarity potential.' }
+    };
+
+    // Sort strategies by average gain (best first)
+    const sortedStrategies = Object.keys(results).sort((a, b) => (results[b]?.avgGain || 0) - (results[a]?.avgGain || 0));
+
+    resultsDiv.innerHTML = `
+        <div style="margin-bottom: 20px;">
+            <h3 style="color: var(--accent-primary); margin-bottom: 10px; font-size: 1.2em; font-weight: 600;">
+                Simulation Results
+            </h3>
+            <p style="color: var(--text-secondary); font-size: 0.9em;">
+                Cube Budget: ${cubeBudget} | Simulations: ${simulationCount}
+            </p>
+        </div>
+
+        ${sortedStrategies.map(strategyKey => {
+            const info = strategyInfo[strategyKey];
+            return formatStrategy(strategyKey, info.name, results[strategyKey], strategyKey === bestStrategy);
+        }).join('')}
+
+        <div style="background: linear-gradient(135deg, rgba(138, 43, 226, 0.1), rgba(75, 0, 130, 0.05)); border: 2px solid rgba(138, 43, 226, 0.3); border-radius: 12px; padding: 20px; margin-top: 20px;">
+            <h4 style="color: var(--accent-primary); margin-bottom: 10px;">Strategy Descriptions</h4>
+            <div style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.6;">
+                ${Object.keys(strategyInfo).map(key => `
+                    <p style="margin-top: 8px;"><strong>${strategyInfo[key].name}:</strong> ${strategyInfo[key].desc}</p>
+                `).join('')}
+            </div>
+        </div>
+    `;
+
+    // Store for chart creation (charts are created on-demand when tabs are shown)
+    (window as any).simulationResultsForCharts = { results, sortedStrategies, strategyInfo };
+}
+
+/**
+ * Create simulation distribution histogram chart
+ */
+function createSimulationDistributionChart(canvasId: string, gains: number[], label: string): void {
+    const canvas = document.getElementById(canvasId) as HTMLCanvasElement;
+    if (!canvas) {
+        setTimeout(() => createSimulationDistributionChart(canvasId, gains, label), 50);
+        return;
+    }
+
+    // Create histogram
+    const sorted = [...gains].sort((a, b) => a - b);
+    const min = sorted[0];
+    const max = sorted[sorted.length - 1];
+    const bucketCount = 30;
+
+    // Handle case where all gains are the same (avoid division by zero)
+    let bucketSize = (max - min) / bucketCount;
+    if (bucketSize === 0) {
+        // All values are the same, create a single bucket
+        bucketSize = 1;
+    }
+
+    const buckets = new Array(bucketCount).fill(0);
+    const bucketLabels: string[] = [];
+
+    for (let i = 0; i < bucketCount; i++) {
+        const bucketStart = min + (i * bucketSize);
+        bucketLabels.push(bucketStart.toFixed(2));
+    }
+
+    sorted.forEach(gain => {
+        const bucketIndex = Math.min(
+            Math.floor((gain - min) / bucketSize),
+            bucketCount - 1
+        );
+        buckets[bucketIndex]++;
     });
 
-    // Set default to current slot
-    slotSelector.value = currentCubeSlot;
+    // Get theme colors
+    const isDark = document.documentElement.classList.contains('dark');
+    const textColor = isDark ? '#e5e7eb' : '#1f2937';
+    const gridColor = isDark ? 'rgba(55, 65, 81, 0.5)' : 'rgba(209, 213, 219, 0.5)';
 
-    // Add event listeners
-    slotSelector.addEventListener('change', () => {
-        currentRankingsPage = 1;
-        // Rankings will be calculated on demand when tab is visible
-    });
+    // Destroy existing chart if any
+    const existingChart = (canvas as any).chart;
+    if (existingChart) {
+        existingChart.destroy();
+    }
 
-    raritySelector.addEventListener('change', () => {
-        currentRankingsPage = 1;
-        // Rankings will be calculated on demand when tab is visible
+    // Create new chart
+    (canvas as any).chart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: bucketLabels,
+            datasets: [{
+                label: 'Simulations',
+                data: buckets,
+                backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                borderColor: 'rgba(59, 130, 246, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 2.5,
+            plugins: {
+                legend: { display: false },
+                title: {
+                    display: true,
+                    text: `${label} - DPS Gain Distribution`,
+                    color: textColor,
+                    font: { size: 14, weight: 'bold' }
+                },
+                tooltip: {
+                    callbacks: {
+                        title: function(context: any) {
+                            const idx = context[0].dataIndex;
+                            const start = parseFloat(bucketLabels[idx]);
+                            const end = start + bucketSize;
+                            return `${start.toFixed(2)}% - ${end.toFixed(2)}%`;
+                        },
+                        label: function(context: any) {
+                            const count = buckets[context.dataIndex];
+                            const total = buckets.reduce((a: number, b: number) => a + b, 0);
+                            const percentage = ((count / total) * 100).toFixed(1);
+                            return `${count} simulations (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    display: false,
+                    grid: { display: false }
+                },
+                y: {
+                    display: true,
+                    grid: { color: gridColor },
+                    ticks: { color: textColor }
+                }
+            }
+        }
     });
 }
 
@@ -646,12 +1039,9 @@ function setupSimulationButton(): void {
     if (!simulationButton) return;
 
     simulationButton.addEventListener('click', () => {
-        // Check if runCubeSimulation function exists on window
-        if (typeof (window as any).runCubeSimulation === 'function') {
-            (window as any).runCubeSimulation();
-        } else {
-            console.error('runCubeSimulation function not found');
-        }
+        handleRunSimulation().catch(err => {
+            console.error('Simulation failed:', err);
+        });
     });
 }
 
@@ -905,8 +1295,240 @@ function displayComparisonResults(result: {
 }
 
 // ============================================================================
+// RANKINGS DISPLAY
+// ============================================================================
+
+/**
+ * Ranking entry interface
+ */
+interface RankingEntry {
+    line1: PotentialLineEntry;
+    line2: PotentialLineEntry;
+    line3: PotentialLineEntry;
+    dpsGain: number;
+}
+
+/**
+ * Display rankings with pagination
+ */
+export function displayRankings(rankings: RankingEntry[], rarity: Rarity): void {
+    const resultsDiv = document.getElementById('cube-rankings-results');
+    if (!resultsDiv) return;
+
+    const totalPages = Math.ceil(rankings.length / RANKINGS_PER_PAGE);
+    const startIdx = (currentRankingsPage - 1) * RANKINGS_PER_PAGE;
+    const endIdx = Math.min(startIdx + RANKINGS_PER_PAGE, rankings.length);
+    const pageRankings = rankings.slice(startIdx, endIdx);
+
+    let html = `
+        <div style="margin-bottom: 20px;">
+            <h3 style="color: var(--accent-primary); margin-bottom: 10px;">
+                Top Potential Combinations for ${rarity.charAt(0).toUpperCase() + rarity.slice(1)} Rarity
+            </h3>
+            <p style="color: var(--text-secondary); font-size: 0.9em;">
+                Showing ${startIdx + 1}-${endIdx} of ${rankings.length} unique combinations
+            </p>
+        </div>
+        <table class="stat-weight-table">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th style="text-align: center;">Line 1</th>
+                    <th style="text-align: center;">Line 2</th>
+                    <th style="text-align: center;">Line 3</th>
+                    <th>DPS Gain</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    pageRankings.forEach((combo, idx) => {
+        const rank = startIdx + idx + 1;
+        const formatLine = (line: PotentialLineEntry): string => {
+            const primeTag = line.prime ? ' <span style="color: var(--accent-primary); font-weight: 600;">(Prime)</span>' : '';
+            const isPercentStat = line.stat.includes('%');
+            const valueSuffix = isPercentStat ? '%' : '';
+            return `${line.stat}: ${line.value}${valueSuffix}${primeTag}`;
+        };
+
+        html += `
+            <tr>
+                <td style="font-weight: 700; color: var(--accent-primary);">#${rank}</td>
+                <td style="text-align: center;">${formatLine(combo.line1)}</td>
+                <td style="text-align: center;">${formatLine(combo.line2)}</td>
+                <td style="text-align: center;">${formatLine(combo.line3)}</td>
+                <td><span class="gain-positive">+${combo.dpsGain.toFixed(2)}%</span></td>
+            </tr>
+        `;
+    });
+
+    html += `
+            </tbody>
+        </table>
+        <div style="display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: 20px;">
+            <button onclick="window.changeCubeRankingsPage(${currentRankingsPage - 1})"
+                    ${currentRankingsPage === 1 ? 'disabled' : ''}
+                    class="btn-primary">Previous</button>
+            <span style="color: var(--text-secondary);">Page ${currentRankingsPage} of ${totalPages}</span>
+            <button onclick="window.changeCubeRankingsPage(${currentRankingsPage + 1})"
+                    ${currentRankingsPage === totalPages ? 'disabled' : ''}
+                    class="btn-primary">Next</button>
+        </div>
+    `;
+
+    resultsDiv.innerHTML = html;
+}
+
+/**
+ * Display or calculate rankings for a specific slot and rarity
+ */
+export async function displayOrCalculateRankingsForSlotAndRarity(
+    slotId: CubeSlotId,
+    rarity: Rarity
+): Promise<void> {
+    // Check if already calculated
+    if (rankingsCache[slotId]?.[rarity]) {
+        displayRankings(rankingsCache[slotId][rarity], rarity);
+        return;
+    }
+
+    // If calculation is in progress, show progress bar and wait
+    const key = `${slotId}-${rarity}`;
+    if (rankingsInProgress[key]) {
+        const progressBar = document.getElementById('cube-rankings-progress') as HTMLElement;
+        if (progressBar) progressBar.style.display = 'block';
+
+        let pollCount = 0;
+        const maxPolls = 600;
+        const checkInterval = setInterval(() => {
+            pollCount++;
+
+            if (rankingsCache[slotId]?.[rarity]) {
+                clearInterval(checkInterval);
+                displayRankings(rankingsCache[slotId][rarity], rarity);
+            } else if (!rankingsInProgress[key]) {
+                clearInterval(checkInterval);
+                calculateRankingsForRarity(rarity, slotId).then(() => {
+                    if (rankingsCache[slotId]?.[rarity]) {
+                        displayRankings(rankingsCache[slotId][rarity], rarity);
+                    }
+                });
+            } else if (pollCount >= maxPolls) {
+                clearInterval(checkInterval);
+                console.error('Rankings calculation timeout');
+                if (progressBar) progressBar.style.display = 'none';
+            }
+        }, 100);
+    } else {
+        // Not calculated and not in progress, start calculation
+        await calculateRankingsForRarity(rarity, slotId);
+        if (rankingsCache[slotId]?.[rarity]) {
+            displayRankings(rankingsCache[slotId][rarity], rarity);
+        }
+    }
+}
+
+/**
+ * Display rankings for a specific rarity (uses independent selectors)
+ */
+export async function displayOrCalculateRankingsForRarity(rarity: Rarity): Promise<void> {
+    const slotSelector = document.getElementById('cube-rankings-slot-selector') as HTMLSelectElement;
+    const slotId = slotSelector ? slotSelector.value as CubeSlotId : currentCubeSlot;
+    await displayOrCalculateRankingsForSlotAndRarity(slotId, rarity);
+}
+
+/**
+ * Change rankings page
+ */
+export function changeCubeRankingsPage(newPage: number): void {
+    changeRankingsPage(newPage);
+
+    // Refresh the display with the new page
+    const slotSelector = document.getElementById('cube-rankings-slot-selector') as HTMLSelectElement;
+    const raritySelector = document.getElementById('cube-rankings-rarity-selector') as HTMLSelectElement;
+
+    if (slotSelector && raritySelector) {
+        const slotId = slotSelector.value as CubeSlotId;
+        const rarity = raritySelector.value as Rarity;
+
+        if (rankingsCache[slotId]?.[rarity]) {
+            displayRankings(rankingsCache[slotId][rarity], rarity);
+        }
+    }
+}
+
+// ============================================================================
 // SUMMARY DISPLAY
 // ============================================================================
+
+/**
+ * Load rankings for all slots and rarities needed for summary display
+ * Skips slots that are already cached or currently being calculated
+ */
+async function loadAllRankingsForSummary(): Promise<void> {
+    if (!loadoutStore.getSelectedClass()) {
+        return; // Don't load rankings if no class is selected
+    }
+
+    const cubeData = gearLabStore.getCubeSlotData();
+    if (!cubeData) return;
+
+    const progressBar = document.getElementById('cube-summary-progress') as HTMLElement;
+    const progressFill = document.getElementById('cube-summary-progress-fill') as HTMLElement;
+    const progressText = document.getElementById('cube-summary-progress-text') as HTMLElement;
+
+    // Collect all unique slot+rarity combinations that need to be calculated
+    const calculationsNeeded: Array<{ slotId: CubeSlotId; rarity: Rarity }> = [];
+
+    SLOT_NAMES.forEach(slot => {
+        ['regular', 'bonus'].forEach(potentialType => {
+            const rarity = cubeData[slot.id][potentialType as PotentialType].rarity;
+            const key = `${slot.id}-${rarity}`;
+
+            // Skip if already cached or currently in progress
+            if (!rankingsCache[slot.id]?.[rarity] && !rankingsInProgress[key]) {
+                calculationsNeeded.push({ slotId: slot.id, rarity });
+            }
+        });
+    });
+
+    if (calculationsNeeded.length === 0) {
+        return; // All rankings already loaded or in progress
+    }
+
+    // Show progress bar
+    if (progressBar) progressBar.style.display = 'block';
+    if (progressText) progressText.textContent = `Loading rankings for ${calculationsNeeded.length} slot(s)...`;
+
+    // Track completed count with proper synchronization
+    let completed = 0;
+    const total = calculationsNeeded.length;
+
+    // Process calculations in parallel (but don't wait for all to complete before showing initial results)
+    const promises = calculationsNeeded.map(async ({ slotId, rarity }) => {
+        try {
+            await calculateRankingsForRarity(rarity, slotId);
+        } catch (error) {
+            console.error(`Failed to load rankings for ${slotId}-${rarity}:`, error);
+        } finally {
+            // Increment completed count and update progress
+            completed++;
+            if (progressFill && progressBar) {
+                progressFill.style.width = `${(completed / total) * 100}%`;
+            }
+            if (progressText) {
+                progressText.textContent = `Loading rankings... ${completed}/${total}`;
+            }
+        }
+    });
+
+    // Wait for all calculations to complete
+    await Promise.all(promises);
+
+    // Hide progress bar and refresh summary with updated rankings
+    if (progressBar) progressBar.style.display = 'none';
+    displayAllSlotsSummary();
+}
 
 /**
  * Display summary of all slots
@@ -986,25 +1608,49 @@ function displayAllSlotsSummary(): void {
     `;
 
     summaryData.forEach((data) => {
+        // Format regular potential display
+        let regularDisplay: string;
+        if (data.regularGain === 0) {
+            regularDisplay = '<span style="color: var(--text-secondary); font-size: 0.9em;">No stats</span>';
+        } else {
+            const regularPercentile = getPercentileForGain(data.slotId, data.regularRarity, data.regularGain, rankingsCache, rankingsInProgress);
+            regularDisplay = `
+                <span style="color: ${data.regularGain >= 0 ? '#4ade80' : '#f87171'}; font-weight: 600;">
+                    ${data.regularGain >= 0 ? '+' : ''}${data.regularGain.toFixed(2)}%
+                </span>
+                <span style="font-size: 0.8em; color: var(--text-secondary); margin: 0 4px;">
+                    ${data.regularRarity.charAt(0).toUpperCase() + data.regularRarity.slice(1)}
+                </span>
+                <span style="font-size: 0.8em;">
+                    ${regularPercentile}
+                </span>
+            `;
+        }
+
+        // Format bonus potential display
+        let bonusDisplay: string;
+        if (data.bonusGain === 0) {
+            bonusDisplay = '<span style="color: var(--text-secondary); font-size: 0.9em;">No stats</span>';
+        } else {
+            const bonusPercentile = getPercentileForGain(data.slotId, data.bonusRarity, data.bonusGain, rankingsCache, rankingsInProgress);
+            bonusDisplay = `
+                <span style="color: ${data.bonusGain >= 0 ? '#4ade80' : '#f87171'}; font-weight: 600;">
+                    ${data.bonusGain >= 0 ? '+' : ''}${data.bonusGain.toFixed(2)}%
+                </span>
+                <span style="font-size: 0.8em; color: var(--text-secondary); margin: 0 4px;">
+                    ${data.bonusRarity.charAt(0).toUpperCase() + data.bonusRarity.slice(1)}
+                </span>
+                <span style="font-size: 0.8em;">
+                    ${bonusPercentile}
+                </span>
+            `;
+        }
+
         html += `
             <tr>
                 <td style="font-weight: 600; text-align: center;">${data.slotName}</td>
-                <td style="text-align: center;">
-                    <div style="color: ${data.regularGain >= 0 ? '#4ade80' : '#f87171'}; font-weight: 600; margin-bottom: 4px;">
-                        ${data.regularGain >= 0 ? '+' : ''}${data.regularGain.toFixed(2)}%
-                    </div>
-                    <div style="font-size: 0.8em; color: var(--text-secondary);">
-                        ${data.regularRarity.charAt(0).toUpperCase() + data.regularRarity.slice(1)}
-                    </div>
-                </td>
-                <td style="text-align: center;">
-                    <div style="color: ${data.bonusGain >= 0 ? '#4ade80' : '#f87171'}; font-weight: 600; margin-bottom: 4px;">
-                        ${data.bonusGain >= 0 ? '+' : ''}${data.bonusGain.toFixed(2)}%
-                    </div>
-                    <div style="font-size: 0.8em; color: var(--text-secondary);">
-                        ${data.bonusRarity.charAt(0).toUpperCase() + data.bonusRarity.slice(1)}
-                    </div>
-                </td>
+                <td style="text-align: center;">${regularDisplay}</td>
+                <td style="text-align: center;">${bonusDisplay}</td>
             </tr>
         `;
     });
@@ -1041,7 +1687,8 @@ function exposeGlobalFunctions(): void {
     (window as any).switchCubePotentialType = switchPotentialType;
     (window as any).selectCubeSlot = selectCubeSlot;
     (window as any).sortCubeSummaryBy = sortCubeSummaryBy;
-    (window as any).changeCubeRankingsPage = changeRankingsPage;
+    (window as any).changeCubeRankingsPage = changeCubeRankingsPage;
+    (window as any).switchSimDetailTab = switchSimDetailTab;
 }
 
 /**
@@ -1050,4 +1697,80 @@ function exposeGlobalFunctions(): void {
 export function changeRankingsPage(newPage: number): void {
     currentRankingsPage = newPage;
     // Rankings display will be updated when tab is visible
+}
+
+// ============================================================================
+// SIMULATION DISPLAY HELPERS
+// ============================================================================
+
+/**
+ * Format slot details for simulation display
+ */
+export function formatSlotDetails(slots: any[]): string {
+    return slots.map((slot) => {
+        const linesHTML = slot.lines && slot.lines.length > 0
+            ? slot.lines.map((line: PotentialLineEntry | null, i: number) => {
+                if (!line) return '';
+                const isPercentStat = line.stat.includes('%');
+                const valueSuffix = isPercentStat ? '%' : '';
+                const primeTag = line.prime ? ' <span style="color: var(--accent-primary); font-weight: 600;">(P)</span>' : '';
+                return `L${i+1}: ${line.stat} ${line.value}${valueSuffix}${primeTag}`;
+            }).join('<br>')
+            : 'No lines';
+
+        return `
+            <div class="sim-slot-card">
+                <div class="sim-slot-card-header">
+                    ${slot.name} [${slot.rarity.toUpperCase()}]
+                </div>
+                <div class="sim-slot-card-lines">
+                    ${linesHTML}
+                </div>
+                <div class="sim-slot-card-gain">
+                    DPS Gain: +${slot.dpsGain.toFixed(2)}%
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+/**
+ * Switch between simulation detail tabs
+ */
+export function switchSimDetailTab(strategy: string, tab: string): void {
+    // Update tab buttons
+    document.querySelectorAll(`.sim-detail-tab[data-strategy="${strategy}"]`).forEach(btn => {
+        const button = btn as HTMLElement;
+        if (button.dataset.tab === tab) {
+            button.classList.add('active');
+            button.style.borderBottomColor = 'var(--accent-primary)';
+        } else {
+            button.classList.remove('active');
+            button.style.borderBottomColor = 'transparent';
+        }
+    });
+
+    // Update content visibility
+    document.querySelectorAll(`.sim-detail-content[data-strategy="${strategy}"]`).forEach(content => {
+        const element = content as HTMLElement;
+        const shouldShow = element.dataset.tab === tab;
+        element.style.display = shouldShow ? 'block' : 'none';
+
+        // Create chart when Distribution tab is shown (charts don't render properly in hidden elements)
+        if (shouldShow && tab === 'distribution') {
+            const canvas = element.querySelector('canvas') as HTMLCanvasElement;
+            if (canvas && !(canvas as any).chart) {
+                // Get the stored simulation results and create the chart
+                const storedData = (window as any).simulationResultsForCharts;
+                if (storedData && storedData.results && storedData.results[strategy]) {
+                    const strategyInfo = storedData.strategyInfo[strategy];
+                    const gains = storedData.results[strategy].totalGains;
+                    // Small delay to ensure the element is visible
+                    setTimeout(() => {
+                        createSimulationDistributionChart(canvas.id, gains, strategyInfo.name);
+                    }, 50);
+                }
+            }
+        }
+    });
 }

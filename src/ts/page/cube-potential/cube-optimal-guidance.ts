@@ -1,35 +1,72 @@
-import { findOptimalSlotToCube, sampleExpectedDPSGain } from './cube-expected-value.js';
-import { getCubeSlotData } from '@core/state/state.js';
-import { saveToLocalStorage } from '@core/state/storage.js';
-import { slotNames, RARITY_UPGRADE_RATES } from './cube-potential-data.js';
-import { getStats } from '@core/state/state.js';
-import { StatCalculationService } from '@core/services/stat-calculation-service.js';
-import { potentialStatToDamageStat } from './cube-logic.js';
+/**
+ * Cube Optimal Guidance - Recommendation Engine and Optimal Strategy Display
+ * Provides recommendations for optimal cube usage based on expected value
+ */
 
-let guidanceState = {
+import { StatCalculationService } from '@ts/services/stat-calculation-service.js';
+import {
+    RARITY_UPGRADE_RATES,
+    SLOT_NAMES
+} from '@ts/page/cube-potential/cube-potential-data.js';
+import { loadoutStore } from '@ts/store/loadout.store.js';
+import { potentialStatToDamageStat } from '@ts/page/cube-potential/cube-potential.js';
+import { findOptimalSlotToCube, sampleExpectedDPSGain } from './cube-expected-value.js';
+import type { SlotState } from './cube-expected-value.js';
+import type { BaseStats } from '@ts/types/loadout.js';
+import type { CubeSlotId, Rarity, PotentialSet } from '@ts/types/page/gear-lab/gear-lab.types';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export interface GuidanceState {
+    potentialType: 'regular' | 'bonus';
+    cubeBudget: number;
+}
+
+export interface OptimalSequenceStep {
+    slotId: CubeSlotId;
+    slotName: string;
+    cubes: number;
+    cumulativeDPS: number;
+}
+
+export interface GuidanceData {
+    recommendedSlot: SlotState | null;
+    marginalGain: number;
+    optimalSequence: OptimalSequenceStep[];
+}
+
+// ============================================================================
+// STATE
+// ============================================================================
+
+let guidanceState: GuidanceState = {
     potentialType: 'regular',
     cubeBudget: 100
 };
 
+// ============================================================================
+// OPTIMAL GUIDANCE FUNCTIONS
+// ============================================================================
+
 /**
- * Initialize optimal guidance tab
+ * Initialize optimal guidance system
  */
-export function initOptimalGuidance() {
+export function initOptimalGuidance(): void {
     loadGuidanceBudget();
-    calculateAndDisplayRecommendation();
-    setupEventListeners();
 }
 
 /**
  * Load saved cube budget from localStorage
  */
-function loadGuidanceBudget() {
+function loadGuidanceBudget(): void {
     const saved = localStorage.getItem('optimalGuidanceBudget');
     if (saved) {
         guidanceState.cubeBudget = parseInt(saved) || 100;
-        const budgetInput = document.getElementById('optimal-cube-budget');
+        const budgetInput = document.getElementById('optimal-cube-budget') as HTMLInputElement;
         if (budgetInput) {
-            budgetInput.value = guidanceState.cubeBudget;
+            budgetInput.value = guidanceState.cubeBudget.toString();
         }
     }
 }
@@ -37,8 +74,8 @@ function loadGuidanceBudget() {
 /**
  * Calculate current slot DPS gain
  */
-function calculateCurrentSlotDPSGain(slotId, slotData) {
-    const baseStats = getStats('base');
+function calculateCurrentSlotDPSGain(slotId: CubeSlotId, slotData: { rarity: Rarity; setA: PotentialSet }): number {
+    const baseStats = loadoutStore.getBaseStats();
     const baseDPS = new StatCalculationService(baseStats).computeDPS('boss');
 
     const slotService = new StatCalculationService(baseStats);
@@ -55,10 +92,10 @@ function calculateCurrentSlotDPSGain(slotId, slotData) {
         const mapped = potentialStatToDamageStat(line.stat, line.value, accumulatedMainStatPct);
         if (mapped.stat) {
             if (mapped.isMainStatPct) {
-                slotService.addPercentageStat('statDamage', mapped.value);
+                slotService.add(mapped.stat, mapped.value);
                 accumulatedMainStatPct += line.value;
             } else {
-                slotService.addPercentageStat(mapped.stat, mapped.value);
+                slotService.add(mapped.stat, mapped.value);
             }
         }
     });
@@ -70,16 +107,17 @@ function calculateCurrentSlotDPSGain(slotId, slotData) {
 /**
  * Calculate and display current recommendation
  */
-export function calculateAndDisplayRecommendation() {
-    const cubeSlotData = getCubeSlotData();
+export function calculateAndDisplayRecommendation(
+    cubeSlotData: Record<string, any>
+): GuidanceData | null {
     const potentialType = guidanceState.potentialType;
 
     // Get base stats for calculations
-    const baseStats = getStats('base');
+    const baseStats = loadoutStore.getBaseStats();
     const baseDPS = new StatCalculationService(baseStats).computeDPS('boss');
 
     // Build current slots state from user data
-    const slots = slotNames.map(slotDef => {
+    const slots: SlotState[] = SLOT_NAMES.map(slotDef => {
         const slotData = cubeSlotData[slotDef.id][potentialType];
         return {
             id: slotDef.id,
@@ -90,7 +128,7 @@ export function calculateAndDisplayRecommendation() {
         };
     });
 
-    // Find optimal slot with new function signature
+    // Find optimal slot
     const { slot: recommendedSlot, marginalGain } = findOptimalSlotToCube(
         slots,
         baseStats,
@@ -100,32 +138,38 @@ export function calculateAndDisplayRecommendation() {
 
     if (!recommendedSlot) {
         displayNoRecommendation();
-        return;
+        return null;
     }
 
     // Calculate full optimal sequence
-    const optimalSequence = calculateOptimalSequence(slots, guidanceState.cubeBudget);
+    const optimalSequence = calculateOptimalSequence(slots, baseStats, baseDPS);
 
     // Display
     displayRecommendation(recommendedSlot, marginalGain);
     displayOptimalSequence(optimalSequence);
+
+    return {
+        recommendedSlot,
+        marginalGain,
+        optimalSequence
+    };
 }
 
 /**
  * Calculate optimal sequence for entire budget
  */
-function calculateOptimalSequence(slots, budget) {
-    const sequence = [];
-    const simSlots = JSON.parse(JSON.stringify(slots)); // Deep copy
+function calculateOptimalSequence(
+    initialSlots: SlotState[],
+    baseStats: BaseStats,
+    baseDPS: number
+): OptimalSequenceStep[] {
+    const sequence: OptimalSequenceStep[] = [];
+    const simSlots: SlotState[] = JSON.parse(JSON.stringify(initialSlots)); // Deep copy
 
-    // Get base stats for DPS calculations
-    const baseStats = getStats('base');
-    const baseDPS = new StatCalculationService(baseStats).computeDPS('boss');
-
-    let currentSlotId = null;
+    let currentSlotId: CubeSlotId | null = null;
     let cubesOnCurrentSlot = 0;
 
-    for (let i = 0; i < budget; i++) {
+    for (let i = 0; i < guidanceState.cubeBudget; i++) {
         const { slot } = findOptimalSlotToCube(simSlots, baseStats, baseDPS, 30);
         if (!slot) break;
 
@@ -134,7 +178,7 @@ function calculateOptimalSequence(slots, budget) {
                 const cumulativeDPS = simSlots.reduce((sum, s) => sum + s.dpsGain, 0);
                 sequence.push({
                     slotId: currentSlotId,
-                    slotName: simSlots.find(s => s.id === currentSlotId).name,
+                    slotName: simSlots.find(s => s.id === currentSlotId)!.name,
                     cubes: cubesOnCurrentSlot,
                     cumulativeDPS
                 });
@@ -159,8 +203,7 @@ function calculateOptimalSequence(slots, budget) {
             }
         }
 
-        // KEY FIX: Update dpsGain with expected value at new rarity
-        // Sample what DPS we'd expect after this cube
+        // Update dpsGain with expected value at new rarity
         const sampledDPS = sampleExpectedDPSGain(slot.id, slot.rarity, baseStats, baseDPS);
         slot.dpsGain = sampledDPS;
     }
@@ -170,7 +213,7 @@ function calculateOptimalSequence(slots, budget) {
         const cumulativeDPS = simSlots.reduce((sum, s) => sum + s.dpsGain, 0);
         sequence.push({
             slotId: currentSlotId,
-            slotName: simSlots.find(s => s.id === currentSlotId).name,
+            slotName: simSlots.find(s => s.id === currentSlotId)!.name,
             cubes: cubesOnCurrentSlot,
             cumulativeDPS
         });
@@ -182,12 +225,12 @@ function calculateOptimalSequence(slots, budget) {
 /**
  * Display no recommendation message
  */
-function displayNoRecommendation() {
+function displayNoRecommendation(): void {
     const panel = document.getElementById('optimal-recommendation');
     if (!panel) return;
 
     panel.innerHTML = `
-        <div style="background: rgba(255, 255, 255, 0.5); border: 2px solid var(--border-color); border-radius: 16px; padding: 24px; text-align: center;">
+        <div class="optimal-no-recommendation-card">
             <div style="font-size: 1.2em; color: var(--text-secondary);">No recommendation available</div>
             <div style="font-size: 0.9em; color: var(--text-secondary); margin-top: 8px;">Please select a class first</div>
         </div>
@@ -197,7 +240,7 @@ function displayNoRecommendation() {
 /**
  * Display recommendation panel
  */
-function displayRecommendation(slot, marginalGain) {
+function displayRecommendation(slot: SlotState, marginalGain: number): void {
     const panel = document.getElementById('optimal-recommendation');
     if (!panel) return;
 
@@ -205,8 +248,7 @@ function displayRecommendation(slot, marginalGain) {
     const rollsUntilPity = upgradeData ? (upgradeData.max - slot.rollCount) : 'N/A';
 
     panel.innerHTML = `
-        <div style="background: linear-gradient(135deg, rgba(52, 199, 89, 0.1), rgba(0, 122, 255, 0.05));
-                    border: 2px solid var(--accent-success); border-radius: 16px; padding: 24px;">
+        <div class="optimal-recommendation-card">
             <div style="display: flex; justify-content: space-between; align-items: start;">
                 <div>
                     <div style="font-size: 0.85em; color: var(--text-secondary); margin-bottom: 4px;">
@@ -235,13 +277,15 @@ function displayRecommendation(slot, marginalGain) {
 /**
  * Display optimal sequence table
  */
-function displayOptimalSequence(sequence) {
+function displayOptimalSequence(sequence: OptimalSequenceStep[]): void {
     const container = document.getElementById('optimal-sequence');
     if (!container) return;
 
+    const totalCubes = sequence.reduce((sum, s) => sum + s.cubes, 0);
+
     let html = `
         <h4 style="color: var(--accent-primary); margin: 20px 0 15px;">
-            Optimal Sequence (${sequence.reduce((sum, s) => sum + s.cubes, 0)} cubes)
+            Optimal Sequence (${totalCubes} cubes)
         </h4>
         <table class="stat-weight-table">
             <thead>
@@ -273,28 +317,48 @@ function displayOptimalSequence(sequence) {
 /**
  * Setup event listeners for optimal guidance tab
  */
-function setupEventListeners() {
+export function setupOptimalGuidanceEventListeners(): void {
     // Potential type selector
-    const potentialTypeSelect = document.getElementById('optimal-potential-type');
+    const potentialTypeSelect = document.getElementById('optimal-potential-type') as HTMLSelectElement;
     if (potentialTypeSelect) {
         potentialTypeSelect.addEventListener('change', (e) => {
-            guidanceState.potentialType = e.target.value;
-            calculateAndDisplayRecommendation();
+            guidanceState.potentialType = (e.target as HTMLSelectElement).value as 'regular' | 'bonus';
+            // Trigger recalculation via callback
+            const cubeSlotData = (window as any).cubeSlotData;
+            if (cubeSlotData) {
+                calculateAndDisplayRecommendation(cubeSlotData);
+            }
         });
     }
 
     // Cube budget input
-    const budgetInput = document.getElementById('optimal-cube-budget');
+    const budgetInput = document.getElementById('optimal-cube-budget') as HTMLInputElement;
     if (budgetInput) {
         budgetInput.addEventListener('change', (e) => {
-            const value = parseInt(e.target.value) || 100;
+            const value = parseInt((e.target as HTMLInputElement).value) || 100;
             guidanceState.cubeBudget = Math.max(1, Math.min(9999, value));
-            budgetInput.value = guidanceState.cubeBudget;
+            budgetInput.value = guidanceState.cubeBudget.toString();
             localStorage.setItem('optimalGuidanceBudget', guidanceState.cubeBudget.toString());
-            calculateAndDisplayRecommendation();
+
+            // Trigger recalculation via callback
+            const cubeSlotData = (window as any).cubeSlotData;
+            if (cubeSlotData) {
+                calculateAndDisplayRecommendation(cubeSlotData);
+            }
         });
     }
 }
 
-// Export for window binding
-window.initOptimalGuidance = initOptimalGuidance;
+/**
+ * Get current guidance state
+ */
+export function getGuidanceState(): GuidanceState {
+    return { ...guidanceState };
+}
+
+/**
+ * Update guidance state
+ */
+export function updateGuidanceState(updates: Partial<GuidanceState>): void {
+    guidanceState = { ...guidanceState, ...updates };
+}

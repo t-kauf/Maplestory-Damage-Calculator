@@ -1,7 +1,8 @@
 import { CumulativeStatCalculator } from "@ts/services/stat-calculation-service.js";
 import { loadoutStore } from "@ts/store/loadout.store.js";
-import { Chart } from "chart.js/auto.js";
+import { Chart } from "chart.js/auto";
 const statWeightCharts = {};
+window.toggleStatChart = toggleStatChart;
 function toggleStatChart(statKey, statLabel, isFlat = false) {
   const chartId = `chart-${statKey}`;
   const rowId = `chart-row-${statKey}`;

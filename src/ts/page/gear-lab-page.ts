@@ -9,6 +9,8 @@ import { gearLabStore } from '@ts/store/gear-lab-store.js';
 import { initializeInnerAbilityUI, loadInnerAbilityFromStore } from '@ts/page/inner-ability/inner-ability-ui.js';
 import { initializeArtifactPotential } from './artifact-potential/artifact-potential-ui.js';
 import { initializeCubePotentialUI } from '@ts/page/cube-potential/cube-potential-ui.js';
+import { initializeScrollingUI } from '@ts/page/scrolling/scrolling-ui.js';
+import { initializeComparisonUI, checkPendingSlotNavigation } from '@ts/page/comparison/comparison-ui.js';
 
 
 class GearLabPage extends BasePage {
@@ -28,6 +30,12 @@ class GearLabPage extends BasePage {
             this.initializeComponents();
             this.initialized = true;
         }
+
+        // Check for pending slot navigation when item-comparison tab is shown
+        // This must happen after initialization
+        if (tabName === 'item-comparison') {
+            checkPendingSlotNavigation();
+        }
     }
 
     private async initializeComponents(): Promise<void> {
@@ -38,6 +46,10 @@ class GearLabPage extends BasePage {
         initializeInnerAbilityUI();
         initializeArtifactPotential();
         initializeCubePotentialUI();
+        initializeScrollingUI();
+
+        // Initialize the Comparison Equipment UI
+        initializeComparisonUI();
 
         // Load saved presets from store
         loadInnerAbilityFromStore();

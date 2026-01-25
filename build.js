@@ -117,7 +117,9 @@ async function build() {
           path.endsWith('.css') ||
           path.startsWith('http') ||
           path.startsWith('.') ||
-          EXPLICIT_IMPORT_MAP_PATHS.includes(path)
+          EXPLICIT_IMPORT_MAP_PATHS.includes(path) ||
+          // Skip npm packages (contains '/' but doesn't start with '.', '/', or '@')
+          (!path.startsWith('@') && path.includes('/') && !path.startsWith('.') && !path.startsWith('/'))
         ) {
           return match;
         }

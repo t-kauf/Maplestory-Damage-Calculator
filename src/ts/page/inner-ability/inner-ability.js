@@ -2,44 +2,35 @@ import { innerAbilitiesData } from "@data/inner-ability-data.js";
 import { gearLabStore } from "@ts/store/gear-lab-store.js";
 import { StatCalculationService } from "@ts/services/stat-calculation-service.js";
 import { loadoutStore } from "@ts/store/loadout.store.js";
-function mapInnerAbilityStat(statName, value, baseStats) {
+import { STAT } from "@ts/types/constants.js";
+function mapInnerAbilityStat(statIdentifier, value, baseStats) {
   const service = new StatCalculationService(baseStats);
-  switch (statName) {
-    case "Attack Speed":
-      service.addDiminishingReturnStat("attackSpeed", value, 150);
-      break;
-    case "Boss Monster Damage":
-      service.addPercentageStat("bossDamage", value);
-      break;
-    case "Critical Rate":
-      service.addPercentageStat("critRate", value);
-      break;
-    case "Damage":
-      service.addPercentageStat("damage", value);
-      break;
-    case "Defense Penetration":
-      service.addDiminishingReturnStat("defPen", value, 100);
-      break;
-    case "Min Damage Multiplier":
-      service.addPercentageStat("minDamage", value);
-      break;
-    case "Max Damage Multiplier":
-      service.addPercentageStat("maxDamage", value);
-      break;
-    case "Normal Monster Damage":
-      service.addPercentageStat("normalDamage", value);
-      break;
-    case "Main Stat":
-      service.addMainStat(value);
-      break;
-    // Ignored stats: Max HP, Max MP, Accuracy, Evasion, MP Recovery Per Sec,
-    // Meso Drop, EXP Gain, Debuff Tolerance, Critical Resistance,
-    // Damage Tolerance, Damage Taken Decrease
-    default:
-      break;
+  let statId = statIdentifier;
+  if (!isKnownStatId(statIdentifier)) {
+    const mappedId = INNER_ABILITY_DISPLAY_NAME_TO_ID[statIdentifier];
+    if (mappedId) {
+      statId = mappedId;
+    } else {
+      return baseStats;
+    }
   }
+  service.add(statId, value);
   return service.getStats();
 }
+function isKnownStatId(statId) {
+  return Object.values(STAT).some((stat) => stat.id === statId);
+}
+const INNER_ABILITY_DISPLAY_NAME_TO_ID = {
+  "Attack Speed": STAT.ATTACK_SPEED.id,
+  "Boss Monster Damage": STAT.BOSS_DAMAGE.id,
+  "Critical Rate": STAT.CRIT_RATE.id,
+  "Damage": STAT.DAMAGE.id,
+  "Defense Penetration": STAT.DEF_PEN.id,
+  "Min Damage Multiplier": STAT.MIN_DAMAGE.id,
+  "Max Damage Multiplier": STAT.MAX_DAMAGE.id,
+  "Normal Monster Damage": STAT.NORMAL_DAMAGE.id,
+  "Main Stat": STAT.PRIMARY_MAIN_STAT.id
+};
 function applyInnerAbilityLines(baseStats, lines) {
   let modifiedStats = { ...baseStats };
   lines.forEach((line) => {
@@ -117,6 +108,7 @@ function calculateTheoreticalBest() {
   const baseline = getBaselineStats();
   const baselineService = new StatCalculationService(baseline);
   const baselineBossDamage = baselineService.compute("boss");
+  const baselineNormalDamage = baselineService.compute("normal");
   Object.entries(innerAbilitiesData).forEach(([rarity, rarityData]) => {
     Object.entries(rarityData).forEach(([statName, range]) => {
       if (statName === "lineRate") return;
@@ -129,9 +121,11 @@ function calculateTheoreticalBest() {
       ].forEach(({ roll, value }) => {
         const modifiedStats = mapInnerAbilityStat(statName, value, baseline);
         const testService = new StatCalculationService(modifiedStats);
-        const damage = testService.compute("boss");
-        const dpsGain = damage.dps - baselineBossDamage.dps;
-        const percentIncrease = dpsGain / baselineBossDamage.dps * 100;
+        const isNormalTarget = statName === "Normal Monster Damage";
+        const baselineDamage = isNormalTarget ? baselineNormalDamage : baselineBossDamage;
+        const damage = testService.compute(isNormalTarget ? "normal" : "boss");
+        const dpsGain = damage.dps - baselineDamage.dps;
+        const percentIncrease = dpsGain / baselineDamage.dps * 100;
         results.push({
           stat: statName,
           rarity,
@@ -208,6 +202,7 @@ if (typeof window !== "undefined") {
   window.applyInnerAbilityLines = applyInnerAbilityLines;
 }
 export {
+  INNER_ABILITY_DISPLAY_NAME_TO_ID,
   applyInnerAbilityLines,
   calculateBestCombinations,
   calculatePresetComparisons,

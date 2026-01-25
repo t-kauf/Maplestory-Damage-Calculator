@@ -13,6 +13,8 @@ import {
     NIGHT_LORD_SKILLS,
     SHADOWER_SKILLS
 } from '@ts/data/all-class-skills.js';
+import { BaseStats } from '@ts/types';
+import { StatCalculationService, StatCalculationService } from '@ts/services/stat-calculation-service';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -1013,7 +1015,7 @@ export function calculateJobSkillPassiveGains(
     className: string,
     characterLevel: number,
     skillLevelBonuses: SkillLevelBonuses,
-    currentStats: Partial<Record<string, number>> = {}
+    baseStat: BaseStats
 ): JobSkillPassiveGainsResult {
     // Get the class skills data
     const classSkills = CLASS_TO_SKILLS_MAP[className];
@@ -1077,7 +1079,7 @@ export function calculateJobSkillPassiveGains(
                 const calculatorStat = effect.stat;
 
                 // Special handling for defense stat (converts to mainStat for certain classes)
-                if (calculatorStat === 'defense' && currentStats.defense) {
+                if (calculatorStat === 'defense') {
                     const baseStrGain = (currentStats.defense * baseValue) / 100;
                     const bonusStrGain = (currentStats.defense * bonusValue) / 100;
                     const strGain = bonusStrGain - baseStrGain;

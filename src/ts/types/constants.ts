@@ -383,11 +383,19 @@ export const STAT = {
         min: 0,
         onChange: true,
     },
+    SKILL_LEVEL_ALL: {
+        id: 'skillLevelAll' as const,
+        label: 'All Job Skill Level',
+        type: 'number' as const,
+        defaultValue: 0,
+        min: 0,
+        onChange: true,
+    },
 
     // Main Stat %
     MAIN_STAT_PCT: {
         id: 'mainStatPct' as const,
-        label: 'Current Main Stat %',
+        label: 'Main Stat %',
         type: 'number' as const,
         step: '0.1',
         defaultValue: 0,
@@ -396,7 +404,7 @@ export const STAT = {
 
     // Hidden/Main Stat Fields
     PRIMARY_MAIN_STAT: {
-        id: 'primaryMainStat' as const,
+        id: 'mainStat' as const,
         label: 'Primary Main Stat',
         type: 'number' as const,
         defaultValue: 1000,
@@ -438,6 +446,12 @@ export const STAT = {
  * Type derived from STAT keys - ensures type safety
  */
 export type StatKey = keyof typeof STAT;
+
+/**
+ * Type derived from STAT id values - represents all valid stat IDs
+ * E.g., 'attack', 'critRate', 'bossDamage', etc.
+ */
+export type StatId = typeof STAT[keyof typeof STAT]['id'];
 
 /**
  * BaseStats type - uses StatKey enum values

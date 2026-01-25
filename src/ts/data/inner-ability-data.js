@@ -1,3 +1,4 @@
+import { STAT } from "@ts/types/constants.js";
 const innerAbilityStats = [
   "Accuracy",
   "Attack Speed",
@@ -20,24 +21,48 @@ const innerAbilityStats = [
   "MP Recovery Per Sec",
   "Normal Monster Damage"
 ];
+const INNER_ABILITY_STAT_NAMES = {
+  [STAT.ATTACK_SPEED.id]: "Attack Speed",
+  [STAT.BOSS_DAMAGE.id]: "Boss Monster Damage",
+  [STAT.CRIT_RATE.id]: "Critical Rate",
+  [STAT.DAMAGE.id]: "Damage",
+  [STAT.DEF_PEN.id]: "Defense Penetration",
+  [STAT.MIN_DAMAGE.id]: "Min Damage Multiplier",
+  [STAT.MAX_DAMAGE.id]: "Max Damage Multiplier",
+  [STAT.NORMAL_DAMAGE.id]: "Normal Monster Damage",
+  [STAT.PRIMARY_MAIN_STAT.id]: "Main Stat"
+};
+const INNER_ABILITY_NON_COMBAT_STATS = [
+  "Accuracy",
+  "Critical Resistance",
+  "Damage Taken Decrease",
+  "Damage Tolerance",
+  "Debuff Tolerance",
+  "EXP Gain",
+  "Evasion",
+  "Max HP",
+  "Max MP",
+  "Meso Drop",
+  "MP Recovery Per Sec"
+];
 const innerAbilitiesData = {
   "Mystic": {
     lineRate: 5.2632,
     // Probability of getting a specific line within this rarity (%)
     "Meso Drop": { min: 9, max: 15 },
     "EXP Gain": { min: 9, max: 15 },
-    "Defense Penetration": { min: 14, max: 20 },
-    "Boss Monster Damage": { min: 28, max: 40 },
-    "Normal Monster Damage": { min: 28, max: 40 },
-    "Attack Speed": { min: 15, max: 20 },
+    [STAT.DEF_PEN.id]: { min: 14, max: 20 },
+    [STAT.BOSS_DAMAGE.id]: { min: 28, max: 40 },
+    [STAT.NORMAL_DAMAGE.id]: { min: 28, max: 40 },
+    [STAT.ATTACK_SPEED.id]: { min: 15, max: 20 },
     "Damage Taken Decrease": { min: 7, max: 10 },
-    "Min Damage Multiplier": { min: 28, max: 40 },
-    "Max Damage Multiplier": { min: 28, max: 40 },
-    "Critical Rate": { min: 15, max: 20 },
+    [STAT.MIN_DAMAGE.id]: { min: 28, max: 40 },
+    [STAT.MAX_DAMAGE.id]: { min: 28, max: 40 },
+    [STAT.CRIT_RATE.id]: { min: 15, max: 20 },
     "Critical Resistance": { min: 22.5, max: 30 },
-    "Damage": { min: 28, max: 40 },
+    [STAT.DAMAGE.id]: { min: 28, max: 40 },
     "Debuff Tolerance": { min: 18, max: 25 },
-    "Main Stat": { min: 1500, max: 2500 },
+    [STAT.PRIMARY_MAIN_STAT.id]: { min: 1500, max: 2500 },
     "Max HP": { min: 7e4, max: 115e3 },
     "Max MP": { min: 900, max: 1500 },
     "Accuracy": { min: 20, max: 25 },
@@ -49,18 +74,18 @@ const innerAbilitiesData = {
     // Probability of getting a specific line within this rarity (%)
     "Meso Drop": { min: 5, max: 8 },
     "EXP Gain": { min: 5, max: 8 },
-    "Defense Penetration": { min: 8, max: 12 },
-    "Boss Monster Damage": { min: 18, max: 25 },
-    "Normal Monster Damage": { min: 18, max: 25 },
-    "Attack Speed": { min: 10, max: 14 },
+    [STAT.DEF_PEN.id]: { min: 8, max: 12 },
+    [STAT.BOSS_DAMAGE.id]: { min: 18, max: 25 },
+    [STAT.NORMAL_DAMAGE.id]: { min: 18, max: 25 },
+    [STAT.ATTACK_SPEED.id]: { min: 10, max: 14 },
     "Damage Taken Decrease": { min: 4, max: 6 },
-    "Min Damage Multiplier": { min: 18, max: 25 },
-    "Max Damage Multiplier": { min: 18, max: 25 },
-    "Critical Rate": { min: 10, max: 14 },
+    [STAT.MIN_DAMAGE.id]: { min: 18, max: 25 },
+    [STAT.MAX_DAMAGE.id]: { min: 18, max: 25 },
+    [STAT.CRIT_RATE.id]: { min: 10, max: 14 },
     "Critical Resistance": { min: 15, max: 21 },
-    "Damage": { min: 18, max: 25 },
+    [STAT.DAMAGE.id]: { min: 18, max: 25 },
     "Debuff Tolerance": { min: 14, max: 16 },
-    "Main Stat": { min: 800, max: 1200 },
+    [STAT.PRIMARY_MAIN_STAT.id]: { min: 800, max: 1200 },
     "Max HP": { min: 35e3, max: 65e3 },
     "Max MP": { min: 500, max: 800 },
     "Accuracy": { min: 14, max: 16 },
@@ -70,15 +95,15 @@ const innerAbilitiesData = {
   "Unique": {
     lineRate: 7.1429,
     // Probability of getting a specific line within this rarity (%)
-    "Attack Speed": { min: 7, max: 9 },
+    [STAT.ATTACK_SPEED.id]: { min: 7, max: 9 },
     "Damage Taken Decrease": { min: 2, max: 3 },
-    "Min Damage Multiplier": { min: 12, max: 15 },
-    "Max Damage Multiplier": { min: 12, max: 15 },
-    "Critical Rate": { min: 7, max: 9 },
+    [STAT.MIN_DAMAGE.id]: { min: 12, max: 15 },
+    [STAT.MAX_DAMAGE.id]: { min: 12, max: 15 },
+    [STAT.CRIT_RATE.id]: { min: 7, max: 9 },
     "Critical Resistance": { min: 10.5, max: 13.5 },
-    "Damage": { min: 12, max: 15 },
+    [STAT.DAMAGE.id]: { min: 12, max: 15 },
     "Debuff Tolerance": { min: 10, max: 12 },
-    "Main Stat": { min: 400, max: 700 },
+    [STAT.PRIMARY_MAIN_STAT.id]: { min: 400, max: 700 },
     "Max HP": { min: 15e3, max: 3e4 },
     "Max MP": { min: 200, max: 400 },
     "Accuracy": { min: 10, max: 12 },
@@ -88,13 +113,13 @@ const innerAbilitiesData = {
   "Epic": {
     lineRate: 8.3333,
     // Probability of getting a specific line within this rarity (%)
-    "Min Damage Multiplier": { min: 7, max: 10 },
-    "Max Damage Multiplier": { min: 7, max: 10 },
-    "Critical Rate": { min: 3, max: 6 },
+    [STAT.MIN_DAMAGE.id]: { min: 7, max: 10 },
+    [STAT.MAX_DAMAGE.id]: { min: 7, max: 10 },
+    [STAT.CRIT_RATE.id]: { min: 3, max: 6 },
     "Critical Resistance": { min: 4.5, max: 9 },
-    "Damage": { min: 7, max: 10 },
+    [STAT.DAMAGE.id]: { min: 7, max: 10 },
     "Debuff Tolerance": { min: 6, max: 8 },
-    "Main Stat": { min: 200, max: 300 },
+    [STAT.PRIMARY_MAIN_STAT.id]: { min: 200, max: 300 },
     "Max HP": { min: 4500, max: 9e3 },
     "Max MP": { min: 100, max: 150 },
     "Accuracy": { min: 6, max: 8 },
@@ -104,9 +129,9 @@ const innerAbilitiesData = {
   "Rare": {
     lineRate: 12,
     // Probability of getting a specific line within this rarity (%)
-    "Damage": { min: 3, max: 5 },
+    [STAT.DAMAGE.id]: { min: 3, max: 5 },
     "Damage Tolerance": { min: 4, max: 5 },
-    "Main Stat": { min: 100, max: 150 },
+    [STAT.PRIMARY_MAIN_STAT.id]: { min: 100, max: 150 },
     "Max HP": { min: 1800, max: 3e3 },
     "Max MP": { min: 50, max: 70 },
     "Accuracy": { min: 4, max: 5 },
@@ -116,7 +141,7 @@ const innerAbilitiesData = {
   "Normal": {
     lineRate: 16.6667,
     // Probability of getting a specific line within this rarity (%)
-    "Main Stat": { min: 40, max: 60 },
+    [STAT.PRIMARY_MAIN_STAT.id]: { min: 40, max: 60 },
     "Max HP": { min: 1200, max: 1500 },
     "Max MP": { min: 30, max: 40 },
     "Accuracy": { min: 2, max: 3 },
@@ -287,6 +312,8 @@ const innerAbilityRarityRates = {
   }
 };
 export {
+  INNER_ABILITY_NON_COMBAT_STATS,
+  INNER_ABILITY_STAT_NAMES,
   innerAbilitiesData,
   innerAbilityRarityRates,
   innerAbilityStats

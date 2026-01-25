@@ -130,6 +130,60 @@ export function getStatIdFromPotentialStat(
 }
 
 /**
+ * Result of mapping a potential stat to damage stat
+ */
+export interface PotentialStatMappingResult {
+    stat: string | null;
+    value: number;
+    isMainStatPct: boolean;
+}
+
+/**
+ * Convert potential stat to damage stat for simulation
+ * This is a simplified version for simulation purposes that doesn't use DOM
+ */
+export function potentialStatToDamageStat(
+    potentialStat: string,
+    value: number,
+    accumulatedMainStatPct: number = 0
+): PotentialStatMappingResult {
+    const mainStat = getMainStatForClass();
+    if (!mainStat) return { stat: null, value: 0, isMainStatPct: false };
+
+    // Map potential stat to damage calculation stat
+    const statMap: Record<string, string> = {
+        'Critical Rate %': STAT.CRIT_RATE.id,
+        'Critical Damage %': STAT.CRIT_DAMAGE.id,
+        'Attack Speed %': STAT.ATTACK_SPEED.id,
+        'Damage %': STAT.DAMAGE.id,
+        'Final Damage %': STAT.FINAL_DAMAGE.id,
+        'Min Damage Multiplier %': STAT.MIN_DAMAGE.id,
+        'Max Damage Multiplier %': STAT.MAX_DAMAGE.id,
+        'Defense %': STAT.DEFENSE.id,
+        'Defense Penetration': STAT.DEF_PEN.id,
+        // Max HP % and Max MP % are non-combat stats, skip them
+    };
+
+    // Check if it's a main stat percentage
+    if (potentialStat === `${mainStat} %`) {
+        return { stat: STAT.STAT_DAMAGE.id, value: value / 100, isMainStatPct: true };
+    }
+
+    // Check if it's a flat main stat
+    if (potentialStat === mainStat) {
+        return { stat: STAT.STAT_DAMAGE.id, value: value / 100, isMainStatPct: false };
+    }
+
+    // Return mapped stat or null if not relevant
+    const statId = statMap[potentialStat];
+    return {
+        stat: statId || null,
+        value: statId ? value : 0,
+        isMainStatPct: false
+    };
+}
+
+/**
  * Check if a potential line exists in a given rarity for a given slot and line number
  */
 export function lineExistsInRarity(
@@ -193,7 +247,7 @@ export function calculateSlotSetGain(
         // Skip if no combat impact
         if (!statId) continue;
 
-        baselineService.subtractStat(statId, line.value);
+        baselineService.subtract(statId, line.value);
     }
 
     const baselineDPS = baselineService.computeDPS('boss');
@@ -214,7 +268,7 @@ export function calculateSlotSetGain(
         // Skip if no combat impact
         if (!statId) continue;
 
-        setService.addPercentageStat(statId, line.value);
+        setService.add(statId, line.value);
     }
 
     const setDPS = setService.computeDPS('boss');

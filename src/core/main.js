@@ -31,8 +31,10 @@ import '@utils/data-management.js';
 //import '@ui/help-sidebar.js';
 //import '@core/features/scrolling/scroll-optimizer.js';
 import { loadoutStore } from '@ts/store/loadout.store.js';
-import { gearLabPage } from './../ts/page/gear-lab-page.js';
+import { gearLabPage } from '@page/gear-lab-page.js';
+import { initializeAppSidebarUI } from '@utils/app-sidebar-ui.js';
 
+/*
 // Main calculation orchestration
 export function calculate() {
     const baseStats = getStats('base');
@@ -104,6 +106,7 @@ export function calculate() {
         sidebarDpsElement.textContent = formatDPS(equippedBossResults.dps);
     }
 }
+*/
 
 // Donation notification functions
 function showDonateNotificationIfNeeded() {
@@ -163,7 +166,7 @@ function enableGlobalNumberInputAutoSelect() {
 //       }
 //   };
 //)();
-
+/*
 function populateSkillDetails() {
     const characterLevel = getCharacterLevel();
 
@@ -324,15 +327,18 @@ export function showSkillDescription(skillKey, category, jobTier) {
         `;
     }
 }
-
+*/
 // Initialize application
 window.onload = async function () {
+    // Initialize the app sidebar UI first
+    initializeAppSidebarUI();
+
     // Register page instances with router
     await loadoutStore.initialize();
     registerPage('setup', loadoutPage);
     registerPage('predictions', statHubPage);
     registerPage('optimization', gearLabPage);
-    
+
     initializeRouter(); // Initialize routing system first
     loadTheme();
 
@@ -341,7 +347,7 @@ window.onload = async function () {
    // await initializeStatHubPage();
 
 //   initializeHeroPowerPresets();
-//   enableGlobalNumberInputAutoSelect();
+//   
 //
 // const loaded = loadFromLocalStorage();
 //   // Initialize character level state from DOM (in case localStorage was empty)
@@ -373,11 +379,9 @@ window.onload = async function () {
 //   if (!loaded) {
 //       calculate();
 //   }
-//   showDonateNotificationIfNeeded();
+    enableGlobalNumberInputAutoSelect();
+    showDonateNotificationIfNeeded();
 };
 
 // Expose functions to window for HTML onclick handlers
-window.showSkillDescription = showSkillDescription;
-window.populateSkillDetails = populateSkillDetails;
 window.dismissDonateNotification = dismissDonateNotification;
-window.calculate = calculate;

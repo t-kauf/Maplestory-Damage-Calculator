@@ -7,66 +7,45 @@ import type {
     EquipmentSlotConfig,
     EquipmentSlotData,
     EquipmentSlotId,
-    StatLineType,
     EquipmentAggregateStats,
     StatDisplayConfig,
 } from '@ts/types/page/equipment/equipment.types';
-import { STAT_KEY_MAP } from '@ts/types/page/equipment/equipment.types';
 import {
     EQUIPMENT_SLOTS,
     getSlotConfig,
-    getAvailableStats,
+    generateStatTypeOptionsHTML,
     setSlotData,
     loadAllEquipmentData,
     getAllEquipmentData,
     calculateAllContributions,
     isValidSlot,
+    migrateStatlineFormats,
 } from './equipment';
-import { STAT } from '@ts/types/constants';
+import { STAT, type StatId } from '@ts/types/constants';
 
 /**
- * Mapping from camelCase STAT IDs to kebab-case StatLineType values
- * Used to bridge between STAT constant and equipment stat line types
+ * Legacy kebab-case to STAT.X.id mapping for UI migration
+ * Used to convert legacy data format to new STAT.X.id format
  */
-const STAT_ID_TO_LINE_TYPE: Record<string, StatLineType> = {
-    attack: 'attack',
-    mainStat: 'main-stat',
-    defense: 'defense',
-    critRate: 'crit-rate',
-    critDamage: 'crit-damage',
-    skillLevel1st: 'skill-level-1st',
-    skillLevel2nd: 'skill-level-2nd',
-    skillLevel3rd: 'skill-level-3rd',
-    skillLevel4th: 'skill-level-4th',
-    normalDamage: 'normal-damage',
-    bossDamage: 'boss-damage',
-    damage: 'damage',
-    finalDamage: 'final-damage',
-    minDamage: 'min-damage',
-    maxDamage: 'max-damage',
-} as const;
-
-/**
- * Mapping from StatLineType to STAT keys
- */
-const LINE_TYPE_TO_STAT_KEY: Record<StatLineType, keyof typeof STAT> = {
-    'attack': 'ATTACK',
-    'main-stat': 'MAIN_STAT_PCT', // Using MAIN_STAT_PCT for main stat %
-    'defense': 'DEFENSE',
-    'crit-rate': 'CRIT_RATE',
-    'crit-damage': 'CRIT_DAMAGE',
-    'skill-level-1st': 'SKILL_LEVEL_1ST',
-    'skill-level-2nd': 'SKILL_LEVEL_2ND',
-    'skill-level-3rd': 'SKILL_LEVEL_3RD',
-    'skill-level-4th': 'SKILL_LEVEL_4TH',
-    'skill-level-all': 'ATTACK_SPEED', // Fallback for now
-    'normal-damage': 'NORMAL_DAMAGE',
-    'boss-damage': 'BOSS_DAMAGE',
-    'damage': 'DAMAGE',
-    'damage-amp': 'DAMAGE_AMP',
-    'final-damage': 'FINAL_DAMAGE',
-    'min-damage': 'MIN_DAMAGE',
-    'max-damage': 'MAX_DAMAGE',
+const LEGACY_KEY_TO_STAT_ID: Record<string, StatId> = {
+    'attack': STAT.ATTACK.id,
+    'main-stat': STAT.PRIMARY_MAIN_STAT.id,
+    'defense': STAT.DEFENSE.id,
+    'crit-rate': STAT.CRIT_RATE.id,
+    'crit-damage': STAT.CRIT_DAMAGE.id,
+    'skill-level-1st': STAT.SKILL_LEVEL_1ST.id,
+    'skill-level-2nd': STAT.SKILL_LEVEL_2ND.id,
+    'skill-level-3rd': STAT.SKILL_LEVEL_3RD.id,
+    'skill-level-4th': STAT.SKILL_LEVEL_4TH.id,
+    'attack-speed': STAT.ATTACK_SPEED.id,
+    'skill-level-all': STAT.SKILL_LEVEL_ALL.id,
+    'normal-damage': STAT.NORMAL_DAMAGE.id,
+    'boss-damage': STAT.BOSS_DAMAGE.id,
+    'damage': STAT.DAMAGE.id,
+    'damage-amp': STAT.DAMAGE_AMP.id,
+    'final-damage': STAT.FINAL_DAMAGE.id,
+    'min-damage': STAT.MIN_DAMAGE.id,
+    'max-damage': STAT.MAX_DAMAGE.id,
 } as const;
 
 // ============================================================================
@@ -133,9 +112,7 @@ function generateSlotCardHTML(slot: EquipmentSlotConfig): string {
  * Generate HTML for a stat line
  */
 function generateStatLineHTML(slotId: string, statIndex: number): string {
-    const optionsHTML = getAvailableStats()
-        .map(stat => `<option value="${stat.value}">${stat.label}</option>`)
-        .join('');
+    const optionsHTML = generateStatTypeOptionsHTML();
 
     return `
         <div id="equipment-${slotId}-stat-${statIndex}" class="equipment-stat-line">
@@ -183,6 +160,9 @@ export function initializeEquipmentUI(): void {
         console.error('Equipment container not found');
         return;
     }
+
+    // Run one-time migration of legacy kebab-case statline formats to statId format
+    migrateStatlineFormats();
 
     // Generate HTML
     container.innerHTML = generateEquipmentHTML();
@@ -247,7 +227,15 @@ function populateSlotWithData(slotId: string, data: EquipmentSlotData): void {
                 const statCount = statsContainer.children.length;
                 const typeInput = document.getElementById(`equipment-${slotId}-stat-${statCount}-type`) as HTMLSelectElement;
                 const valueInput = document.getElementById(`equipment-${slotId}-stat-${statCount}-value`) as HTMLInputElement;
-                if (typeInput) typeInput.value = statLine.type;
+
+                // Handle both old format (kebab-case) and new format (statId)
+                let typeValue = statLine.type;
+                // Convert old kebab-case format to statId if needed
+                if (typeValue in LEGACY_KEY_TO_STAT_ID) {
+                    typeValue = LEGACY_KEY_TO_STAT_ID[typeValue];
+                }
+
+                if (typeInput) typeInput.value = typeValue;
                 if (valueInput) valueInput.value = statLine.value.toString();
             });
         }
@@ -296,8 +284,9 @@ function saveSlotDataFromDOM(slotId: string): void {
         mainStat = mainStatInput ? parseFloat(mainStatInput.value) || 0 : undefined;
     }
 
-    // Get stat lines
-    const statLines: Array<{ type: StatLineType; value: number }> = [];
+    // Get stat lines - now stores STAT constant ID format (camelCase)
+    // statId format: 'attack', 'critRate', 'bossDamage', etc.
+    const statLines: Array<{ type: StatId; value: number }> = [];
     const statsContainer = document.getElementById(`equipment-${validSlotId}-stats-container`);
     if (statsContainer) {
         const statElements = statsContainer.querySelectorAll(`[id^="equipment-${validSlotId}-stat-"]:not([id*="-type"]):not([id*="-value"])`);
@@ -306,7 +295,7 @@ function saveSlotDataFromDOM(slotId: string): void {
             const valueInput = statElement.querySelector('[id$="-value"]') as HTMLInputElement;
             if (typeInput && valueInput && typeInput.value && valueInput.value) {
                 statLines.push({
-                    type: typeInput.value as StatLineType,
+                    type: typeInput.value as StatId, // Cast to StatId
                     value: parseFloat(valueInput.value) || 0
                 });
             }
@@ -373,7 +362,8 @@ function notifyStatContributors(): void {
 function calculateAggregateStats(equipmentData: ReturnType<typeof getAllEquipmentData>): EquipmentAggregateStats {
     const totals: EquipmentAggregateStats = {
         [STAT.ATTACK.id]: 0,
-        mainStat: 0, // Equipment-specific key
+        [STAT.PRIMARY_MAIN_STAT.id]: 0, 
+        [STAT.MAIN_STAT_PCT.id]: 0, 
         [STAT.DEFENSE.id]: 0,
         [STAT.CRIT_RATE.id]: 0,
         [STAT.CRIT_DAMAGE.id]: 0,
@@ -388,7 +378,8 @@ function calculateAggregateStats(equipmentData: ReturnType<typeof getAllEquipmen
         [STAT.SKILL_LEVEL_2ND.id]: 0,
         [STAT.SKILL_LEVEL_3RD.id]: 0,
         [STAT.SKILL_LEVEL_4TH.id]: 0,
-        skillLevelAll: 0 // Equipment-specific key (no STAT equivalent)
+        [STAT.SKILL_LEVEL_ALL.id]: 0,
+        [STAT.ATTACK_SPEED.id]: 0
     };
 
     Object.values(equipmentData).forEach(slotData => {
@@ -401,15 +392,15 @@ function calculateAggregateStats(equipmentData: ReturnType<typeof getAllEquipmen
 
         // Add main stat
         if (slotData.mainStat) {
-            totals.mainStat += slotData.mainStat;
+            totals[STAT.PRIMARY_MAIN_STAT.id] += slotData.mainStat;
         }
 
-        // Add stat lines
+        // Add stat lines - statLine.type is now STAT.X.id
         if (slotData.statLines && Array.isArray(slotData.statLines)) {
             slotData.statLines.forEach(statLine => {
-                const statKey = STAT_KEY_MAP[statLine.type];
-                if (statKey && totals.hasOwnProperty(statKey)) {
-                    totals[statKey] += statLine.value;
+                const statId = statLine.type;
+                if (statId && totals.hasOwnProperty(statId)) {
+                    totals[statId] += statLine.value;
                 }
             });
         }
@@ -439,7 +430,8 @@ function updateSummaryDisplay(totals: EquipmentAggregateStats): void {
     // Define stat display configuration using STAT constant labels and IDs
     const statConfigs: StatDisplayConfig[] = [
         { key: STAT.ATTACK.id, label: STAT.ATTACK.label, isPercent: false },
-        { key: 'mainStat', label: 'Main Stat', isPercent: false }, // Equipment-specific key
+        { key: STAT.PRIMARY_MAIN_STAT.id, label: 'Main Stat', isPercent: false }, 
+        { key: STAT.MAIN_STAT_PCT.id, label: 'Main Stat %', isPercent: true }, 
         { key: STAT.DEFENSE.id, label: STAT.DEFENSE.label, isPercent: false },
         { key: STAT.CRIT_RATE.id, label: STAT.CRIT_RATE.label.replace(' (%)', ''), isPercent: true },
         { key: STAT.CRIT_DAMAGE.id, label: STAT.CRIT_DAMAGE.label.replace(' (%)', ''), isPercent: true },
@@ -453,7 +445,8 @@ function updateSummaryDisplay(totals: EquipmentAggregateStats): void {
         { key: STAT.SKILL_LEVEL_2ND.id, label: STAT.SKILL_LEVEL_2ND.label, isPercent: false },
         { key: STAT.SKILL_LEVEL_3RD.id, label: STAT.SKILL_LEVEL_3RD.label, isPercent: false },
         { key: STAT.SKILL_LEVEL_4TH.id, label: STAT.SKILL_LEVEL_4TH.label, isPercent: false },
-        { key: 'skillLevelAll', label: 'All Jobs', isPercent: false } // Equipment-specific key (no STAT equivalent)
+        { key: STAT.SKILL_LEVEL_ALL.id, label: STAT.SKILL_LEVEL_ALL.label, isPercent: false },
+        { key: STAT.ATTACK_SPEED.id, label: 'All Jobs (Atk Speed)', isPercent: false } // Fallback for skill-level-all
     ];
 
     statConfigs.forEach(config => {
@@ -487,6 +480,7 @@ function updateSummaryDisplay(totals: EquipmentAggregateStats): void {
 
 /**
  * Attach event listeners for the equipment UI
+ * Uses event delegation to handle dynamically added stat lines
  */
 export function attachEquipmentEventListeners(): void {
     // Attach listeners for each slot
@@ -494,14 +488,11 @@ export function attachEquipmentEventListeners(): void {
         const slotElement = document.getElementById(`equipment-slot-${slot.id}`);
         if (!slotElement) return;
 
-        // Listen for input changes on all inputs
-        const inputs = slotElement.querySelectorAll('input, select');
-        inputs.forEach(input => {
-            input.addEventListener('input', debounce(() => {
-                saveSlotDataFromDOM(slot.id);
-                notifyStatContributors();
-            }, 300));
-        });
+        // Use event delegation for input changes - this handles dynamically added stat lines
+        slotElement.addEventListener('input', debounce(() => {
+            saveSlotDataFromDOM(slot.id);
+            notifyStatContributors();
+        }, 300));
 
         // Add stat button
         const addStatBtn = slotElement.querySelector('.equipment-btn-add');

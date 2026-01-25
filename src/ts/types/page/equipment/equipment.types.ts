@@ -3,7 +3,7 @@
  * Shared types for the equipment module
  */
 
-import { STAT } from '@ts/types/constants';
+import { STAT, type StatId } from '@ts/types/constants';
 
 /**
  * Equipment slot ID type
@@ -31,32 +31,12 @@ export interface EquipmentSlotConfig {
 }
 
 /**
- * Stat line type (value from availableStats array)
- */
-export type StatLineType =
-    | 'attack'
-    | 'main-stat'
-    | 'defense'
-    | 'crit-rate'
-    | 'crit-damage'
-    | 'skill-level-1st'
-    | 'skill-level-2nd'
-    | 'skill-level-3rd'
-    | 'skill-level-4th'
-    | 'skill-level-all'
-    | 'normal-damage'
-    | 'boss-damage'
-    | 'damage'
-    | 'damage-amp'
-    | 'final-damage'
-    | 'min-damage'
-    | 'max-damage';
-
-/**
- * Stat line interface
+ * Stat line interface using STAT constant IDs
+ * The type field stores STAT constant ID values (e.g., 'critRate', 'bossDamage', 'attack')
+ * All stat references now use STAT.X.id format for consistency
  */
 export interface StatLine {
-    type: StatLineType;
+    type: StatId;
     value: number;
 }
 
@@ -77,25 +57,28 @@ export type EquipmentData = Record<EquipmentSlotId, EquipmentSlotData | null>;
 
 /**
  * Equipment slot stats (calculated contributions)
+ * Uses STAT constant IDs as property keys for consistency with StatCalculationService
  */
 export interface EquipmentSlotStats {
-    attack: number;
-    mainStat?: number;
-    defense?: number;
-    critRate?: number;
-    critDamage?: number;
-    bossDamage?: number;
-    normalDamage?: number;
-    damage?: number;
-    damageAmp?: number;
-    finalDamage?: number;
-    minDamage?: number;
-    maxDamage?: number;
-    skillLevel1st?: number;
-    skillLevel2nd?: number;
-    skillLevel3rd?: number;
-    skillLevel4th?: number;
-    skillLevelAll?: number;
+    [STAT.ATTACK.id]: number;
+    [STAT.PRIMARY_MAIN_STAT.id]?: number;
+    [STAT.MAIN_STAT_PCT.id]?: number;
+    [STAT.DEFENSE.id]?: number;
+    [STAT.CRIT_RATE.id]?: number;
+    [STAT.CRIT_DAMAGE.id]?: number;
+    [STAT.BOSS_DAMAGE.id]?: number;
+    [STAT.NORMAL_DAMAGE.id]?: number;
+    [STAT.DAMAGE.id]?: number;
+    [STAT.DAMAGE_AMP.id]?: number;
+    [STAT.FINAL_DAMAGE.id]?: number;
+    [STAT.MIN_DAMAGE.id]?: number;
+    [STAT.MAX_DAMAGE.id]?: number;
+    [STAT.SKILL_LEVEL_1ST.id]?: number;
+    [STAT.SKILL_LEVEL_2ND.id]?: number;
+    [STAT.SKILL_LEVEL_3RD.id]?: number;
+    [STAT.SKILL_LEVEL_4TH.id]?: number;
+    [STAT.SKILL_LEVEL_ALL.id]?: number;
+    [STAT.ATTACK_SPEED.id]?: number;
 }
 
 /**
@@ -105,65 +88,35 @@ export type EquipmentContributions = Record<EquipmentSlotId, EquipmentSlotStats 
 
 /**
  * Aggregate stats totals
+ * Uses STAT constant IDs as property keys for consistency with StatCalculationService
  */
 export interface EquipmentAggregateStats {
-    attack: number;
-    mainStat: number;
-    defense: number;
-    critRate: number;
-    critDamage: number;
-    bossDamage: number;
-    normalDamage: number;
-    damage: number;
-    damageAmp: number;
-    finalDamage: number;
-    minDamage: number;
-    maxDamage: number;
-    skillLevel1st: number;
-    skillLevel2nd: number;
-    skillLevel3rd: number;
-    skillLevel4th: number;
-    skillLevelAll: number;
+    [STAT.ATTACK.id]: number;
+    [STAT.PRIMARY_MAIN_STAT.id]: number;
+    [STAT.MAIN_STAT_PCT.id]: number;
+    [STAT.DEFENSE.id]: number;
+    [STAT.CRIT_RATE.id]: number;
+    [STAT.CRIT_DAMAGE.id]: number;
+    [STAT.BOSS_DAMAGE.id]: number;
+    [STAT.NORMAL_DAMAGE.id]: number;
+    [STAT.DAMAGE.id]: number;
+    [STAT.DAMAGE_AMP.id]: number;
+    [STAT.FINAL_DAMAGE.id]: number;
+    [STAT.MIN_DAMAGE.id]: number;
+    [STAT.MAX_DAMAGE.id]: number;
+    [STAT.SKILL_LEVEL_1ST.id]: number;
+    [STAT.SKILL_LEVEL_2ND.id]: number;
+    [STAT.SKILL_LEVEL_3RD.id]: number;
+    [STAT.SKILL_LEVEL_4TH.id]: number;
+    [STAT.SKILL_LEVEL_ALL.id]: number;
+    [STAT.ATTACK_SPEED.id]: number;
 }
 
 /**
  * Stat display configuration for summary
  */
 export interface StatDisplayConfig {
-    key: keyof EquipmentAggregateStats;
+    key: StatId;
     label: string;
     isPercent: boolean;
 }
-
-/**
- * Equipment slot configuration interface
- */
-export interface EquipmentSlotConfig {
-    id: EquipmentSlotId;
-    name: string;
-    hasMainStat: boolean;
-}
-
-/**
- * Stat type to property key mapping (shared between logic and UI)
- * Uses STAT constant IDs where possible for consistency
- */
-export const STAT_KEY_MAP: Record<StatLineType, keyof EquipmentSlotStats> = {
-    'attack': STAT.ATTACK.id,
-    'main-stat': 'mainStat', // Equipment-specific key
-    'defense': STAT.DEFENSE.id,
-    'crit-rate': STAT.CRIT_RATE.id,
-    'crit-damage': STAT.CRIT_DAMAGE.id,
-    'skill-level-1st': STAT.SKILL_LEVEL_1ST.id,
-    'skill-level-2nd': STAT.SKILL_LEVEL_2ND.id,
-    'skill-level-3rd': STAT.SKILL_LEVEL_3RD.id,
-    'skill-level-4th': STAT.SKILL_LEVEL_4TH.id,
-    'skill-level-all': 'skillLevelAll', // Equipment-specific key (no STAT equivalent)
-    'normal-damage': STAT.NORMAL_DAMAGE.id,
-    'boss-damage': STAT.BOSS_DAMAGE.id,
-    'damage': STAT.DAMAGE.id,
-    'damage-amp': STAT.DAMAGE_AMP.id,
-    'final-damage': STAT.FINAL_DAMAGE.id,
-    'min-damage': STAT.MIN_DAMAGE.id,
-    'max-damage': STAT.MAX_DAMAGE.id
-} as const;

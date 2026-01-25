@@ -37,29 +37,29 @@ export function mapArtifactStat(statName: string, value: number, baseStats: Base
     switch (cleanStatName) {
         case 'Main Stat %':
             // StatCalculationService handles complex main stat % calculations including Dark Knight
-            service.addMainStatPct(value);
+            service.add('mainStatPct', value);
             break;
         case 'Critical Rate %':
-            service.addPercentageStat('critRate', value);
+            service.add('critRate', value);
             break;
         case 'Min Damage Multiplier %':
-            service.addPercentageStat('minDamage', value);
+            service.add('minDamage', value);
             break;
         case 'Max Damage Multiplier %':
-            service.addPercentageStat('maxDamage', value);
+            service.add('maxDamage', value);
             break;
         case 'Boss Monster Damage %':
-            service.addPercentageStat('bossDamage', value);
+            service.add('bossDamage', value);
             break;
         case 'Normal Monster Damage %':
-            service.addPercentageStat('normalDamage', value);
+            service.add('normalDamage', value);
             break;
         case 'Damage %':
-            service.addPercentageStat('damage', value);
+            service.add('damage', value);
             break;
         case 'Defense Penetration %':
             // Defense Penetration uses diminishing returns with factor 100
-            service.addDiminishingReturnStat('defPen', value, 100);
+            service.add('defPen', value);
             break;
         // Ignored stats: Damage Taken Decrease %, Defense %, Accuracy, Status Effect Damage %
         default:

@@ -4,7 +4,7 @@ const EQUIV_PREFIX = "equiv";
 const EQUIVALENCY_INPUTS = {
   flat: [
     { id: `${EQUIV_PREFIX}Attack`, label: "Attack", default: 1e3, step: 100, min: 0 },
-    { id: `${EQUIV_PREFIX}MainStat`, label: "Main Stat (100 = 1% Stat Dmg)", default: 500, step: 50, min: 0 }
+    { id: `${EQUIV_PREFIX}MainStat`, label: "Main Stat", default: 500, step: 50, min: 0 }
   ],
   percentage: [
     { id: `${EQUIV_PREFIX}SkillCoeff`, label: "Skill Coefficient (%)", default: 10, step: 1, min: 0 },
@@ -89,7 +89,7 @@ function generateStatEquivalencyHTML() {
   let html = `
         <div style="margin-bottom: 20px;">
             <h3 style="color: var(--accent-primary); margin-bottom: 10px; font-size: 1.2em; font-weight: 600;">
-                \u2728 Stat Equivalency Calculator
+                Stat Equivalency Calculator
             </h3>
             <p style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.6;">
                 Enter a value for any stat below to see what that gain translates to for all other stats. Perfect for comparing upgrade paths and understanding relative stat values.

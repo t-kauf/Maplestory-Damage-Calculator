@@ -1,5 +1,4 @@
-import { STAT_KEY_MAP } from "@ts/types/page/equipment/equipment.types.js";
-import { availableStats } from "@core/constants.js";
+import { STAT } from "@ts/types/constants.js";
 import { loadoutStore } from "@ts/store/loadout.store.js";
 const EQUIPMENT_SLOTS = [
   { id: "head", name: "Head", hasMainStat: false },
@@ -52,6 +51,71 @@ function loadAllEquipmentData() {
     equipmentData[slot.id] = storeData[slot.id];
   });
 }
+const LEGACY_STAT_KEY_MAP = {
+  "attack": STAT.ATTACK.id,
+  "main-stat": STAT.PRIMARY_MAIN_STAT.id,
+  "defense": STAT.DEFENSE.id,
+  "crit-rate": STAT.CRIT_RATE.id,
+  "crit-damage": STAT.CRIT_DAMAGE.id,
+  "skill-level-1st": STAT.SKILL_LEVEL_1ST.id,
+  "skill-level-2nd": STAT.SKILL_LEVEL_2ND.id,
+  "skill-level-3rd": STAT.SKILL_LEVEL_3RD.id,
+  "skill-level-4th": STAT.SKILL_LEVEL_4TH.id,
+  "skill-level-all": STAT.SKILL_LEVEL_ALL.id,
+  "attack-speed": STAT.ATTACK_SPEED.id,
+  "normal-damage": STAT.NORMAL_DAMAGE.id,
+  "boss-damage": STAT.BOSS_DAMAGE.id,
+  "damage": STAT.DAMAGE.id,
+  "damage-amp": STAT.DAMAGE_AMP.id,
+  "final-damage": STAT.FINAL_DAMAGE.id,
+  "min-damage": STAT.MIN_DAMAGE.id,
+  "max-damage": STAT.MAX_DAMAGE.id
+};
+function migrateStatlineFormats() {
+  if (localStorage.getItem("statline-migration-complete")) {
+    return;
+  }
+  const storeData = loadoutStore.getEquipmentData();
+  let totalMigrated = 0;
+  const slotsMigrated = [];
+  const updates = {};
+  EQUIPMENT_SLOTS.forEach((slot) => {
+    const slotData = storeData[slot.id];
+    if (!slotData || !Array.isArray(slotData.statLines)) return;
+    const needsMigration = slotData.statLines.some(
+      (statLine) => statLine && statLine.type && typeof statLine.type === "string" && statLine.type.includes("-")
+    );
+    if (needsMigration) {
+      const migratedStatLines = slotData.statLines.map((statLine) => {
+        if (!statLine || !statLine.type || typeof statLine.type !== "string") {
+          return statLine;
+        }
+        if (statLine.type.includes("-")) {
+          const statId = LEGACY_STAT_KEY_MAP[statLine.type];
+          totalMigrated++;
+          return {
+            ...statLine,
+            type: statId || statLine.type
+            // Use statId if mapping exists
+          };
+        }
+        return statLine;
+      });
+      updates[slot.id] = {
+        ...slotData,
+        statLines: migratedStatLines
+      };
+      slotsMigrated.push(slot.id);
+    }
+  });
+  Object.entries(updates).forEach(([slotId, data]) => {
+    loadoutStore.updateEquipment(slotId, data);
+  });
+  if (totalMigrated > 0) {
+    localStorage.setItem("statline-migration-complete", "true");
+    console.log(`[Equipment] Migrated ${totalMigrated} statlines across ${slotsMigrated.length} slots from kebab-case to statId`);
+  }
+}
 function saveSlotToStorage(slotId, data) {
   loadoutStore.updateEquipment(slotId, data);
 }
@@ -64,24 +128,47 @@ function createEmptySlotData(hasMainStat) {
   };
 }
 function getAvailableStats() {
-  return availableStats;
+  return [
+    { value: STAT.ATTACK.id, label: STAT.ATTACK.label },
+    { value: STAT.PRIMARY_MAIN_STAT.id, label: "Main Stat" },
+    { value: STAT.MAIN_STAT_PCT.id, label: "Main Stat %" },
+    { value: STAT.DEFENSE.id, label: STAT.DEFENSE.label },
+    { value: STAT.CRIT_RATE.id, label: STAT.CRIT_RATE.label },
+    { value: STAT.CRIT_DAMAGE.id, label: STAT.CRIT_DAMAGE.label },
+    { value: STAT.SKILL_LEVEL_1ST.id, label: STAT.SKILL_LEVEL_1ST.label },
+    { value: STAT.SKILL_LEVEL_2ND.id, label: STAT.SKILL_LEVEL_2ND.label },
+    { value: STAT.SKILL_LEVEL_3RD.id, label: STAT.SKILL_LEVEL_3RD.label },
+    { value: STAT.SKILL_LEVEL_4TH.id, label: STAT.SKILL_LEVEL_4TH.label },
+    { value: STAT.SKILL_LEVEL_ALL.id, label: STAT.SKILL_LEVEL_ALL.label },
+    { value: STAT.ATTACK_SPEED.id, label: STAT.ATTACK_SPEED.label },
+    { value: STAT.NORMAL_DAMAGE.id, label: STAT.NORMAL_DAMAGE.label },
+    { value: STAT.BOSS_DAMAGE.id, label: STAT.BOSS_DAMAGE.label },
+    { value: STAT.DAMAGE.id, label: STAT.DAMAGE.label },
+    { value: STAT.FINAL_DAMAGE.id, label: STAT.FINAL_DAMAGE.label },
+    { value: STAT.MIN_DAMAGE.id, label: STAT.MIN_DAMAGE.label },
+    { value: STAT.MAX_DAMAGE.id, label: STAT.MAX_DAMAGE.label }
+  ];
+}
+function generateStatTypeOptionsHTML() {
+  return getAvailableStats().map((stat) => `<option value="${stat.value}">${stat.label}</option>`).join("");
 }
 function getStatKey(statType) {
-  return STAT_KEY_MAP[statType] || null;
+  const statEntry = Object.values(STAT).find((stat) => stat.id === statType);
+  return statEntry ? statType : null;
 }
 function calculateSlotContributions(slotConfig, slotData) {
   if (!slotData) return null;
   const stats = {
-    attack: slotData.attack || 0
+    [STAT.ATTACK.id]: slotData.attack || 0
   };
   if (slotConfig.hasMainStat && slotData.mainStat !== void 0) {
-    stats.mainStat = slotData.mainStat;
+    stats[STAT.MAIN_STAT_PCT.id] = slotData.mainStat;
   }
   if (slotData.statLines && Array.isArray(slotData.statLines)) {
     slotData.statLines.forEach((statLine) => {
-      const statKey = getStatKey(statLine.type);
-      if (statKey) {
-        stats[statKey] = (stats[statKey] || 0) + statLine.value;
+      const statId = getStatKey(statLine.type);
+      if (statId) {
+        stats[statId] = (stats[statId] || 0) + statLine.value;
       }
     });
   }
@@ -106,6 +193,7 @@ export {
   calculateSlotContributions,
   clearSlotData,
   createEmptySlotData,
+  generateStatTypeOptionsHTML,
   getAllEquipmentData,
   getAvailableStats,
   getSlotConfig,
@@ -113,6 +201,7 @@ export {
   getStatKey,
   isValidSlot,
   loadAllEquipmentData,
+  migrateStatlineFormats,
   setSlotData
 };
 //# sourceMappingURL=equipment.js.map

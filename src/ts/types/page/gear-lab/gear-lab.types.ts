@@ -5,6 +5,8 @@
  * and will be extensible for future Gear Lab features.
  */
 
+import type { StatId } from '@ts/types/constants';
+
 // ============================================================================
 // INNER ABILITY TYPES
 // ============================================================================
@@ -14,6 +16,7 @@
  */
 export interface InnerAbilityLine {
     stat: string;  // e.g., "Boss Monster Damage"
+    statId: string;  // Maps to STAT.X.id (e.g., "bossDamage")
     value: number;  // e.g., 40
 }
 
@@ -104,6 +107,7 @@ export interface PotentialLineEntry {
     stat: string;
     value: number;
     prime: boolean;
+    weight?: number; // Weight for weighted random selection
 }
 
 /**
@@ -183,6 +187,92 @@ export interface LegacyCubeSlotData {
 }
 
 // ============================================================================
+// EQUIPMENT SLOT TYPES
+// ============================================================================
+
+/**
+ * Valid equipment slot IDs
+ */
+export const VALID_EQUIPMENT_SLOTS: EquipmentSlotId[] = ['head', 'cape', 'chest', 'shoulders', 'legs', 'belt', 'gloves', 'boots', 'ring', 'neck', 'eye-accessory'];
+
+/**
+ * Equipment slot ID type
+ */
+export type EquipmentSlotId =
+    | 'head' | 'cape' | 'chest' | 'shoulders' | 'legs' | 'belt'
+    | 'gloves' | 'boots' | 'ring' | 'neck' | 'eye-accessory';
+
+/**
+ * Equipment slot data (attack, main stat, damage amp)
+ */
+export interface EquipmentSlotData {
+    attack: number;
+    mainStat: number;
+    damageAmp: number;
+}
+
+/**
+ * All equipment slot data
+ */
+export type AllEquipmentSlotData = Record<EquipmentSlotId, EquipmentSlotData>;
+
+/**
+ * Legacy equipment slot data from localStorage (for migration)
+ */
+export interface LegacyEquipmentSlotData {
+    attack: number;
+    mainStat: number;
+    damageAmp: number;
+}
+
+// ============================================================================
+// COMPARISON EQUIPMENT TYPES
+// ============================================================================
+
+/**
+ * Stat line interface for comparison items
+ * Uses StatId type for type-safe stat selection
+ */
+export interface ComparisonStatLine {
+    type: StatId;  // Stat ID from STAT.X.id (e.g., 'attack', 'bossDamage')
+    value: number;
+}
+
+/**
+ * A comparison item for a specific equipment slot
+ */
+export interface ComparisonItem {
+    guid: string;              // UUID v4 unique identifier
+    name: string;              // Item name (e.g., "Item 1", "Item 2")
+    attack: number;            // Attack value
+    mainStat: number;          // Main stat value (0 for non-accessory slots)
+    statLines: ComparisonStatLine[];  // Array of stat lines
+    // Job skill level bonuses
+    skillLevel1st?: number;     // 1st job skill level bonus
+    skillLevel2nd?: number;     // 2nd job skill level bonus
+    skillLevel3rd?: number;     // 3rd job skill level bonus
+    skillLevel4th?: number;     // 4th job skill level bonus
+    skillLevelAll?: number;     // All jobs skill level bonus
+}
+
+/**
+ * Comparison equipment data structure
+ * Maps each equipment slot to an array of comparison items
+ */
+export type ComparisonEquipment = Record<EquipmentSlotId, ComparisonItem[]>;
+
+/**
+ * Legacy comparison item format (for migration from comparison-state.js)
+ */
+export interface LegacyComparisonItem {
+    guid: string;
+    version: number;
+    name: string;
+    attack: number;
+    stats: Array<{ type: string; value: string }>;  // Old format had values as strings
+}
+
+// ============================================================================
 // STORE DATA STRUCTURE
 // ============================================================================
 
@@ -195,6 +285,8 @@ export interface GearLabData {
         presets: Record<number, InnerAbilityPreset>;
     };
     cubePotential: AllCubeSlotData;
+    equipmentSlots: AllEquipmentSlotData;
+    comparisonEquipment: ComparisonEquipment;
     // Future: cubeStrategies, scrollOptimization, etc.
 }
 
@@ -234,6 +326,40 @@ const createDefaultCubeSlotData = (): AllCubeSlotData => ({
 });
 
 /**
+ * Create default equipment slot data for all slots
+ */
+const createDefaultEquipmentSlotData = (): AllEquipmentSlotData => ({
+    head: { attack: 0, mainStat: 0, damageAmp: 0 },
+    cape: { attack: 0, mainStat: 0, damageAmp: 0 },
+    chest: { attack: 0, mainStat: 0, damageAmp: 0 },
+    shoulders: { attack: 0, mainStat: 0, damageAmp: 0 },
+    legs: { attack: 0, mainStat: 0, damageAmp: 0 },
+    belt: { attack: 0, mainStat: 0, damageAmp: 0 },
+    gloves: { attack: 0, mainStat: 0, damageAmp: 0 },
+    boots: { attack: 0, mainStat: 0, damageAmp: 0 },
+    ring: { attack: 0, mainStat: 0, damageAmp: 0 },
+    neck: { attack: 0, mainStat: 0, damageAmp: 0 },
+    'eye-accessory': { attack: 0, mainStat: 0, damageAmp: 0 }
+});
+
+/**
+ * Create default comparison equipment data for all slots
+ */
+const createDefaultComparisonEquipment = (): ComparisonEquipment => ({
+    head: [],
+    cape: [],
+    chest: [],
+    shoulders: [],
+    legs: [],
+    belt: [],
+    gloves: [],
+    boots: [],
+    ring: [],
+    neck: [],
+    'eye-accessory': []
+});
+
+/**
  * Default gear lab data
  */
 export const DEFAULT_GEAR_LAB_DATA: GearLabData = {
@@ -251,7 +377,9 @@ export const DEFAULT_GEAR_LAB_DATA: GearLabData = {
             10: { id: 10, isEquipped: false, lines: [] },
         }
     },
-    cubePotential: createDefaultCubeSlotData()
+    cubePotential: createDefaultCubeSlotData(),
+    equipmentSlots: createDefaultEquipmentSlotData(),
+    comparisonEquipment: createDefaultComparisonEquipment()
 };
 
 // ============================================================================

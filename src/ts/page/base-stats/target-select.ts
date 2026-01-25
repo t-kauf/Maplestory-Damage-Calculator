@@ -12,9 +12,9 @@ export type { ContentType };
 // ============================================================================
 
 export interface StageEntry {
-    stage: string;
+    stage?: string;
     defense: number;
-    accuracy?: number;
+    accuracy?: number | string;
     chapter?: string;
     boss?: string;
 }

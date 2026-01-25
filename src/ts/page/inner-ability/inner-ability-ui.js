@@ -1,4 +1,4 @@
-import { innerAbilityStats } from "@data/inner-ability-data.js";
+import { innerAbilityStats, INNER_ABILITY_STAT_NAMES } from "@data/inner-ability-data.js";
 import { gearLabStore } from "@ts/store/gear-lab-store.js";
 import { formatNumber } from "@utils/formatters.js";
 import { StatCalculationService } from "@ts/services/stat-calculation-service.js";
@@ -6,10 +6,17 @@ import {
   calculatePresetComparisons,
   calculateTheoreticalBest,
   calculateBestCombinations,
-  getBaselineStats
+  getBaselineStats,
+  INNER_ABILITY_DISPLAY_NAME_TO_ID
 } from "@ts/page/inner-ability/inner-ability.js";
 let presetSortState = { column: 2, ascending: false };
 let theoreticalSortState = { column: 2, ascending: false };
+function getStatDisplayName(statIdOrName) {
+  if (INNER_ABILITY_STAT_NAMES[statIdOrName]) {
+    return INNER_ABILITY_STAT_NAMES[statIdOrName];
+  }
+  return statIdOrName;
+}
 let theoreticalRollFilters = {
   min: true,
   mid: true,
@@ -212,8 +219,9 @@ function renderTheoreticalBest() {
     const rarityClass = `rarity-${result.rarity.toLowerCase()}`;
     const badge = `<span class="badge badge--rarity ${rarityClass}">${rarityLetter}</span>`;
     const percentClass = result.percentIncrease > 0 ? "ia-dps-positive" : "ia-dps-negative";
+    const statDisplayName = getStatDisplayName(result.stat);
     html += "<tr>";
-    html += `<td>${badge}${result.stat} ${result.roll} Roll</td>`;
+    html += `<td>${badge}${statDisplayName} ${result.roll} Roll</td>`;
     html += `<td class="ia-dps-value">${result.value}</td>`;
     html += `<td><span class="ia-dps-value">+${formatNumber(result.dpsGain)}</span> <span class="${percentClass} ia-dps-percent">(${result.percentIncrease >= 0 ? "+" : ""}${result.percentIncrease.toFixed(2)}%)</span></td>`;
     html += "</tr>";
@@ -226,7 +234,8 @@ function renderTheoreticalBest() {
   html += '<div class="ia-combo-lines">';
   combinations.uniqueOnly.lines.forEach((line) => {
     const rarityClass = `rarity-${line.rarity.toLowerCase()}`;
-    html += `<div class="ia-combo-line"><span class="badge badge--rarity ${rarityClass}">${line.rarity.charAt(0)}</span>${line.stat}: ${line.value}</div>`;
+    const statDisplayName = getStatDisplayName(line.stat);
+    html += `<div class="ia-combo-line"><span class="badge badge--rarity ${rarityClass}">${line.rarity.charAt(0)}</span>${statDisplayName}: ${line.value}</div>`;
   });
   html += "</div>";
   {
@@ -239,7 +248,8 @@ function renderTheoreticalBest() {
   html += '<div class="ia-combo-lines">';
   combinations.uniqueLegendary.lines.forEach((line) => {
     const rarityClass = `rarity-${line.rarity.toLowerCase()}`;
-    html += `<div class="ia-combo-line"><span class="badge badge--rarity ${rarityClass}">${line.rarity.charAt(0)}</span>${line.stat}: ${line.value}</div>`;
+    const statDisplayName = getStatDisplayName(line.stat);
+    html += `<div class="ia-combo-line"><span class="badge badge--rarity ${rarityClass}">${line.rarity.charAt(0)}</span>${statDisplayName}: ${line.value}</div>`;
   });
   html += "</div>";
   {
@@ -252,7 +262,8 @@ function renderTheoreticalBest() {
   html += '<div class="ia-combo-lines">';
   combinations.mysticLegendaryUnique.lines.forEach((line) => {
     const rarityClass = `rarity-${line.rarity.toLowerCase()}`;
-    html += `<div class="ia-combo-line"><span class="badge badge--rarity ${rarityClass}">${line.rarity.charAt(0)}</span>${line.stat}: ${line.value}</div>`;
+    const statDisplayName = getStatDisplayName(line.stat);
+    html += `<div class="ia-combo-line"><span class="badge badge--rarity ${rarityClass}">${line.rarity.charAt(0)}</span>${statDisplayName}: ${line.value}</div>`;
   });
   html += "</div>";
   {
@@ -265,7 +276,8 @@ function renderTheoreticalBest() {
   html += '<div class="ia-combo-lines">';
   combinations.allRarities.lines.forEach((line) => {
     const rarityClass = `rarity-${line.rarity.toLowerCase()}`;
-    html += `<div class="ia-combo-line"><span class="badge badge--rarity ${rarityClass}">${line.rarity.charAt(0)}</span>${line.stat}: ${line.value}</div>`;
+    const statDisplayName = getStatDisplayName(line.stat);
+    html += `<div class="ia-combo-line"><span class="badge badge--rarity ${rarityClass}">${line.rarity.charAt(0)}</span>${statDisplayName}: ${line.value}</div>`;
   });
   html += "</div>";
   {
@@ -341,7 +353,8 @@ function handlePresetLineChange(presetId, lineIndex) {
   const valueInput = document.getElementById(`preset-${presetId}-line-${lineIndex + 1}-value`);
   const stat = statSelect?.value || "";
   const value = parseFloat(valueInput?.value) || 0;
-  gearLabStore.updatePresetLine(presetId, lineIndex, { stat, value });
+  const statId = stat ? INNER_ABILITY_DISPLAY_NAME_TO_ID[stat] || "" : "";
+  gearLabStore.updatePresetLine(presetId, lineIndex, { stat, statId, value });
   renderPresetComparison();
   renderTheoreticalBest();
 }

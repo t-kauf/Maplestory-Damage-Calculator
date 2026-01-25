@@ -6,8 +6,7 @@
 
 import { getCompanionEffects, getMaxCompanionLevel } from '@ts/services/index.js';
 import { loadoutStore } from '@ts/store/loadout.store.js';
-import { addStat, subtractStat } from '@core/services/stat-inputs-service.js';
-import { calculateBothDpsDifferences, presetHasAnyCompanion, generateOptimalPreset } from './companion.js';
+import { calculateBothDpsDifferences, presetHasAnyCompanion, generateOptimalPreset, swapCompanionPresetEffects } from './companion.js';
 import type {
     CompanionKey,
     CompanionPresetId,
@@ -428,43 +427,6 @@ function initializePresetsUI(): void {
 function renderPresetsPanel(): void {
     const container = document.getElementById('companions-presets-container');
     if (!container) return;
-
-    // Skip expensive optimal preset generation if companions tab is not visible
-    const companionsTab = document.getElementById('setup-companions');
-    const isTabVisible = companionsTab && companionsTab.classList.contains('active');
-
-    if (!isTabVisible) {
-        // Still render basic UI without optimal presets
-        const showDpsComparison = loadoutStore.getShowPresetDpsComparison();
-        const equippedPresetId = loadoutStore.getEquippedPresetId();
-        const currentPresetEffects = getPresetEquipEffects(equippedPresetId);
-
-        let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
-
-        // Add toggle header
-        html += `
-            <header style="margin-bottom: 8px; padding: 10px 12px; background: rgba(0, 122, 255, 0.08); border: 1px solid rgba(0, 122, 255, 0.2); border-radius: 8px; display: flex; align-items: center; justify-content: space-between;">
-                <span style="font-weight: 600; color: var(--text-primary);">Show DPS Comparison</span>
-                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
-                    <input type="checkbox" id="preset-dps-comparison-toggle" onchange="window.togglePresetDpsComparison(this.checked)" ${showDpsComparison ? 'checked' : ''}>
-                    <span style="font-size: 0.9em; color: var(--text-secondary);">Enable DPS info below each preset</span>
-                </label>
-            </header>
-        `;
-
-        // Render user presets only (skip optimal ones)
-        for (let i = 1; i <= 5; i++) {
-            const presetId: CompanionPresetId = `preset${i}` as CompanionPresetId;
-            const presetData = loadoutStore.getPreset(presetId);
-            const isEquipped = presetId === equippedPresetId;
-            html += renderPresetRow(presetId, presetData, isEquipped, showDpsComparison, currentPresetEffects, false);
-        }
-
-        html += '</div>';
-        container.innerHTML = html;
-        attachPresetEventListeners();
-        return;
-    }
 
     const showDpsComparison = loadoutStore.getShowPresetDpsComparison();
     const equippedPresetId = loadoutStore.getEquippedPresetId();
@@ -1067,8 +1029,23 @@ function attachCompanionIconListeners(): void {
             // Check if a preset slot is selected for assignment
             const selectedSlot = getSelectedSlotInfo();
             if (selectedSlot) {
-                // Check if companion is locked and show visual feedback
                 const companionData = loadoutStore.getCompanion(companionKey);
+
+                // Check if this is an optimal preset and companion is already locked
+                const isOptimalPreset = selectedSlot.presetId === 'optimal-boss' || selectedSlot.presetId === 'optimal-normal';
+                if (isOptimalPreset && selectedSlot.type === 'main') {
+                    const currentLock = loadoutStore.getLockedMainCompanion(selectedSlot.presetId as 'optimal-boss' | 'optimal-normal');
+                    if (currentLock === companionKey) {
+                        // Already locked - add shake animation and return early
+                        target.style.animation = 'shake 0.5s ease-in-out';
+                        setTimeout(() => {
+                            target.style.animation = '';
+                        }, 500);
+                        return; // Don't proceed to assignment
+                    }
+                }
+
+                // Check if companion is locked and show visual feedback
                 if (!companionData?.unlocked) {
                     // Add shake animation
                     target.style.animation = 'shake 0.5s ease-in-out';
@@ -1519,10 +1496,29 @@ function showTooltip(slotElement: HTMLElement, text: string): void {
  * Highlight source companion icons (only unlocked ones)
  */
 function highlightSourceIcons(): void {
+    // Check if we're selecting for an optimal preset
+    const slotInfo = getSelectedSlotInfo();
+    let excludedCompanion: CompanionKey | null = null;
+
+    if (slotInfo && (slotInfo.presetId === 'optimal-boss' || slotInfo.presetId === 'optimal-normal')) {
+        // Get the locked companion for this optimal preset (if any)
+        excludedCompanion = loadoutStore.getLockedMainCompanion(slotInfo.presetId);
+    }
+
     document.querySelectorAll('.companion-icon').forEach(icon => {
         const target = icon as HTMLElement;
         const companionKey = target.dataset.companion as CompanionKey;
         const companionData = loadoutStore.getCompanion(companionKey);
+
+        // Skip highlighting if this companion is excluded (already locked for this preset)
+        if (companionKey === excludedCompanion) {
+            // Dim the excluded companion to show it's unavailable
+            target.style.transition = 'all 0.3s ease';
+            target.style.opacity = '0.3';
+            target.style.transform = 'scale(0.9)';
+            target.style.boxShadow = 'none';
+            return;
+        }
 
         // Only highlight unlocked companions
         if (companionData?.unlocked) {
@@ -1553,6 +1549,7 @@ function clearSelectionFeedback(): void {
         const target = icon as HTMLElement;
         target.style.boxShadow = '';
         target.style.transform = '';
+        target.style.opacity = ''; // Restore opacity for dimmed companions
     });
 
     // Hide the clear selection button
@@ -1588,6 +1585,24 @@ function assignCompanionToSlot(companionKey: CompanionKey): void {
             }, 1500);
         }
         return;
+    }
+
+    // For optimal presets, check if this companion is already locked as main
+    if (isOptimalPreset && slotInfo.type === 'main') {
+        const currentLock = loadoutStore.getLockedMainCompanion(slotInfo.presetId as 'optimal-boss' | 'optimal-normal');
+        if (currentLock === companionKey) {
+            // Already locked - show feedback and don't proceed
+            const slotSelector = `.optimal-main-slot[data-preset="${slotInfo.presetId}"]`;
+            const slotElement = document.querySelector(slotSelector) as HTMLElement;
+            if (slotElement) {
+                showTooltip(slotElement, '❌ This companion is already locked!');
+                setTimeout(() => {
+                    const tooltip = document.getElementById('preset-selection-tooltip');
+                    if (tooltip) tooltip.remove();
+                }, 1500);
+            }
+            return;
+        }
     }
 
     // For optimal presets, just set the locked main
@@ -1809,20 +1824,13 @@ function assignCompanionToSlot(companionKey: CompanionKey): void {
             renderPresetsPanel();
         } else if (userChoice === 'yes') {
             // User says stats ARE incorporated - need to subtract old and add new
-            // Subtract current preset effects from input stats (excluding Attack flat stat)
-            Object.entries(currentPresetEffects).forEach(([stat, value]) => {
-                if (stat !== 'Attack') {
-                    subtractStat(stat, value);
-                }
-            });
+            // Use StatCalculationService to properly calculate new base stats
+            const newStats = swapCompanionPresetEffects(currentPresetEffects, newPresetEffects);
 
-            // Add new preset effects to input stats (excluding Attack flat stat)
-            Object.entries(newPresetEffects).forEach(([stat, value]) => {
-                if (stat !== 'Attack') {
-                    addStat(stat, value);
-                }
-            });
+            // Persist the new base stats
+            loadoutStore.updateBaseStats(newStats);
 
+            // Switch preset ID
             loadoutStore.setEquippedPresetId(presetId);
             updateContributedStatsForPreset(presetId);
             renderPresetsPanel();

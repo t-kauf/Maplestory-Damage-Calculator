@@ -254,10 +254,18 @@ const STAT = {
     min: 0,
     onChange: true
   },
+  SKILL_LEVEL_ALL: {
+    id: "skillLevelAll",
+    label: "All Job Skill Level",
+    type: "number",
+    defaultValue: 0,
+    min: 0,
+    onChange: true
+  },
   // Main Stat %
   MAIN_STAT_PCT: {
     id: "mainStatPct",
-    label: "Current Main Stat %",
+    label: "Main Stat %",
     type: "number",
     step: "0.1",
     defaultValue: 0,
@@ -265,7 +273,7 @@ const STAT = {
   },
   // Hidden/Main Stat Fields
   PRIMARY_MAIN_STAT: {
-    id: "primaryMainStat",
+    id: "mainStat",
     label: "Primary Main Stat",
     type: "number",
     defaultValue: 1e3

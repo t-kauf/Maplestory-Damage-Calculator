@@ -1,52 +1,34 @@
-import { STAT_KEY_MAP } from "@ts/types/page/equipment/equipment.types.js";
 import {
   EQUIPMENT_SLOTS,
   getSlotConfig,
-  getAvailableStats,
+  generateStatTypeOptionsHTML,
   setSlotData,
   loadAllEquipmentData,
   getAllEquipmentData,
   calculateAllContributions,
-  isValidSlot
+  isValidSlot,
+  migrateStatlineFormats
 } from "./equipment.js";
 import { STAT } from "@ts/types/constants.js";
-const STAT_ID_TO_LINE_TYPE = {
-  attack: "attack",
-  mainStat: "main-stat",
-  defense: "defense",
-  critRate: "crit-rate",
-  critDamage: "crit-damage",
-  skillLevel1st: "skill-level-1st",
-  skillLevel2nd: "skill-level-2nd",
-  skillLevel3rd: "skill-level-3rd",
-  skillLevel4th: "skill-level-4th",
-  normalDamage: "normal-damage",
-  bossDamage: "boss-damage",
-  damage: "damage",
-  finalDamage: "final-damage",
-  minDamage: "min-damage",
-  maxDamage: "max-damage"
-};
-const LINE_TYPE_TO_STAT_KEY = {
-  "attack": "ATTACK",
-  "main-stat": "MAIN_STAT_PCT",
-  // Using MAIN_STAT_PCT for main stat %
-  "defense": "DEFENSE",
-  "crit-rate": "CRIT_RATE",
-  "crit-damage": "CRIT_DAMAGE",
-  "skill-level-1st": "SKILL_LEVEL_1ST",
-  "skill-level-2nd": "SKILL_LEVEL_2ND",
-  "skill-level-3rd": "SKILL_LEVEL_3RD",
-  "skill-level-4th": "SKILL_LEVEL_4TH",
-  "skill-level-all": "ATTACK_SPEED",
-  // Fallback for now
-  "normal-damage": "NORMAL_DAMAGE",
-  "boss-damage": "BOSS_DAMAGE",
-  "damage": "DAMAGE",
-  "damage-amp": "DAMAGE_AMP",
-  "final-damage": "FINAL_DAMAGE",
-  "min-damage": "MIN_DAMAGE",
-  "max-damage": "MAX_DAMAGE"
+const LEGACY_KEY_TO_STAT_ID = {
+  "attack": STAT.ATTACK.id,
+  "main-stat": STAT.PRIMARY_MAIN_STAT.id,
+  "defense": STAT.DEFENSE.id,
+  "crit-rate": STAT.CRIT_RATE.id,
+  "crit-damage": STAT.CRIT_DAMAGE.id,
+  "skill-level-1st": STAT.SKILL_LEVEL_1ST.id,
+  "skill-level-2nd": STAT.SKILL_LEVEL_2ND.id,
+  "skill-level-3rd": STAT.SKILL_LEVEL_3RD.id,
+  "skill-level-4th": STAT.SKILL_LEVEL_4TH.id,
+  "attack-speed": STAT.ATTACK_SPEED.id,
+  "skill-level-all": STAT.SKILL_LEVEL_ALL.id,
+  "normal-damage": STAT.NORMAL_DAMAGE.id,
+  "boss-damage": STAT.BOSS_DAMAGE.id,
+  "damage": STAT.DAMAGE.id,
+  "damage-amp": STAT.DAMAGE_AMP.id,
+  "final-damage": STAT.FINAL_DAMAGE.id,
+  "min-damage": STAT.MIN_DAMAGE.id,
+  "max-damage": STAT.MAX_DAMAGE.id
 };
 function generateSlotCardHTML(slot) {
   const mainStatInput = slot.hasMainStat ? `
@@ -84,7 +66,7 @@ function generateSlotCardHTML(slot) {
     `;
 }
 function generateStatLineHTML(slotId, statIndex) {
-  const optionsHTML = getAvailableStats().map((stat) => `<option value="${stat.value}">${stat.label}</option>`).join("");
+  const optionsHTML = generateStatTypeOptionsHTML();
   return `
         <div id="equipment-${slotId}-stat-${statIndex}" class="equipment-stat-line">
             <div class="equipment-input-group equipment-stat-type-select">
@@ -119,6 +101,7 @@ function initializeEquipmentUI() {
     console.error("Equipment container not found");
     return;
   }
+  migrateStatlineFormats();
   container.innerHTML = generateEquipmentHTML();
 }
 function loadEquipmentUI() {
@@ -158,7 +141,11 @@ function populateSlotWithData(slotId, data) {
         const statCount = statsContainer.children.length;
         const typeInput = document.getElementById(`equipment-${slotId}-stat-${statCount}-type`);
         const valueInput = document.getElementById(`equipment-${slotId}-stat-${statCount}-value`);
-        if (typeInput) typeInput.value = statLine.type;
+        let typeValue = statLine.type;
+        if (typeValue in LEGACY_KEY_TO_STAT_ID) {
+          typeValue = LEGACY_KEY_TO_STAT_ID[typeValue];
+        }
+        if (typeInput) typeInput.value = typeValue;
         if (valueInput) valueInput.value = statLine.value.toString();
       });
     }
@@ -196,6 +183,7 @@ function saveSlotDataFromDOM(slotId) {
       if (typeInput && valueInput && typeInput.value && valueInput.value) {
         statLines.push({
           type: typeInput.value,
+          // Cast to StatId
           value: parseFloat(valueInput.value) || 0
         });
       }
@@ -233,8 +221,8 @@ function notifyStatContributors() {
 function calculateAggregateStats(equipmentData) {
   const totals = {
     [STAT.ATTACK.id]: 0,
-    mainStat: 0,
-    // Equipment-specific key
+    [STAT.PRIMARY_MAIN_STAT.id]: 0,
+    [STAT.MAIN_STAT_PCT.id]: 0,
     [STAT.DEFENSE.id]: 0,
     [STAT.CRIT_RATE.id]: 0,
     [STAT.CRIT_DAMAGE.id]: 0,
@@ -249,8 +237,8 @@ function calculateAggregateStats(equipmentData) {
     [STAT.SKILL_LEVEL_2ND.id]: 0,
     [STAT.SKILL_LEVEL_3RD.id]: 0,
     [STAT.SKILL_LEVEL_4TH.id]: 0,
-    skillLevelAll: 0
-    // Equipment-specific key (no STAT equivalent)
+    [STAT.SKILL_LEVEL_ALL.id]: 0,
+    [STAT.ATTACK_SPEED.id]: 0
   };
   Object.values(equipmentData).forEach((slotData) => {
     if (!slotData) return;
@@ -258,13 +246,13 @@ function calculateAggregateStats(equipmentData) {
       totals[STAT.ATTACK.id] += slotData.attack;
     }
     if (slotData.mainStat) {
-      totals.mainStat += slotData.mainStat;
+      totals[STAT.PRIMARY_MAIN_STAT.id] += slotData.mainStat;
     }
     if (slotData.statLines && Array.isArray(slotData.statLines)) {
       slotData.statLines.forEach((statLine) => {
-        const statKey = STAT_KEY_MAP[statLine.type];
-        if (statKey && totals.hasOwnProperty(statKey)) {
-          totals[statKey] += statLine.value;
+        const statId = statLine.type;
+        if (statId && totals.hasOwnProperty(statId)) {
+          totals[statId] += statLine.value;
         }
       });
     }
@@ -282,8 +270,8 @@ function updateSummaryDisplay(totals) {
   const parts = [];
   const statConfigs = [
     { key: STAT.ATTACK.id, label: STAT.ATTACK.label, isPercent: false },
-    { key: "mainStat", label: "Main Stat", isPercent: false },
-    // Equipment-specific key
+    { key: STAT.PRIMARY_MAIN_STAT.id, label: "Main Stat", isPercent: false },
+    { key: STAT.MAIN_STAT_PCT.id, label: "Main Stat %", isPercent: true },
     { key: STAT.DEFENSE.id, label: STAT.DEFENSE.label, isPercent: false },
     { key: STAT.CRIT_RATE.id, label: STAT.CRIT_RATE.label.replace(" (%)", ""), isPercent: true },
     { key: STAT.CRIT_DAMAGE.id, label: STAT.CRIT_DAMAGE.label.replace(" (%)", ""), isPercent: true },
@@ -297,8 +285,9 @@ function updateSummaryDisplay(totals) {
     { key: STAT.SKILL_LEVEL_2ND.id, label: STAT.SKILL_LEVEL_2ND.label, isPercent: false },
     { key: STAT.SKILL_LEVEL_3RD.id, label: STAT.SKILL_LEVEL_3RD.label, isPercent: false },
     { key: STAT.SKILL_LEVEL_4TH.id, label: STAT.SKILL_LEVEL_4TH.label, isPercent: false },
-    { key: "skillLevelAll", label: "All Jobs", isPercent: false }
-    // Equipment-specific key (no STAT equivalent)
+    { key: STAT.SKILL_LEVEL_ALL.id, label: STAT.SKILL_LEVEL_ALL.label, isPercent: false },
+    { key: STAT.ATTACK_SPEED.id, label: "All Jobs (Atk Speed)", isPercent: false }
+    // Fallback for skill-level-all
   ];
   statConfigs.forEach((config) => {
     const value = totals[config.key];
@@ -324,13 +313,10 @@ function attachEquipmentEventListeners() {
   EQUIPMENT_SLOTS.forEach((slot) => {
     const slotElement = document.getElementById(`equipment-slot-${slot.id}`);
     if (!slotElement) return;
-    const inputs = slotElement.querySelectorAll("input, select");
-    inputs.forEach((input) => {
-      input.addEventListener("input", debounce(() => {
-        saveSlotDataFromDOM(slot.id);
-        notifyStatContributors();
-      }, 300));
-    });
+    slotElement.addEventListener("input", debounce(() => {
+      saveSlotDataFromDOM(slot.id);
+      notifyStatContributors();
+    }, 300));
     const addStatBtn = slotElement.querySelector(".equipment-btn-add");
     addStatBtn?.addEventListener("click", () => addStatLineToSlot(slot.id));
     slotElement.addEventListener("click", (e) => {

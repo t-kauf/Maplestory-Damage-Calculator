@@ -1,4 +1,5 @@
-import { DEFAULT_GEAR_LAB_DATA, EMPTY_POTENTIAL_LINE } from "@ts/types/page/gear-lab/gear-lab.types.js";
+import { DEFAULT_GEAR_LAB_DATA, EMPTY_POTENTIAL_LINE, VALID_EQUIPMENT_SLOTS } from "@ts/types/page/gear-lab/gear-lab.types.js";
+import { INNER_ABILITY_DISPLAY_NAME_TO_ID } from "@ts/page/inner-ability/inner-ability.js";
 class GearLabStore {
   // ========================================================================
   // CONSTRUCTOR
@@ -49,10 +50,15 @@ class GearLabStore {
         Object.entries(legacy).forEach(([key, preset]) => {
           const presetId = parseInt(key);
           if (presetId >= 1 && presetId <= 10) {
+            const migratedLines = (preset.lines || []).map((line) => ({
+              stat: line.stat || "",
+              statId: line.stat ? INNER_ABILITY_DISPLAY_NAME_TO_ID[line.stat] || "" : "",
+              value: line.value || 0
+            }));
             this.data.innerAbility.presets[presetId] = {
               id: presetId,
               isEquipped: preset.isEquipped || false,
-              lines: preset.lines || []
+              lines: migratedLines
             };
           }
         });
@@ -66,8 +72,51 @@ class GearLabStore {
       console.log("GearLabStore: No legacy heroPowerPresets found");
     }
     this.migrateCubePotentialFromLegacy();
+    this.migrateEquipmentSlotsFromLegacy();
+    this.migrateComparisonItemsFromLegacy();
     console.log("GearLabStore: Migration complete, saving to new format...");
     this.saveDualWrite();
+  }
+  /**
+   * Migrate comparison items from legacy comparison-state.js format
+   */
+  migrateComparisonItemsFromLegacy() {
+    const slotIds = ["head", "cape", "chest", "shoulders", "legs", "belt", "gloves", "boots", "ring", "neck", "eye-accessory"];
+    let migratedCount = 0;
+    slotIds.forEach((slotId) => {
+      const legacyKey = `comparisonItems.${slotId}`;
+      const legacyDataStr = localStorage.getItem(legacyKey);
+      if (legacyDataStr) {
+        try {
+          const legacyItems = JSON.parse(legacyDataStr);
+          legacyItems.forEach((legacyItem) => {
+            const statLines = (legacyItem.stats || []).map((stat) => ({
+              type: stat.type,
+              value: parseFloat(stat.value) || 0
+            }));
+            const newItem = {
+              name: legacyItem.name || "Item",
+              attack: legacyItem.attack || 0,
+              mainStat: 0,
+              // Legacy format didn't track main stat separately
+              statLines
+            };
+            this.addComparisonItem(slotId, newItem);
+            migratedCount++;
+          });
+          console.log(`GearLabStore: Migrated ${legacyItems.length} comparison items for slot ${slotId}`);
+          localStorage.removeItem(legacyKey);
+          console.log(`GearLabStore: Deleted ${legacyKey} key`);
+        } catch (error) {
+          console.error(`GearLabStore: Failed to migrate comparison items for ${slotId}:`, error);
+        }
+      }
+    });
+    if (migratedCount > 0) {
+      console.log(`GearLabStore: Total ${migratedCount} comparison items migrated`);
+    } else {
+      console.log("GearLabStore: No legacy comparison items found");
+    }
   }
   /**
    * Migrate cube potential data from legacy format
@@ -104,6 +153,39 @@ class GearLabStore {
     } catch (error) {
       console.error("GearLabStore: Failed to migrate cube potential:", error);
     }
+  }
+  /**
+   * Migrate equipment slot data from legacy format
+   */
+  migrateEquipmentSlotsFromLegacy() {
+    const legacyDataStr = localStorage.getItem("equipmentSlots");
+    if (!legacyDataStr) {
+      console.log("GearLabStore: No legacy equipmentSlots found in localStorage");
+      return;
+    }
+    try {
+      const legacyData = JSON.parse(legacyDataStr);
+      Object.entries(legacyData).forEach(([slotId, slotData]) => {
+        if (this.isValidEquipmentSlotId(slotId)) {
+          this.data.equipmentSlots[slotId] = {
+            attack: typeof slotData.attack === "number" ? slotData.attack : 0,
+            mainStat: typeof slotData.mainStat === "number" ? slotData.mainStat : 0,
+            damageAmp: typeof slotData.damageAmp === "number" ? slotData.damageAmp : 0
+          };
+        }
+      });
+      console.log("GearLabStore: Equipment slots migration complete");
+      localStorage.removeItem("equipmentSlots");
+      console.log("GearLabStore: Deleted equipmentSlots key");
+    } catch (error) {
+      console.error("GearLabStore: Failed to migrate equipment slots:", error);
+    }
+  }
+  /**
+   * Validate if a string is a valid EquipmentSlotId
+   */
+  isValidEquipmentSlotId(slotId) {
+    return VALID_EQUIPMENT_SLOTS.includes(slotId);
   }
   /**
    * Validate if a string is a valid CubeSlotId
@@ -187,6 +269,39 @@ class GearLabStore {
             typeData.setA = this.validatePotentialSet(typeData.setA);
             typeData.setB = this.validatePotentialSet(typeData.setB);
           }
+        });
+      }
+    });
+    if (!this.data.equipmentSlots) {
+      this.data.equipmentSlots = { ...defaults.equipmentSlots };
+    }
+    VALID_EQUIPMENT_SLOTS.forEach((slotId) => {
+      if (!this.data.equipmentSlots[slotId]) {
+        this.data.equipmentSlots[slotId] = { ...defaults.equipmentSlots[slotId] };
+      } else {
+        const slot = this.data.equipmentSlots[slotId];
+        if (typeof slot.attack !== "number") slot.attack = 0;
+        if (typeof slot.mainStat !== "number") slot.mainStat = 0;
+        if (typeof slot.damageAmp !== "number") slot.damageAmp = 0;
+      }
+    });
+    if (!this.data.comparisonEquipment) {
+      this.data.comparisonEquipment = { ...defaults.comparisonEquipment };
+    }
+    VALID_EQUIPMENT_SLOTS.forEach((slotId) => {
+      if (!Array.isArray(this.data.comparisonEquipment[slotId])) {
+        this.data.comparisonEquipment[slotId] = [];
+      } else {
+        this.data.comparisonEquipment[slotId] = this.data.comparisonEquipment[slotId].filter((item) => {
+          if (typeof item.guid !== "string" || !item.guid) return false;
+          if (typeof item.name !== "string") return false;
+          if (typeof item.attack !== "number") return false;
+          if (typeof item.mainStat !== "number") return false;
+          if (!Array.isArray(item.statLines)) return false;
+          item.statLines = item.statLines.filter((statLine) => {
+            return typeof statLine.type === "string" && typeof statLine.value === "number";
+          });
+          return true;
         });
       }
     });
@@ -291,9 +406,10 @@ class GearLabStore {
       preset.lines = [];
     }
     while (preset.lines.length <= lineIndex) {
-      preset.lines.push({ stat: "", value: 0 });
+      preset.lines.push({ stat: "", statId: "", value: 0 });
     }
-    preset.lines[lineIndex] = line;
+    const statId = line.stat ? INNER_ABILITY_DISPLAY_NAME_TO_ID[line.stat] || "" : "";
+    preset.lines[lineIndex] = { ...line, statId };
     this.saveDualWrite();
   }
   /**
@@ -395,6 +511,207 @@ class GearLabStore {
     }
     this.data.cubePotential[slotId][potentialType][setName] = set;
     this.saveDualWrite();
+  }
+  // ========================================================================
+  // EQUIPMENT SLOTS
+  // ========================================================================
+  /**
+   * Get all equipment slot data
+   * @returns Deep clone of all equipment slot data
+   */
+  getEquipmentSlots() {
+    return JSON.parse(JSON.stringify(this.data.equipmentSlots));
+  }
+  /**
+   * Get data for a specific equipment slot
+   * @param slotId - Equipment slot ID
+   * @returns Equipment slot data or null if not found
+   */
+  getEquipmentSlot(slotId) {
+    const slot = this.data.equipmentSlots[slotId];
+    return slot ? JSON.parse(JSON.stringify(slot)) : null;
+  }
+  /**
+   * Update equipment slot data
+   * @param slotId - Equipment slot ID
+   * @param data - Partial equipment slot data to update
+   */
+  updateEquipmentSlot(slotId, data) {
+    if (!VALID_EQUIPMENT_SLOTS.includes(slotId)) {
+      console.error(`GearLabStore: Invalid slot ID ${slotId}`);
+      return;
+    }
+    if (!this.data.equipmentSlots[slotId]) {
+      this.data.equipmentSlots[slotId] = { attack: 0, mainStat: 0, damageAmp: 0 };
+    }
+    this.data.equipmentSlots[slotId] = {
+      ...this.data.equipmentSlots[slotId],
+      ...data
+    };
+    this.saveDualWrite();
+  }
+  /**
+   * Update all equipment slots at once
+   * @param slots - Complete equipment slot data
+   */
+  updateAllEquipmentSlots(slots) {
+    VALID_EQUIPMENT_SLOTS.forEach((slotId) => {
+      if (slots[slotId]) {
+        if (!this.data.equipmentSlots[slotId]) {
+          this.data.equipmentSlots[slotId] = { attack: 0, mainStat: 0, damageAmp: 0 };
+        }
+        this.data.equipmentSlots[slotId] = {
+          ...this.data.equipmentSlots[slotId],
+          ...slots[slotId]
+        };
+      }
+    });
+    this.saveDualWrite();
+  }
+  // ========================================================================
+  // COMPARISON EQUIPMENT
+  // ========================================================================
+  /**
+   * Get all comparison equipment data
+   * @returns Deep clone of all comparison equipment
+   */
+  getComparisonEquipment() {
+    return JSON.parse(JSON.stringify(this.data.comparisonEquipment));
+  }
+  /**
+   * Get comparison items for a specific slot
+   * @param slotId - Equipment slot ID
+   * @returns Array of comparison items for the slot
+   */
+  getComparisonItems(slotId) {
+    if (!this.data.comparisonEquipment[slotId]) {
+      this.data.comparisonEquipment[slotId] = [];
+    }
+    return JSON.parse(JSON.stringify(this.data.comparisonEquipment[slotId]));
+  }
+  /**
+   * Get a specific comparison item by GUID
+   * @param slotId - Equipment slot ID
+   * @param guid - Item GUID
+   * @returns Item data or null if not found
+   */
+  getComparisonItem(slotId, guid) {
+    const items = this.data.comparisonEquipment[slotId];
+    if (!items) return null;
+    const item = items.find((i) => i.guid === guid);
+    return item ? JSON.parse(JSON.stringify(item)) : null;
+  }
+  /**
+   * Add a new comparison item to a slot
+   * @param slotId - Equipment slot ID
+   * @param item - Item data (guid will be generated)
+   * @returns The created item with generated guid
+   */
+  addComparisonItem(slotId, item) {
+    if (!this.data.comparisonEquipment[slotId]) {
+      this.data.comparisonEquipment[slotId] = [];
+    }
+    const guid = this.generateUUID();
+    const newItem = {
+      guid,
+      name: item.name,
+      attack: item.attack,
+      mainStat: item.mainStat,
+      statLines: item.statLines || []
+    };
+    this.data.comparisonEquipment[slotId].push(newItem);
+    this.saveDualWrite();
+    return JSON.parse(JSON.stringify(newItem));
+  }
+  /**
+   * Update an existing comparison item
+   * @param slotId - Equipment slot ID
+   * @param guid - Item GUID
+   * @param data - Partial item data to update
+   * @returns True if successful, false if item not found
+   */
+  updateComparisonItem(slotId, guid, data) {
+    const items = this.data.comparisonEquipment[slotId];
+    if (!items) return false;
+    const index = items.findIndex((i) => i.guid === guid);
+    if (index === -1) return false;
+    items[index] = {
+      ...items[index],
+      ...data,
+      guid
+      // Ensure guid cannot be changed
+    };
+    this.saveDualWrite();
+    return true;
+  }
+  /**
+   * Remove a comparison item from a slot
+   * @param slotId - Equipment slot ID
+   * @param guid - Item GUID
+   * @returns True if successful, false if item not found
+   */
+  removeComparisonItem(slotId, guid) {
+    const items = this.data.comparisonEquipment[slotId];
+    if (!items) return false;
+    const index = items.findIndex((i) => i.guid === guid);
+    if (index === -1) return false;
+    items.splice(index, 1);
+    this.saveDualWrite();
+    return true;
+  }
+  /**
+   * Clear all comparison items from a slot
+   * @param slotId - Equipment slot ID
+   */
+  clearComparisonItems(slotId) {
+    if (this.data.comparisonEquipment[slotId]) {
+      this.data.comparisonEquipment[slotId] = [];
+      this.saveDualWrite();
+    }
+  }
+  /**
+   * Add a stat line to a comparison item
+   * @param slotId - Equipment slot ID
+   * @param guid - Item GUID
+   * @param statLine - Stat line data
+   * @returns True if successful, false if item not found
+   */
+  addComparisonItemStatLine(slotId, guid, statLine) {
+    const items = this.data.comparisonEquipment[slotId];
+    if (!items) return false;
+    const item = items.find((i) => i.guid === guid);
+    if (!item) return false;
+    item.statLines.push(statLine);
+    this.saveDualWrite();
+    return true;
+  }
+  /**
+   * Remove a stat line from a comparison item by index
+   * @param slotId - Equipment slot ID
+   * @param guid - Item GUID
+   * @param statLineIndex - Index of stat line to remove
+   * @returns True if successful, false if item or stat line not found
+   */
+  removeComparisonItemStatLine(slotId, guid, statLineIndex) {
+    const items = this.data.comparisonEquipment[slotId];
+    if (!items) return false;
+    const item = items.find((i) => i.guid === guid);
+    if (!item) return false;
+    if (statLineIndex < 0 || statLineIndex >= item.statLines.length) return false;
+    item.statLines.splice(statLineIndex, 1);
+    this.saveDualWrite();
+    return true;
+  }
+  /**
+   * Generate a UUID v4
+   * @returns UUID v4 string
+   */
+  generateUUID() {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0;
+      const v = c === "x" ? r : r & 3 | 8;
+      return v.toString(16);
+    });
   }
   // ========================================================================
   // PERSISTENCE
