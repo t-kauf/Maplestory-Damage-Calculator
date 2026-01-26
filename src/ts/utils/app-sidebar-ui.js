@@ -1,3 +1,7 @@
+import { StatCalculationService } from "@ts/services/stat-calculation-service.js";
+import { loadoutStore } from "@ts/store/loadout.store.js";
+import { formatDPS } from "./formatters.js";
+import { debounce } from "./event-emitter.js";
 function generateSubmenuItem(page, tab, label) {
   const displayStyle = tab === "stat-breakdown" || tab === "artifacts" ? 'style="display: none;"' : "";
   return `<button ${displayStyle} class="sidebar-submenu-item" data-tab="${tab}" onclick="navigateToTab('${page}', '${tab}')">${label}</button>`;
@@ -57,7 +61,8 @@ function generateAppSidebarHTML() {
                 </button>
             </div>
             <button onclick="toggleTheme()" id="theme-toggle-sidebar" class="sidebar-footer-btn" style="display: none !important;">
-                <span id="theme-icon-sidebar">\u{1F319}</span>
+                <span id="theme-icon-sidebar">\u{1F319}</span>import { StatCalculationService } from '@ts/services/stat-calculation-service.js';
+
                 <span>Toggle Theme</span>
             </button>
             <a href="https://paypal.me/freakehms" target="_blank" rel="noopener noreferrer" class="sidebar-footer-btn donate-btn">
@@ -73,8 +78,21 @@ function initializeAppSidebarUI() {
     return;
   }
   container.innerHTML = generateAppSidebarHTML();
+  attachAppSidebarEventListeners();
 }
 function attachAppSidebarEventListeners() {
+  loadoutStore.on("data:initialized", (_) => {
+    updateDps();
+  });
+  loadoutStore.on("stat:changed", debounce((_) => {
+    updateDps();
+  }, 1500));
+}
+function updateDps() {
+  const statCalculationService = new StatCalculationService(loadoutStore.getBaseStats());
+  console.log(loadoutStore.getBaseStats());
+  const dpsValue = document.getElementById(`sidebar-dps-value`);
+  dpsValue.innerText = formatDPS(statCalculationService.baseBossDPS);
 }
 export {
   attachAppSidebarEventListeners,

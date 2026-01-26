@@ -377,7 +377,6 @@ export function getPercentileForGain(
  */
 export async function initializeCubePotential(): Promise<void> {
     // Initial setup is handled by gear-lab-store initialization
-    console.log('Cube Potential: Initialization complete');
 }
 
 /**
@@ -395,8 +394,6 @@ export function clearCubeRankingsCache(): void {
     for (const key in rankingsInProgress) {
         delete rankingsInProgress[key];
     }
-
-    console.log('Cube Potential: Rankings cache cleared');
 }
 
 /**

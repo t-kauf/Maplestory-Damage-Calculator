@@ -6,7 +6,9 @@ function formatDPS(dps) {
     return "-";
   }
   const abs = Math.abs(dps);
-  if (abs >= 1e9) {
+  if (abs >= 1e12) {
+    return (dps / 1e12).toFixed(2) + "T";
+  } else if (abs >= 1e9) {
     return (dps / 1e9).toFixed(2) + "B";
   } else if (abs >= 1e6) {
     return (dps / 1e6).toFixed(2) + "M";

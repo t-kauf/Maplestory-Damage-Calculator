@@ -20,6 +20,7 @@ import type {
     CompanionClass
 } from '@ts/types/page/companions/companions.types';
 import { CLASS_DISPLAY_NAMES, RARITY_CONFIG } from '@ts/types/page/companions/companions.types';
+import { debounce } from '@ts/utils/event-emitter.js';
 
 // ============================================================================
 // STATE TRACKING
@@ -64,6 +65,10 @@ export function attachCompanionsEventListeners(): void {
     attachCompanionIconListeners();
     attachPresetEventListeners();
     attachClickOutsideListener();
+
+    loadoutStore.on('stat:changed', debounce((_) => {
+        refreshCompanionsUI();
+    }, 3000));
 }
 
 /**

@@ -11,7 +11,9 @@ export function formatDPS(dps) {
 
     const abs = Math.abs(dps);
 
-    if (abs >= 1_000_000_000) {
+    if (abs >= 1_000_000_000_000) {
+        return (dps / 1_000_000_000_000).toFixed(2) + 'T';
+    } else if (abs >= 1_000_000_000) {
         return (dps / 1_000_000_000).toFixed(2) + 'B';
     } else if (abs >= 1_000_000) {
         return (dps / 1_000_000).toFixed(2) + 'M';

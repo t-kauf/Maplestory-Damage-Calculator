@@ -13,8 +13,8 @@ import {
     NIGHT_LORD_SKILLS,
     SHADOWER_SKILLS
 } from '@ts/data/all-class-skills.js';
-import { BaseStats } from '@ts/types';
-import { StatCalculationService, StatCalculationService } from '@ts/services/stat-calculation-service';
+import { BaseStats, STAT } from '@ts/types';
+import { StatCalculationService } from '@ts/services/stat-calculation-service';
 
 // ============================================================================
 // TYPE DEFINITIONS
@@ -1015,7 +1015,7 @@ export function calculateJobSkillPassiveGains(
     className: string,
     characterLevel: number,
     skillLevelBonuses: SkillLevelBonuses,
-    baseStat: BaseStats
+    baseStats: BaseStats
 ): JobSkillPassiveGainsResult {
     // Get the class skills data
     const classSkills = CLASS_TO_SKILLS_MAP[className];
@@ -1078,29 +1078,44 @@ export function calculateJobSkillPassiveGains(
                 const statGain = bonusValue - baseValue;
                 const calculatorStat = effect.stat;
 
-                // Special handling for defense stat (converts to mainStat for certain classes)
+                // Special handling for defense stat (converts to mainStat for Dark Knight)
                 if (calculatorStat === 'defense') {
-                    const baseStrGain = (currentStats.defense * baseValue) / 100;
-                    const bonusStrGain = (currentStats.defense * bonusValue) / 100;
-                    const strGain = bonusStrGain - baseStrGain;
+                    // Calculate the actual defense increase (as a flat number)
+                    const defenseValue = statGain; // This is the defense % value from the skill
+                    const mainStatIncrease = (baseStats.DEFENSE || 0) * (defenseValue / 100);
 
-                    // Convert STR to stat damage (100 STR = 1% stat damage)
-                    const baseStatDamage = baseStrGain / 100;
-                    const bonusStatDamage = bonusStrGain / 100;
-                    const statDamageGain = bonusStatDamage - baseStatDamage;
+                    // Use StatCalculationService to apply defense core
+                    // The circular dependency is avoided by using calculateFinalAttackBonusFromJobSkills
+                    // which doesn't create a StatCalculationService
+                    const statService = new StatCalculationService(baseStats);
+                    const beforeStats = statService.getStats();
 
+                    // Add the defense - for Dark Knight this will convert to main stat, attack, and stat damage
+                    statService.add(STAT.PRIMARY_MAIN_STAT.id, mainStatIncrease);
+                    const afterStats = statService.getStats();
+
+                    // Calculate the gains by comparing before and after
+                    const mainStatGain = afterStats.PRIMARY_MAIN_STAT - beforeStats.PRIMARY_MAIN_STAT;
+                    const statDamageGain = afterStats.STAT_DAMAGE - beforeStats.STAT_DAMAGE;
+                    const attackGain = afterStats.ATTACK - beforeStats.ATTACK;
+
+                    // Add gains to statChanges
+                    if (!statChanges['mainStat']) statChanges['mainStat'] = 0;
+                    statChanges['mainStat'] += mainStatGain;
                     if (!statChanges['statDamage']) statChanges['statDamage'] = 0;
                     statChanges['statDamage'] += statDamageGain;
+                    if (!statChanges['attack']) statChanges['attack'] = 0;
+                    statChanges['attack'] += attackGain;
 
                     breakdown.push({
                         passive: name,
-                        stat: 'statDamage',
-                        statDisplay: 'Stat Damage',
-                        baseValue: baseStatDamage,
-                        bonusValue: bonusStatDamage,
-                        gain: statDamageGain,
+                        stat: 'defense',
+                        statDisplay: 'Defense',
+                        baseValue: baseValue,
+                        bonusValue: bonusValue,
+                        gain: statGain,
                         isPercent: true,
-                        note: `${baseValue.toFixed(2)}% → ${bonusValue.toFixed(2)}% DEF conversion = ${baseStrGain.toFixed(0)} → ${bonusStrGain.toFixed(0)} STR`
+                        note: `+${statGain.toFixed(2)} DEF% → +${mainStatGain.toFixed(0)} Main Stat, +${statDamageGain.toFixed(2)}% Stat Damage, +${attackGain.toFixed(0)} ATK`
                     });
                 } else {
                     // Standard stat gain
@@ -1185,4 +1200,73 @@ export function calculateJobSkillPassiveGains(
         complexPassives,
         complexStatChanges
     };
+}
+
+/**
+ * Calculate final attack bonus from job skills without creating a StatCalculationService
+ * This directly calculates the Final Attack skill value to avoid circular dependencies
+ * @param className - Class name
+ * @param characterLevel - Character level
+ * @param skillLevels - Skill level bonuses
+ * @returns Final attack bonus multiplier (e.g., 1.45 for 45% bonus)
+ */
+export function calculateFinalAttackBonusFromJobSkills(
+    className: string | null,
+    characterLevel: number,
+    skillLevels: {
+        firstJob?: number;
+        secondJob?: number;
+        thirdJob?: number;
+        fourthJob?: number;
+        allSkills?: number;
+    }
+): number {
+    if (!className) return 1;
+
+    const classSkills = CLASS_TO_SKILLS_MAP[className];
+    if (!classSkills) return 1;
+
+    let finalAttackBonus = 0;
+
+    // Check all job tiers for Final Attack skills
+    const jobTiers: JobTier[] = [1, 2, 3, 4];
+    const jobTierNames: JobTierString[] = ['firstJob', 'secondJob', 'thirdJob', 'fourthJob'];
+    const allSkillsBonus = skillLevels.allSkills || 0;
+
+    for (let i = 0; i < jobTiers.length; i++) {
+        const tierNumber = jobTiers[i];
+        const tierName = jobTierNames[i];
+        const tierBonus = (skillLevels[tierName] || 0) + allSkillsBonus;
+
+        // Get complex passives for this tier (Final Attack is a complex passive)
+        for (const [skillKey, skillData] of Object.entries(classSkills)) {
+            if (skillData.jobStep === tierNumber && skillData.isComplex) {
+                // Check if this is a Final Attack skill (by checking effect stat)
+                const hasFinalAttack = skillData.effects?.some(
+                    effect => effect.stat.toLowerCase() === 'finalattack'
+                );
+
+                if (hasFinalAttack && skillData.effects) {
+                    const effect = skillData.effects[0]; // Final Attack skills have one effect
+                    const bonusInputLevel = calculateSkillInputLevel(characterLevel, tierNumber, tierBonus);
+
+                    const bonusValue = calculateSkillValue(
+                        effect.baseValue,
+                        effect.factorIndex,
+                        bonusInputLevel,
+                        true,
+                        effect.type === 'flat'
+                    );
+
+                    finalAttackBonus += bonusValue;
+                }
+            }
+        }
+    }
+
+    if (finalAttackBonus !== 0) {
+        return (1 + finalAttackBonus / 100);
+    }
+
+    return 1;
 }

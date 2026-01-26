@@ -146,10 +146,17 @@ export function displayResults(
                             const percentSign = item.isPercent ? '%' : '';
                             const gainSign = item.gain >= 0 ? '+' : '';
                             const fromTo = `${item.baseValue.toFixed(2)}${percentSign} → ${item.bonusValue.toFixed(2)}${percentSign}`;
-                            const note = item.note ? ` <span style="color: var(--text-secondary); font-size: 0.85em;">(${item.note})</span>` : '';
-                            return `<div class="damage-row">
-                                <span class="damage-label">${item.passive}:</span>
-                                <span class="damage-value">${gainSign}${item.gain.toFixed(2)}${percentSign} ${statLabel} (${fromTo})${note}</span>
+                            const note = item.note ? `<div class="passive-note">${item.note}</div>` : '';
+                            return `<div class="passive-gain-card">
+                                <div class="passive-header">
+                                    <span class="passive-name">${item.passive}</span>
+                                    <span class="passive-gain-value">${gainSign}${item.gain.toFixed(2)}${percentSign}</span>
+                                </div>
+                                <div class="passive-details">
+                                    <span class="passive-stat-label">${statLabel}</span>
+                                    <span class="passive-from-to">${fromTo}</span>
+                                </div>
+                                ${note}
                             </div>`;
                         }).join('')}
                     </div>
@@ -167,17 +174,28 @@ export function displayResults(
                             if (item.stat && item.gain !== undefined && item.baseValue !== undefined && item.bonusValue !== undefined) {
                                 const statName = statDisplayNames[item.stat] || item.stat;
                                 const percentSign = item.isPercent ? '%' : '';
-                                const sign = item.gain >= 0 ? '+' : '';
+                                const gainSign = item.gain >= 0 ? '+' : '';
                                 const fromTo = `${item.baseValue.toFixed(2)}${percentSign} → ${item.bonusValue.toFixed(2)}${percentSign}`;
-                                return `<div class="damage-row">
-                                    <span class="damage-label">${item.passive}:</span>
-                                    <span class="damage-value">${sign}${item.gain.toFixed(2)}${percentSign} ${statName} (${fromTo})</span>
+                                const note = item.note ? `<div class="passive-note">${item.note}</div>` : '';
+                                return `<div class="passive-gain-card">
+                                    <div class="passive-header">
+                                        <span class="passive-name">${item.passive}</span>
+                                        <span class="passive-gain-value">${gainSign}${item.gain.toFixed(2)}${percentSign}</span>
+                                    </div>
+                                    <div class="passive-details">
+                                        <span class="passive-stat-label">${statName}</span>
+                                        <span class="passive-from-to">${fromTo}</span>
+                                    </div>
+                                    ${note}
                                 </div>`;
                             } else {
                                 // Otherwise just show the note
-                                return `<div class="damage-row">
-                                    <span class="damage-label">${item.passive}:</span>
-                                    <span class="damage-value">${item.note || ''}</span>
+                                const note = item.note || '';
+                                return `<div class="passive-gain-card">
+                                    <div class="passive-header">
+                                        <span class="passive-name">${item.passive}</span>
+                                    </div>
+                                    ${note ? `<div class="passive-note">${note}</div>` : ''}
                                 </div>`;
                             }
                         }).join('')}

@@ -292,7 +292,6 @@ export function generateOptimalPreset(
         // Remove locked main from candidates (can't duplicate)
         const lockedIndex = unlockedCompanions.indexOf(lockedMainData);
         unlockedCompanions.splice(lockedIndex, 1);
-        console.log(`[generateOptimalPreset] Locked main companion: ${lockedMainCompanion}`);
     }
 
     // Check if we have enough companions to fill all slots
@@ -371,10 +370,6 @@ export function generateOptimalPreset(
     // Sort by individual DPS contribution
     scoredCompanions.sort((a, b) => b.dpsGain - a.dpsGain);
 
-    console.log(`[Phase 1] Scored ${scoredCompanions.length} companions individually`);
-    console.log(`[Phase 1] Top 5: ${scoredCompanions.slice(0, 5).map(s =>
-        `${s.companion.companionKey}: +${(s.dpsGain / baselineDps * 100).toFixed(2)}%`).join(', ')}`);
-
     // =========================================================================
     // PHASE 2: Smart locking based on marginal gains
     // =========================================================================
@@ -404,8 +399,6 @@ export function generateOptimalPreset(
             prevGain = score.dpsGain;
         }
     }
-
-    console.log(`[Phase 2] Locked ${locked.length} companions`);
 
     // Track selected companion keys to prevent duplicates
     const selectedKeys = new Set<CompanionKey>();
@@ -438,8 +431,6 @@ export function generateOptimalPreset(
     const service = new StatCalculationService(baseStats, null);
     let combinationsTested = 0;
     const maxCombinations = 15000; // Reasonable limit for Phase 3
-
-    console.log(`[Phase 3] Testing combinations from ${candidates.length} candidates (selecting ${numToSelect} from ${remaining.length} remaining)`);
 
     // Helper to calculate DPS for a combination
     const calculateDpsForCombination = (companions: UnlockedCompanion[]): number => {
@@ -512,7 +503,6 @@ export function generateOptimalPreset(
     }
 
     const totalGainPercent = ((bestDps - baselineDps) / baselineDps * 100);
-    console.log(`[Phase 3] Tested ${combinationsTested} combinations, best DPS: ${bestDps.toFixed(0)} (+${totalGainPercent.toFixed(2)}%)`);
 
     return bestPreset;
 }

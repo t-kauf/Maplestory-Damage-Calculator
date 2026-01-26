@@ -14,16 +14,11 @@ import { showToast } from '@ts/utils/notifications';
 import { loadoutStore } from '@ts/store/loadout.store';
 import { STAT_TYPE, STAT, type StatConfig, type StatKey } from '@ts/types/constants';
 
-// Import calculate dynamically to avoid circular dependency
-function getCalculateFunction(): (() => void) | undefined {
-    return window.calculate;
-}
-
 // Stat categories for organizing the UI
 const CORE_COMBAT_STATS: StatKey[] = ['ATTACK', 'DEFENSE', 'CRIT_RATE', 'CRIT_DAMAGE', 'ATTACK_SPEED'];
 const MAIN_STATS: StatKey[] = ['STR', 'DEX', 'INT', 'LUK'];
 const DAMAGE_MODIFIERS: StatKey[] = [
-    'STAT_DAMAGE', 'DAMAGE', 'DAMAGE_AMP', 'BASIC_ATTACK_DAMAGE', 'SKILL_DAMAGE',
+    'DAMAGE', 'DAMAGE_AMP', 'BASIC_ATTACK_DAMAGE', 'SKILL_DAMAGE',
     'DEF_PEN', 'BOSS_DAMAGE', 'NORMAL_DAMAGE', 'MIN_DAMAGE', 'MAX_DAMAGE', 'FINAL_DAMAGE'
 ];
 const SKILL_LEVELS: StatKey[] = ['SKILL_LEVEL_1ST', 'SKILL_LEVEL_2ND', 'SKILL_LEVEL_3RD', 'SKILL_LEVEL_4TH', 'SKILL_LEVEL_ALL'];
@@ -92,6 +87,7 @@ function generateStatInputsHTML(): string {
     // Hidden fields
     html += `
         <input type="hidden" id="mainStat" value="${STAT.PRIMARY_MAIN_STAT.defaultValue}">
+        <input type="hidden" id="statDamage" value="${STAT.STAT_DAMAGE.defaultValue}">
         <input type="hidden" id="secondaryMainStat" value="${STAT.SECONDARY_MAIN_STAT.defaultValue}">
         ${generateMasteryHiddenInputs()}
         <input type="hidden" id="skillCoeff" value="0">
@@ -238,34 +234,10 @@ function attachCharacterLevelListener(): void {
             const level = parseInt(levelInput.value) || 0;
             updateSkillCoefficient();
             // Save via loadout store (auto dual-writes to localStorage)
-            loadoutStore.updateCharacter({ level });
+            loadoutStore.setCharacterLevel(level);
         });
     }
 }
-
-/**
- * Attach event listeners to sub-tab buttons
- */
-//function attachSubTabListeners(): void {
-//    const subTabContainer = document.querySelector('.optimization-sub-tabs');
-//    if (!subTabContainer) return;
-//
-//    const buttons = subTabContainer.querySelectorAll('.optimization-sub-tab-button');
-//    const subTabs: Record<string, string> = {
-//        'Stats': 'character-stats',
-//        'Skill Mastery': 'skill-mastery',
-//        'Skill Details': 'skill-details'
-//    };
-//
-//    buttons.forEach(button => {
-//        button.addEventListener('click', () => {
-//            const tabName = subTabs[button.textContent || ''];
-//            if (tabName) {
-//                switchBaseStatsSubTab(tabName);
-//            }
-//        });
-//    });
-//}
 
 /**
  * Attach event listener for paste area (OCR stat extraction)
@@ -297,8 +269,8 @@ function attachPasteAreaListener(): void {
                     }, { once: true });
 
                     const className = loadoutStore.getCharacter().class;
-                    const primaryInput = document.getElementById('primary-main-stat') as HTMLInputElement;
-                    const secondaryInput = document.getElementById('secondary-main-stat') as HTMLInputElement;
+                    const primaryInput = document.getElementById('mainStat') as HTMLInputElement;
+                    const secondaryInput = document.getElementById('secondaryMainStat') as HTMLInputElement;
 
                     const statType = getStatType(className, parsedStat[0]);
                     if (statType === STAT_TYPE.PRIMARY) {
@@ -323,9 +295,6 @@ function attachPasteAreaListener(): void {
                 baseStatUpdates[key] = value;
             }
             loadoutStore.updateBaseStats(baseStatUpdates);
-
-            const calculate = getCalculateFunction();
-            if (calculate) calculate();
         }
         catch (e) {
             console.error(e);
@@ -347,9 +316,6 @@ function attachMainStatSyncListeners(): void {
         if (input) {
             input.addEventListener('input', () => {
                 syncMainStatsToHidden();
-                // Save via loadout store (auto dual-writes to localStorage)
-                const value = parseFloat(input.value) || 0;
-                loadoutStore.updateBaseStat(input.id, value);
             });
         }
     });
@@ -402,44 +368,13 @@ export function syncMainStatsToHidden() {
         if (lukInput) primaryInput.value = lukInput.value || '1000';
         if (dexInput) secondaryInput.value = dexInput.value || '0';
     }
+        
+    loadoutStore.updateBaseStat(STAT.PRIMARY_MAIN_STAT.id,  parseFloat(primaryInput.value));
+    const statDamageInput = document.getElementById(STAT.STAT_DAMAGE.id) as HTMLInputElement;
+    const statDamage = parseFloat(primaryInput.value) / 100;
+    statDamageInput.value = statDamage.toFixed(1);
+    loadoutStore.updateBaseStat(STAT.STAT_DAMAGE.id, statDamage);
 }
-
-/**
- * Switch between base stats sub-tabs
- */
-//function switchBaseStatsSubTab(subTabName: string): void {
-//    // Hide all sub-tabs
-//    const subTabs = document.querySelectorAll('.stats-subtab');
-//    subTabs.forEach(tab => {
-    //    (tab as HTMLElement).style.display = 'none';
-//    });
-//
-//    // Show the selected sub-tab
-//    const selectedTab = document.getElementById(`stats-${subTabName}`);
-//    if (selectedTab) {
-   //     selectedTab.style.display = 'block';
-//    }
-//
-//    // Update button states - get the parent container's buttons
-//    const buttons = document.querySelectorAll('#setup-stats .optimization-tab-button');
-//    buttons.forEach(button => {
-     //   button.classList.remove('active');
-//    });
-//
-//    // Activate button by index
-//    const tabIndex: Record<string, number> = { 'character-stats': 0, 'skill-mastery': 1, 'skill-details': 2 };
-//    if (tabIndex[subTabName] !== undefined && buttons[tabIndex[subTabName]]) {
-      //  buttons[tabIndex[subTabName]].classList.add('active');
-//    }
-//
-//    // If switching to skill details, populate the skills (handled by main.js)
-//    if (subTabName === 'skill-details') {
-        // Trigger populateSkillDetails from main.js via window
-        if (window.populateSkillDetails) {
-            window.populateSkillDetails();
-        }
-//    }
-//}
 
 /**
  * Initialize the base stats UI - generates HTML only
@@ -486,7 +421,6 @@ export function loadBaseStatsUI(): void {
  */
 export function attachBaseStatsEventListeners(): void {
     attachCharacterLevelListener();
-   // attachSubTabListeners();
     attachPasteAreaListener();
     attachMainStatSyncListeners();
     attachStatInputListeners();

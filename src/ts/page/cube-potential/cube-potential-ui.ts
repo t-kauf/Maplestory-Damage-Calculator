@@ -17,6 +17,7 @@ import {
     initializeCubePotential
 } from '@ts/page/cube-potential/cube-potential.js';
 import { gearLabStore } from '@ts/store/gear-lab-store.js';
+import { Chart } from 'chart.js/auto';
 import {
     SLOT_NAMES,
     SLOT_SPECIFIC_POTENTIALS,
@@ -32,6 +33,7 @@ import type {
 } from '@ts/types/page/gear-lab/gear-lab.types';
 import { calculateSlotSetGain } from '@ts/page/cube-potential/cube-potential.js';
 import { loadoutStore } from '@ts/store/loadout.store';
+import { debounce } from '@ts/utils/event-emitter';
 
 // ============================================================================
 // STATE
@@ -337,7 +339,7 @@ function generateSimulationTabHTML(): string {
                 </div>
                 <div class="cube-sim-input-group">
                     <label for="simulation-count" class="cube-sim-label">Number of Simulations</label>
-                    <input type="number" id="simulation-count" value="1000" min="100" max="10000" step="100" class="cube-sim-input">
+                    <input type="number" id="simulation-count" value="10" min="100" max="10000" step="100" class="cube-sim-input">
                 </div>
             </div>
             <button class="cube-sim-run-btn" id="cube-simulation-run-btn">
@@ -428,6 +430,13 @@ export async function initializeCubePotentialUI(): Promise<void> {
 
     // Expose global functions
     exposeGlobalFunctions();
+
+    loadoutStore.on('stat:changed', debounce((_) => {
+           clearCubeRankingsCache();
+           calculateComparisonAndDisplay();
+           const button = document.getElementById("cube-main-tab-comparison");
+           button?.click();
+    }, 1500));
 }
 
 /**
@@ -647,8 +656,6 @@ function setupRankingsControls(): void {
             slotSelector.value = SLOT_NAMES[0].id;
             console.warn(`currentCubeSlot "${currentCubeSlot}" not found in options, defaulting to "${SLOT_NAMES[0].id}"`);
         }
-
-        console.log(`Rankings slot selector populated with ${SLOT_NAMES.length} options, current value: ${slotSelector.value}`);
     }
 
     // Add event listeners if not already attached (using defensive element lookup)
@@ -822,14 +829,14 @@ function displaySimulationResults(results: Record<string, any>): void {
                     </div>
 
                     <!-- Detailed Results Dropdown -->
-                    <details style="background: rgba(0, 0, 0, 0.05); border-radius: 8px; padding: 10px; margin-top: 10px;">
+                    <details class="sim-detail-results" data-strategy="${strategyKey}" style="background: rgba(0, 0, 0, 0.05); border-radius: 8px; padding: 10px; margin-top: 10px;">
                         <summary style="cursor: pointer; font-weight: 600; color: var(--accent-primary); user-select: none; font-size: 0.95em;">
                             View Detailed Results (Slot Stats & Distribution)
                         </summary>
                         <div id="${detailsId}" style="margin-top: 15px;">
                             <!-- Sub-tabs -->
                             <div style="display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 2px solid rgba(0, 0, 0, 0.1); padding-bottom: 0; overflow-x: auto;">
-                                <button class="sim-detail-tab active" data-strategy="${strategyKey}" data-tab="distribution" onclick="window.switchSimDetailTab('${strategyKey}', 'distribution')" style="padding: 8px 16px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-primary); transition: all 0.3s; white-space: nowrap;">Distribution</button>
+                                <button class="sim-detail-tab active" data-strategy="${strategyKey}" data-tab="distribution" onclick="window.switchSimDetailTab('${strategyKey}', 'distribution')" style="padding: 8px 16px; background: none; border: none; border-bottom: 3px solid var(--accent-primary); cursor: pointer; font-weight: 600; color: var(--text-primary); transition: all 0.3s; white-space: nowrap;">Distribution</button>
                                 <button class="sim-detail-tab" data-strategy="${strategyKey}" data-tab="min" onclick="window.switchSimDetailTab('${strategyKey}', 'min')" style="padding: 8px 16px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-primary); transition: all 0.3s; white-space: nowrap;">Min (+${min.toFixed(2)}%)</button>
                                 <button class="sim-detail-tab" data-strategy="${strategyKey}" data-tab="p25" onclick="window.switchSimDetailTab('${strategyKey}', 'p25')" style="padding: 8px 16px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-primary); transition: all 0.3s; white-space: nowrap;">P25 (+${p25.toFixed(2)}%)</button>
                                 <button class="sim-detail-tab" data-strategy="${strategyKey}" data-tab="median" onclick="window.switchSimDetailTab('${strategyKey}', 'median')" style="padding: 8px 16px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-primary); transition: all 0.3s; white-space: nowrap;">Median (+${median.toFixed(2)}%)</button>
@@ -892,8 +899,10 @@ function displaySimulationResults(results: Record<string, any>): void {
         dpOptimal: { name: 'DP Optimal', desc: 'Mathematically optimal strategy that cubes the slot with highest expected marginal DPS gain, accounting for tier-up probability and future rarity potential.' }
     };
 
-    // Sort strategies by average gain (best first)
-    const sortedStrategies = Object.keys(results).sort((a, b) => (results[b]?.avgGain || 0) - (results[a]?.avgGain || 0));
+    // Sort strategies by average gain (best first), filtering out dpOptimal
+    const sortedStrategies = Object.keys(results)
+        .filter(key => key !== 'dpOptimal')
+        .sort((a, b) => (results[b]?.avgGain || 0) - (results[a]?.avgGain || 0));
 
     resultsDiv.innerHTML = `
         <div style="margin-bottom: 20px;">
@@ -913,7 +922,7 @@ function displaySimulationResults(results: Record<string, any>): void {
         <div style="background: linear-gradient(135deg, rgba(138, 43, 226, 0.1), rgba(75, 0, 130, 0.05)); border: 2px solid rgba(138, 43, 226, 0.3); border-radius: 12px; padding: 20px; margin-top: 20px;">
             <h4 style="color: var(--accent-primary); margin-bottom: 10px;">Strategy Descriptions</h4>
             <div style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.6;">
-                ${Object.keys(strategyInfo).map(key => `
+                ${Object.keys(strategyInfo).filter(key => key !== 'dpOptimal').map(key => `
                     <p style="margin-top: 8px;"><strong>${strategyInfo[key].name}:</strong> ${strategyInfo[key].desc}</p>
                 `).join('')}
             </div>
@@ -922,6 +931,38 @@ function displaySimulationResults(results: Record<string, any>): void {
 
     // Store for chart creation (charts are created on-demand when tabs are shown)
     (window as any).simulationResultsForCharts = { results, sortedStrategies, strategyInfo };
+
+    // Add event listeners to initialize charts when details are opened
+    resultsDiv.querySelectorAll('.sim-detail-results').forEach((details) => {
+        const detailsElement = details as HTMLDetailsElement;
+        detailsElement.addEventListener('toggle', () => {
+            if (detailsElement.open) {
+                const strategy = detailsElement.dataset.strategy;
+                if (!strategy) return;
+
+                // Initialize chart when details are opened (if not already created)
+                const canvas = detailsElement.querySelector('canvas') as HTMLCanvasElement;
+                if (canvas && !(canvas as any).chart) {
+                    const storedData = (window as any).simulationResultsForCharts;
+                    if (storedData && storedData.results && storedData.results[strategy]) {
+                        const strategyInfo = storedData.strategyInfo[strategy];
+                        const gains = storedData.results[strategy].totalGains;
+                        // Small delay to ensure the element is visible
+                        setTimeout(() => {
+                            createSimulationDistributionChart(canvas.id, gains, strategyInfo.name);
+                        }, 50);
+                    }
+                }
+
+                // Ensure Distribution tab button has active styling
+                const distributionTab = detailsElement.querySelector('.sim-detail-tab[data-tab="distribution"]') as HTMLElement;
+                if (distributionTab) {
+                    distributionTab.classList.add('active');
+                    distributionTab.style.borderBottomColor = 'var(--accent-primary)';
+                }
+            }
+        });
+    });
 }
 
 /**
@@ -1750,8 +1791,15 @@ export function switchSimDetailTab(strategy: string, tab: string): void {
         }
     });
 
-    // Update content visibility
-    document.querySelectorAll(`.sim-detail-content[data-strategy="${strategy}"]`).forEach(content => {
+    // Find the specific details container for this strategy
+    const detailsContainer = document.getElementById(`sim-details-${strategy}`);
+    if (!detailsContainer) {
+        console.error(`Details container for strategy "${strategy}" not found`);
+        return;
+    }
+
+    // Update content visibility - only within this strategy's details container
+    detailsContainer.querySelectorAll(`.sim-detail-content[data-strategy="${strategy}"]`).forEach(content => {
         const element = content as HTMLElement;
         const shouldShow = element.dataset.tab === tab;
         element.style.display = shouldShow ? 'block' : 'none';

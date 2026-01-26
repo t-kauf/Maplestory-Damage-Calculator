@@ -1,10 +1,12 @@
 import { DEFAULT_LOADOUT_DATA } from "@ts/types/loadout.js";
 import { CONTENT_TYPE, JOB_TIER, MASTERY_TYPE, DEFAULT_BASE_STATS, STAT } from "@ts/types/constants.js";
-const _LoadoutStore = class _LoadoutStore {
+import { EventEmitter } from "@ts/utils/event-emitter.js";
+const _LoadoutStore = class _LoadoutStore extends EventEmitter {
   // ========================================================================
   // CONSTRUCTOR
   // ========================================================================
   constructor() {
+    super();
     this.isInitialized = false;
     this.data = JSON.parse(JSON.stringify(DEFAULT_LOADOUT_DATA));
   }
@@ -35,7 +37,7 @@ const _LoadoutStore = class _LoadoutStore {
     if (newData) {
       try {
         this.data = JSON.parse(newData);
-        console.log("LoadoutStore: Loaded from new format (loadout-data)");
+        this.emit("data:initialized", { data: this.data });
       } catch (e) {
         console.error("LoadoutStore: Failed to parse loadout-data, falling back to migration", e);
         this.migrateFromLegacy();
@@ -45,18 +47,15 @@ const _LoadoutStore = class _LoadoutStore {
     }
     this.validateAndFillDefaults();
     this.isInitialized = true;
-    console.log("LoadoutStore: Initialization complete", this.data);
   }
   /**
    * Migrate data from legacy localStorage keys to new format
    */
   migrateFromLegacy() {
-    console.log("LoadoutStore: Migrating from legacy format...");
     const legacyDataStr = localStorage.getItem("damageCalculatorData");
     const selectedClass = localStorage.getItem("selectedClass");
     const selectedJobTier = localStorage.getItem("selectedJobTier");
     if (!legacyDataStr && !selectedClass && !selectedJobTier) {
-      console.log("LoadoutStore: No legacy data found, using defaults");
       return;
     }
     const legacy = legacyDataStr ? JSON.parse(legacyDataStr) : {};
@@ -172,20 +171,16 @@ const _LoadoutStore = class _LoadoutStore {
             try {
               const slotData = JSON.parse(equippedData);
               this.data.equipment[slotName] = slotData;
-              console.log(`LoadoutStore: Migrated ${equippedKey} to loadout-data.equipment.${slotName}`);
             } catch (e) {
               console.error(`Failed to parse ${equippedKey} data`, e);
             }
           }
         });
-        console.log("LoadoutStore: Migrated equipment data from equipmentSlots");
       } catch (e) {
         console.error("Failed to parse equipmentSlots data", e);
       }
     }
-    console.log("LoadoutStore: Migration complete, saving to new format...");
     this.saveDualWrite();
-    console.log("LoadoutStore: Cleaning up old localStorage keys...");
     const keysToDelete = [
       "selectedClass",
       "selectedJobTier",
@@ -203,7 +198,6 @@ const _LoadoutStore = class _LoadoutStore {
     keysToDelete.forEach((key) => {
       localStorage.removeItem(key);
     });
-    console.log(`LoadoutStore: Deleted ${keysToDelete.length} old localStorage keys`);
   }
   /**
    * Migrate stat keys from legacy hyphenated/camelCase format to uppercase StatKey
@@ -223,7 +217,6 @@ const _LoadoutStore = class _LoadoutStore {
     });
     if (hasMigrations) {
       this.data.baseStats = migratedStats;
-      console.log("LoadoutStore: Migrated stat keys to uppercase StatKey format");
     }
   }
   /**
@@ -377,7 +370,6 @@ const _LoadoutStore = class _LoadoutStore {
             }
           });
           if (migratedCount > 0) {
-            console.log(`LoadoutStore: Recovered ${migratedCount} equipment slots from legacy equipmentSlots data`);
             localStorage.removeItem("equipmentSlots");
             this.saveDualWrite();
           }
@@ -572,6 +564,7 @@ const _LoadoutStore = class _LoadoutStore {
     });
     Object.assign(this.data.baseStats, normalizedUpdates);
     this.saveDualWrite();
+    this.emit("stat:changed", { updates: normalizedUpdates });
   }
   /**
    * Update single base stat
@@ -590,6 +583,13 @@ const _LoadoutStore = class _LoadoutStore {
     }
     this.data.baseStats[normalizedKey] = value;
     this.saveDualWrite();
+    this.emit("stat:changed", { key: normalizedKey, value });
+    if (normalizedKey === "SKILL_LEVEL_3RD" || normalizedKey === "SKILL_LEVEL_4TH" || normalizedKey === "SKILL_LEVEL_ALL") {
+      this.emit("skill:level:changed", {
+        statKey: normalizedKey,
+        value
+      });
+    }
   }
   /**
    * Update weapon data
@@ -623,14 +623,6 @@ const _LoadoutStore = class _LoadoutStore {
     this.saveDualWrite();
   }
   /**
-   * Update character metadata
-   * @param data - Partial character data
-   */
-  updateCharacter(data) {
-    Object.assign(this.data.character, data);
-    this.saveDualWrite();
-  }
-  /**
    * Update equipment data for a specific slot
    * @param slotId - Equipment slot ID
    * @param data - Equipment slot data
@@ -658,8 +650,12 @@ const _LoadoutStore = class _LoadoutStore {
    * @param jobTier - Job tier ('3rd' or '4th')
    */
   setSelectedJobTier(jobTier) {
+    const oldTier = this.data.character.jobTier;
     this.data.character.jobTier = jobTier;
     this.saveDualWrite();
+    if (oldTier !== jobTier) {
+      this.emit("character:jobtier:changed", { oldTier, newTier: jobTier });
+    }
   }
   /**
    * Set character level
@@ -668,6 +664,7 @@ const _LoadoutStore = class _LoadoutStore {
   setCharacterLevel(level) {
     this.data.character.level = level;
     this.saveDualWrite();
+    this.emit("character:level:changed", { level });
   }
   /**
    * Update weapon attack bonus

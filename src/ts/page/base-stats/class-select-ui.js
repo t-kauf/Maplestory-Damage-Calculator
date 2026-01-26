@@ -25,7 +25,7 @@ if (typeof window !== "undefined") {
   window.selectMasteryTab = selectMasteryTab;
 }
 function selectJobTier(tier) {
-  loadoutStore.updateCharacter({ jobTier: tier });
+  loadoutStore.setSelectedJobTier(tier);
   updateJobTierButtonUI(tier);
   updateMasteryTableVisibility(tier);
   updateMasteryTabUI(tier);
@@ -33,7 +33,7 @@ function selectJobTier(tier) {
   updateMasteryBonuses();
 }
 function selectClass(className) {
-  loadoutStore.updateCharacter({ class: className });
+  loadoutStore.setSelectedClass(className);
   updateClassSelectionUI(className);
   updateClassUI(className);
   try {
@@ -63,10 +63,10 @@ function loadClassSelectUI() {
   }
 }
 function initializeJobTierState(tier) {
-  loadoutStore.updateCharacter({ jobTier: tier });
+  loadoutStore.setSelectedJobTier(tier);
 }
 function initializeClassState(className) {
-  loadoutStore.updateCharacter({ class: className });
+  loadoutStore.setSelectedClass(className);
 }
 function restoreJobTierSelection(tier) {
   updateJobTierButtonUI(tier);

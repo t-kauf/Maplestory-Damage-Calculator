@@ -1,5 +1,7 @@
 import { calculateArtifactPotentialRankings, getArtifactSortAsc, getArtifactSortColumn } from "./artifact-potential.js";
 import { formatNumber } from "@ts/utils/formatters.js";
+import { loadoutStore } from "@ts/store/loadout.store.js";
+import { debounce } from "@ts/utils/event-emitter.js";
 function generateRankingRowHTML(result, index) {
   const rarityLetter = result.rarity.charAt(0).toUpperCase();
   const rarityClass = `rarity-${result.rarity.toLowerCase()}`;
@@ -77,6 +79,9 @@ function renderArtifactPotential() {
 }
 function initializeArtifactPotential() {
   renderArtifactPotential();
+  loadoutStore.on("stat:changed", debounce((_) => {
+    renderArtifactPotential();
+  }, 3500));
 }
 export {
   initializeArtifactPotential,

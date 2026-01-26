@@ -6,7 +6,7 @@
 import {
     calculateJobSkillPassiveGains
 } from '@ts/services/skill-coefficient.service.js';
-import { STAT } from '@ts/types';
+import { BaseStats, STAT } from '@ts/types';
 import type { ComparisonItem } from '@ts/types/page/gear-lab/gear-lab.types';
 
 // Re-export for convenience
@@ -35,7 +35,7 @@ export interface PassiveGainsContext {
      * // Get base defense from stats
      * defense: baseStats.DEFENSE || 0
      */
-    defense: number;
+    baseStats: BaseStats;
 }
 
 // ============================================================================
@@ -75,7 +75,7 @@ export function calculatePassiveGainsForItem(
     }>;
     complexStatChanges: Record<string, number>;
 } {
-    const { currentClass, characterLevel, defense } = context;
+    const { currentClass, characterLevel, baseStats } = context;
 
     // Extract and validate skill level bonuses from item
     const skillLevelBonuses = {
@@ -103,7 +103,7 @@ export function calculatePassiveGainsForItem(
         currentClass,
         characterLevel,
         skillLevelBonuses,
-        { defense }
+        baseStats
     );
 
     return {

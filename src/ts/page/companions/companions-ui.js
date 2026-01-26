@@ -2,6 +2,7 @@ import { getCompanionEffects, getMaxCompanionLevel } from "@ts/services/index.js
 import { loadoutStore } from "@ts/store/loadout.store.js";
 import { calculateBothDpsDifferences, presetHasAnyCompanion, generateOptimalPreset, swapCompanionPresetEffects } from "./companion.js";
 import { CLASS_DISPLAY_NAMES, RARITY_CONFIG } from "@ts/types/page/companions/companions.types.js";
+import { debounce } from "@ts/utils/event-emitter.js";
 let currentCompanion = null;
 function initializeCompanionsUI() {
   renderCompanionsGrid();
@@ -14,6 +15,9 @@ function attachCompanionsEventListeners() {
   attachCompanionIconListeners();
   attachPresetEventListeners();
   attachClickOutsideListener();
+  loadoutStore.on("stat:changed", debounce((_) => {
+    refreshCompanionsUI();
+  }, 3e3));
 }
 function refreshCompanionsUI() {
   renderCompanionsGrid();

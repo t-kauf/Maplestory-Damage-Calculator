@@ -6,6 +6,8 @@
 import { calculateArtifactPotentialRankings, getArtifactSortAsc, getArtifactSortColumn } from './artifact-potential.js';
 import { formatNumber } from '@ts/utils/formatters.js';
 import type { ArtifactRankingResult } from '@ts/types/page/artifact-potential/artifact-potential.types.js';
+import { loadoutStore } from '@ts/store/loadout.store.js';
+import { debounce } from '@ts/utils/event-emitter.js';
 
 // ============================================================================
 // HTML GENERATION
@@ -127,4 +129,8 @@ export function renderArtifactPotential(): void {
  */
 export function initializeArtifactPotential(): void {
     renderArtifactPotential();
+
+    loadoutStore.on('stat:changed', debounce((_) => {
+        renderArtifactPotential();
+    }, 3500));
 }

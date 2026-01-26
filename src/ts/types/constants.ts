@@ -172,7 +172,8 @@ declare global {
 
         // Stat hub
         handleStatEquivalencyInput?: (sourceStat: string) => void;
-        toggleStatChart?: (statKey: string, label: string, isFlat: boolean) => void;
+        toggleStatChart?: (statKey: string, statLabel: string, isFlat?: boolean) => void;
+        resetCachedCharts?: () => void;
         sortStatPredictions?: (tableType: string, colIndex: number, th: HTMLElement) => void;
     }
 }

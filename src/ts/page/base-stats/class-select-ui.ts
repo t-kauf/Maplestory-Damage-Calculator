@@ -51,7 +51,7 @@ if (typeof window !== 'undefined') {
  * Handle user clicking on a job tier button
  */
 export function selectJobTier(tier: JobTier): void {
-    loadoutStore.updateCharacter({ jobTier: tier });
+    loadoutStore.setSelectedJobTier(tier);
     updateJobTierButtonUI(tier);
     updateMasteryTableVisibility(tier);
     updateMasteryTabUI(tier);
@@ -64,7 +64,7 @@ export function selectJobTier(tier: JobTier): void {
  * Handle user clicking on a class card
  */
 export function selectClass(className: ClassName): void {
-    loadoutStore.updateCharacter({ class: className });
+    loadoutStore.setSelectedClass(className);
     updateClassSelectionUI(className);
     updateClassUI(className);
 
@@ -126,14 +126,14 @@ export function loadClassSelectUI(): void {
  * Initialize job tier state only - does NOT update UI
  */
 function initializeJobTierState(tier: JobTier): void {
-    loadoutStore.updateCharacter({ jobTier: tier });
+    loadoutStore.setSelectedJobTier(tier);
 }
 
 /**
  * Initialize class state only - does NOT update UI
  */
 function initializeClassState(className: ClassName): void {
-    loadoutStore.updateCharacter({ class: className });
+    loadoutStore.setSelectedClass(className);
 }
 
 // ============================================================================

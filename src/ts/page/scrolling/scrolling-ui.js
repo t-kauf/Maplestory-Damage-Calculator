@@ -10,6 +10,7 @@ import {
   createL65Strategies,
   createL85Strategies
 } from "@ts/page/scrolling/scrolling.js";
+import { debounce } from "@ts/utils/event-emitter.js";
 let currentScrollLevel = "85";
 function generateScrollLevelInfoHTML(level, enhancementBonus) {
   const bonusDisplay = enhancementBonus.total > 0 ? `<br><strong class="scrolling-level-info__bonus">Enhancement Bonus: +${(enhancementBonus.total * 100).toFixed(0)}% success rate</strong>` : "";
@@ -656,6 +657,9 @@ function initializeScrollingUI() {
   container.innerHTML = generateScrollingHTML();
   renderMySlotPerformance();
   renderSimulation();
+  loadoutStore.on("stat:changed", debounce((_) => {
+    updateAllSlotCalculations();
+  }, 3e3));
 }
 if (typeof window !== "undefined") {
   window.switchScrollingSubTab = switchScrollingSubTab;

@@ -3,7 +3,7 @@ import {
 } from "@ts/services/skill-coefficient.service.js";
 import { STAT } from "@ts/types";
 function calculatePassiveGainsForItem(item, context) {
-  const { currentClass, characterLevel, defense } = context;
+  const { currentClass, characterLevel, baseStats } = context;
   const skillLevelBonuses = {
     firstJob: validateSkillLevel(item.statLines.find((s) => s.type === STAT.SKILL_LEVEL_1ST.id)?.value),
     secondJob: validateSkillLevel(item.statLines.find((s) => s.type === STAT.SKILL_LEVEL_2ND.id)?.value),
@@ -24,7 +24,7 @@ function calculatePassiveGainsForItem(item, context) {
     currentClass,
     characterLevel,
     skillLevelBonuses,
-    { defense }
+    baseStats
   );
   return {
     statChanges: result.statChanges,

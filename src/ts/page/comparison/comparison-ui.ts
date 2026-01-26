@@ -115,7 +115,7 @@ export function generateComparisonHTML(): string {
                     <div class="equipped-stats-header">
                         <label class="equipped-stats-label">Additional Stats</label>
                         <button id="equipped-add-stat-btn" class="comparison-action-btn comparison-action-btn--add" aria-label="Add stat to equipped item">
-                            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                                 <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                             </svg>
                             <span>Add Stat</span>
@@ -131,7 +131,7 @@ export function generateComparisonHTML(): string {
                 <!-- Tab Navigation with Enhanced Accessibility -->
                 <div id="comparison-tabs-container" class="comparison-tabs-container" role="tablist" aria-label="Comparison item tabs">
                     <button class="comparison-add-tab-btn" data-type="add-button" aria-label="Add new comparison item">
-                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                             <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                         </svg>
                         <span>Add Item</span>
@@ -144,7 +144,7 @@ export function generateComparisonHTML(): string {
 
         <!-- Calculate Button with Enhanced Styling -->
         <button class="comparison-calculate-btn" aria-label="Calculate damage for all comparison items">
-            <svg width="20" height="20" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                 <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 1 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
             </svg>
             <span>Calculate All</span>
@@ -224,7 +224,7 @@ function renderEquippedItem(): void {
                     <input type="number" step="0.1" class="equipped-stat-value" data-stat-index="${i}" value="${statLine?.value || 0}">
                 </div>
                 <button class="equipped-stat-remove" data-stat-index="${i}" aria-label="Remove stat line" title="Remove stat line">
-                    <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                    <svg viewBox="0 0 16 16" fill="currentColor">
                         <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
                     </svg>
                 </button>
@@ -290,7 +290,7 @@ function renderComparisonItems(): void {
             deleteItem(item.guid);
         };
         removeButton.innerHTML = `
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                 <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
             </svg>
         `;
@@ -345,13 +345,13 @@ function createItemCard(item: ComparisonItem, itemNumber: number): HTMLElement {
 
             <div class="comparison-card-actions">
                 <button class="comparison-action-btn comparison-action-btn--add" aria-label="Add stat to item" data-guid="${item.guid}">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                         <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                     </svg>
                     <span>Add Stat</span>
                 </button>
                 <button class="comparison-action-btn comparison-action-btn--equip" aria-label="Equip this item" data-guid="${item.guid}">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                         <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 1 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
                     </svg>
                     <span>Equip</span>
@@ -397,7 +397,7 @@ function createStatLineElement(itemGuid: string, statLine: ComparisonStatLine, i
             <input type="number" step="0.1" id="item-${itemGuid}-stat-${index}-value" value="${statLine.value}" aria-label="Stat value" data-guid="${itemGuid}" data-stat-index="${index}">
         </div>
         <button class="comparison-stat-remove" aria-label="Remove stat" data-guid="${itemGuid}" data-stat-index="${index}">
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+            <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                 <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
             </svg>
         </button>
@@ -434,7 +434,7 @@ function renderEmptyState(container: HTMLElement): void {
     container.innerHTML = `
         <div class="comparison-empty-state">
             <div class="comparison-empty-icon">
-                <svg width="48" height="48" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                     <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
                     <path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/>
                 </svg>
@@ -972,7 +972,7 @@ function showUndoButton(itemName: string): void {
     undoButton.id = 'comparison-undo-btn';
     undoButton.className = 'comparison-undo-btn';
     undoButton.innerHTML = `
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
             <path fill-rule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2v1z"/>
             <path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466z"/>
         </svg>

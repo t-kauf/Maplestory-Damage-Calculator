@@ -133,29 +133,30 @@ function applyConvolution(imageData, kernel, width, height) {
 }
 function parseBaseStatText(text) {
   const displayNamesToInput = {
-    "Attack": "attack-base",
-    "Defense": "defense-base",
-    "Critical Rate": "crit-rate-base",
-    "Critical Damage": "crit-damage-base",
-    "Attack Speed": "attack-speed-base",
-    "STR": "str-base",
-    "DEX": "dex-base",
-    "LUK": "luk-base",
-    "INT": "int-base",
-    "Stat Prop. Damage": "stat-damage-base",
-    "Damage": "damage-base",
-    "Damage Amplification": "damage-amp-base",
-    "Defense Penetration": "def-pen-base",
-    "Boss Monster Damage": "boss-damage-base",
-    "Normal Monster Damage": "normal-damage-base",
-    "Min Damage Multiplier": "min-damage-base",
-    // sometimes broken due to multi line 
-    "Max Damage Multiplier": "max-damage-base",
-    "1st Job Skill Lv.": "skill-level-1st-base",
-    "2nd Job Skill Lv.": "skill-level-2nd-base",
-    "3rd Job Skill Lv.": "skill-level-3rd-base",
-    "4th Job Skill Lv.": "skill-level-4th-base",
-    "Final Damage": "final-damage-base"
+    "Attack": "attack",
+    "Defense": "defense",
+    "Critical Rate": "critRate",
+    "Critical Damage": "critDamage",
+    "Attack Speed": "attackSpeed",
+    "STR": "str",
+    "DEX": "dex",
+    "LUK": "luk",
+    "INT": "int",
+    "Stat Prop. Damage": "statDamage",
+    "Damage": "damage",
+    "Damage Amplification": "damageAmp",
+    "Defense Penetration": "defPen",
+    "Boss Monster Damage": "bossDamage",
+    "Normal Monster Damage": "normalDamage",
+    "Min Damage Multiplier": "minDamage",
+    // sometimes broken due to multi line
+    "Max Damage Multiplier": "maxDamage",
+    "1st Job Skill Lv.": "skillLevel1st",
+    "2nd Job Skill Lv.": "skillLevel2nd",
+    "3rd Job Skill Lv.": "skillLevel3rd",
+    "4th Job Skill Lv.": "skillLevel4th",
+    "All Skill Levels": "skillLevelAll",
+    "Final Damage": "finalDamage"
   };
   const cleanData = text.split("\n").map((x) => x.trim()).map((x) => x.split(" i ").join(" ")).map((x) => x.split(" ; ").join(" ")).filter((x, idx) => !(idx === 0 && !/\d/.test(x))).filter((x) => x).map((x) => {
     if (/^\d/.test(x)) {

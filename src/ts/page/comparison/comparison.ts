@@ -309,7 +309,7 @@ export function calculateItemDamage(
         const passiveResult = calculatePassiveGainsForItem(item, {
             currentClass,
             characterLevel,
-            defense: baseStats.DEFENSE || 0
+            baseStats
         });
 
         // Apply non-complex passive stat gains
@@ -357,6 +357,11 @@ export function calculateAllItemsDamage(slotId: EquipmentSlotId): ComparisonCalc
 
 /**
  * Calculate equipped item damage
+ *
+ * IMPORTANT: Base stats already include the equipped item's direct stat contributions
+ * (attack, main stat, stat lines) AND any passive gains from its skill level bonuses.
+ * We simply compute DPS from these stats without adding anything.
+ *
  * @param slotId - Equipment slot ID
  * @returns Calculation result or null if no equipped data
  */
@@ -365,16 +370,10 @@ export function calculateEquippedDamage(slotId: EquipmentSlotId): ComparisonCalc
     if (!equippedData) return null;
 
     const baseStats = loadoutStore.getBaseStats();
+    console.log(baseStats);
 
+    // Base stats already include the equipped item's contribution (both direct stats and passive gains)
     const service = new StatCalculationService(baseStats);
-
-    service.add(STAT.ATTACK.id, equippedData.attack);
-    service.add(STAT.PRIMARY_MAIN_STAT.id, equippedData.mainStat);
-
-    // Add stat lines from equipped item
-    equippedData.statLines.forEach(statLine => {
-        service.add(statLine.type, statLine.value);
-    });
 
     const bossResult = service.compute('boss');
     const normalResult = service.compute('normal');

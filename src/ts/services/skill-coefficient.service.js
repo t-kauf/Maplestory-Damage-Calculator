@@ -9,6 +9,8 @@ import {
   NIGHT_LORD_SKILLS,
   SHADOWER_SKILLS
 } from "@ts/data/all-class-skills.js";
+import { STAT } from "@ts/types";
+import { StatCalculationService } from "@ts/services/stat-calculation-service.js";
 const CLASS_TO_SKILLS_MAP = {
   "hero": HERO_SKILLS,
   "dark-knight": DK_GENERATED_SKILLS,
@@ -497,7 +499,7 @@ function getComplexPassivesByTier(classSkills, jobTier) {
   }
   return passives;
 }
-function calculateJobSkillPassiveGains(className, characterLevel, skillLevelBonuses, currentStats = {}) {
+function calculateJobSkillPassiveGains(className, characterLevel, skillLevelBonuses, baseStats) {
   const classSkills = CLASS_TO_SKILLS_MAP[className];
   if (!classSkills) {
     return {
@@ -543,24 +545,31 @@ function calculateJobSkillPassiveGains(className, characterLevel, skillLevelBonu
         );
         const statGain = bonusValue - baseValue;
         const calculatorStat = effect.stat;
-        if (calculatorStat === "defense" && currentStats.defense) {
-          const baseStrGain = currentStats.defense * baseValue / 100;
-          const bonusStrGain = currentStats.defense * bonusValue / 100;
-          const strGain = bonusStrGain - baseStrGain;
-          const baseStatDamage = baseStrGain / 100;
-          const bonusStatDamage = bonusStrGain / 100;
-          const statDamageGain = bonusStatDamage - baseStatDamage;
+        if (calculatorStat === "defense") {
+          const defenseValue = statGain;
+          const mainStatIncrease = (baseStats.DEFENSE || 0) * (defenseValue / 100);
+          const statService = new StatCalculationService(baseStats);
+          const beforeStats = statService.getStats();
+          statService.add(STAT.PRIMARY_MAIN_STAT.id, mainStatIncrease);
+          const afterStats = statService.getStats();
+          const mainStatGain = afterStats.PRIMARY_MAIN_STAT - beforeStats.PRIMARY_MAIN_STAT;
+          const statDamageGain = afterStats.STAT_DAMAGE - beforeStats.STAT_DAMAGE;
+          const attackGain = afterStats.ATTACK - beforeStats.ATTACK;
+          if (!statChanges["mainStat"]) statChanges["mainStat"] = 0;
+          statChanges["mainStat"] += mainStatGain;
           if (!statChanges["statDamage"]) statChanges["statDamage"] = 0;
           statChanges["statDamage"] += statDamageGain;
+          if (!statChanges["attack"]) statChanges["attack"] = 0;
+          statChanges["attack"] += attackGain;
           breakdown.push({
             passive: name,
-            stat: "statDamage",
-            statDisplay: "Stat Damage",
-            baseValue: baseStatDamage,
-            bonusValue: bonusStatDamage,
-            gain: statDamageGain,
+            stat: "defense",
+            statDisplay: "Defense",
+            baseValue,
+            bonusValue,
+            gain: statGain,
             isPercent: true,
-            note: `${baseValue.toFixed(2)}% \u2192 ${bonusValue.toFixed(2)}% DEF conversion = ${baseStrGain.toFixed(0)} \u2192 ${bonusStrGain.toFixed(0)} STR`
+            note: `+${statGain.toFixed(2)} DEF% \u2192 +${mainStatGain.toFixed(0)} Main Stat, +${statDamageGain.toFixed(2)}% Stat Damage, +${attackGain.toFixed(0)} ATK`
           });
         } else {
           if (!statChanges[calculatorStat]) statChanges[calculatorStat] = 0;
@@ -628,6 +637,43 @@ function calculateJobSkillPassiveGains(className, characterLevel, skillLevelBonu
     complexStatChanges
   };
 }
+function calculateFinalAttackBonusFromJobSkills(className, characterLevel, skillLevels) {
+  if (!className) return 1;
+  const classSkills = CLASS_TO_SKILLS_MAP[className];
+  if (!classSkills) return 1;
+  let finalAttackBonus = 0;
+  const jobTiers = [1, 2, 3, 4];
+  const jobTierNames = ["firstJob", "secondJob", "thirdJob", "fourthJob"];
+  const allSkillsBonus = skillLevels.allSkills || 0;
+  for (let i = 0; i < jobTiers.length; i++) {
+    const tierNumber = jobTiers[i];
+    const tierName = jobTierNames[i];
+    const tierBonus = (skillLevels[tierName] || 0) + allSkillsBonus;
+    for (const [skillKey, skillData] of Object.entries(classSkills)) {
+      if (skillData.jobStep === tierNumber && skillData.isComplex) {
+        const hasFinalAttack = skillData.effects?.some(
+          (effect) => effect.stat.toLowerCase() === "finalattack"
+        );
+        if (hasFinalAttack && skillData.effects) {
+          const effect = skillData.effects[0];
+          const bonusInputLevel = calculateSkillInputLevel(characterLevel, tierNumber, tierBonus);
+          const bonusValue = calculateSkillValue(
+            effect.baseValue,
+            effect.factorIndex,
+            bonusInputLevel,
+            true,
+            effect.type === "flat"
+          );
+          finalAttackBonus += bonusValue;
+        }
+      }
+    }
+  }
+  if (finalAttackBonus !== 0) {
+    return 1 + finalAttackBonus / 100;
+  }
+  return 1;
+}
 export {
   DARK_KNIGHT_SKILLS,
   calculate3rdJobSkillCoefficient,
@@ -640,6 +686,7 @@ export {
   calculateEvilEyeShock,
   calculateEvilEyeShockEnhancement,
   calculateFinalAttack,
+  calculateFinalAttackBonusFromJobSkills,
   calculateHexOfTheEvilEye,
   calculateHyperBody,
   calculateIronWall,

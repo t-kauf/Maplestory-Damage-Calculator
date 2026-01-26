@@ -175,7 +175,6 @@ function getPercentileForGain(slotId, rarity, dpsGain, rankingsCache2, rankingsI
   return `<span style="color: var(--accent-primary);">Top ${percentile}%</span>`;
 }
 async function initializeCubePotential() {
-  console.log("Cube Potential: Initialization complete");
 }
 function clearCubeRankingsCache() {
   for (const slotId of SLOT_NAMES) {
@@ -186,7 +185,6 @@ function clearCubeRankingsCache() {
   for (const key in rankingsInProgress) {
     delete rankingsInProgress[key];
   }
-  console.log("Cube Potential: Rankings cache cleared");
 }
 function switchPotentialType(type) {
   currentPotentialType = type;

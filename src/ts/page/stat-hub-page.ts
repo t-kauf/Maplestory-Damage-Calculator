@@ -7,6 +7,10 @@
 import { updateStatPredictions } from './stat-hub/stat-predictions-ui';
 import { generateStatEquivalencyHTML } from './stat-hub/stat-equivalency-ui';
 import { BasePage } from './base-page';
+import { loadoutStore } from '@ts/store/loadout.store';
+import { debounce } from '@ts/utils/event-emitter';
+// Import stat-chart for side-effect of attaching toggleStatChart to window
+import '@ts/utils/stat-chart';
 
 
 class StatHubPage extends BasePage {
@@ -36,16 +40,19 @@ class StatHubPage extends BasePage {
 
         const equivalencyContainer = document.getElementById('predictions-equivalency');
         if (equivalencyContainer) {
-            // Clear existing static HTML and replace with dynamic HTML
-            const existingContent = equivalencyContainer.innerHTML;
-            // Keep the header/description, replace the rest
-            const headerMatch = existingContent.match(/<div[^>]*>[\s\S]*?<\/div>\s*<p[^>]*>[\s\S]*?<\/p>/);
-            const headerHTML = headerMatch ? headerMatch[0] : '';
-
-            equivalencyContainer.innerHTML = headerHTML + generateStatEquivalencyHTML();
+          this.updateEquivalency(equivalencyContainer);
         }
 
         updateStatPredictions();
+
+            loadoutStore.on('stat:changed', debounce((_) => {
+                this.updateEquivalency(equivalencyContainer);
+            }, 3000));
+    }
+
+    private updateEquivalency(equivalencyContainer: HTMLElement): void
+    {
+            equivalencyContainer.innerHTML = generateStatEquivalencyHTML();
     }
 }
 

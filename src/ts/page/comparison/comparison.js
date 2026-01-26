@@ -91,7 +91,7 @@ function calculateItemDamage(slotId, item) {
     const passiveResult = calculatePassiveGainsForItem(item, {
       currentClass,
       characterLevel,
-      defense: baseStats.DEFENSE || 0
+      baseStats
     });
     Object.entries(passiveResult.statChanges).forEach(([stat, value]) => {
       if (value !== 0) {
@@ -128,12 +128,8 @@ function calculateEquippedDamage(slotId) {
   const equippedData = getEquippedItemData(slotId);
   if (!equippedData) return null;
   const baseStats = loadoutStore.getBaseStats();
+  console.log(baseStats);
   const service = new StatCalculationService(baseStats);
-  service.add(STAT.ATTACK.id, equippedData.attack);
-  service.add(STAT.PRIMARY_MAIN_STAT.id, equippedData.mainStat);
-  equippedData.statLines.forEach((statLine) => {
-    service.add(statLine.type, statLine.value);
-  });
   const bossResult = service.compute("boss");
   const normalResult = service.compute("normal");
   return {

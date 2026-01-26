@@ -19,6 +19,8 @@ import {
     getBaselineStats,
     INNER_ABILITY_DISPLAY_NAME_TO_ID
 } from '@ts/page/inner-ability/inner-ability.js';
+import { loadoutStore } from '@ts/store/loadout.store';
+import { debounce } from '@ts/utils/event-emitter';
 
 // ============================================================================
 // STATE
@@ -635,8 +637,6 @@ export function loadInnerAbilityFromStore(): void {
  * Attach event listeners for inner ability UI
  */
 export function attachInnerAbilityEventListeners(): void {
-    // Event listeners are attached via onclick attributes in generated HTML
-    // Additional event listeners can be added here if needed
 }
 
 // ============================================================================

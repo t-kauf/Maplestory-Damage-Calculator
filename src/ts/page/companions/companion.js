@@ -131,7 +131,6 @@ function generateOptimalPreset(targetStat, getCompanionEffects, getCompanion, ge
     lockedMain = lockedMainData;
     const lockedIndex = unlockedCompanions.indexOf(lockedMainData);
     unlockedCompanions.splice(lockedIndex, 1);
-    console.log(`[generateOptimalPreset] Locked main companion: ${lockedMainCompanion}`);
   }
   const minRequired = lockedMain ? 6 : 7;
   if (unlockedCompanions.length < minRequired) {
@@ -189,8 +188,6 @@ function generateOptimalPreset(targetStat, getCompanionEffects, getCompanion, ge
     };
   });
   scoredCompanions.sort((a, b) => b.dpsGain - a.dpsGain);
-  console.log(`[Phase 1] Scored ${scoredCompanions.length} companions individually`);
-  console.log(`[Phase 1] Top 5: ${scoredCompanions.slice(0, 5).map((s) => `${s.companion.companionKey}: +${(s.dpsGain / baselineDps * 100).toFixed(2)}%`).join(", ")}`);
   const locked = [];
   const pool = [...scoredCompanions];
   let prevGain = Infinity;
@@ -210,7 +207,6 @@ function generateOptimalPreset(targetStat, getCompanionEffects, getCompanion, ge
       prevGain = score.dpsGain;
     }
   }
-  console.log(`[Phase 2] Locked ${locked.length} companions`);
   const selectedKeys = /* @__PURE__ */ new Set();
   if (lockedMain) {
     selectedKeys.add(lockedMain.companionKey);
@@ -226,7 +222,6 @@ function generateOptimalPreset(targetStat, getCompanionEffects, getCompanion, ge
   const service = new StatCalculationService(baseStats, null);
   let combinationsTested = 0;
   const maxCombinations = 15e3;
-  console.log(`[Phase 3] Testing combinations from ${candidates.length} candidates (selecting ${numToSelect} from ${remaining.length} remaining)`);
   const calculateDpsForCombination = (companions) => {
     const totalEffects = {};
     companions.forEach((comp) => {
@@ -267,7 +262,6 @@ function generateOptimalPreset(targetStat, getCompanionEffects, getCompanion, ge
     }
   }
   const totalGainPercent = (bestDps - baselineDps) / baselineDps * 100;
-  console.log(`[Phase 3] Tested ${combinationsTested} combinations, best DPS: ${bestDps.toFixed(0)} (+${totalGainPercent.toFixed(2)}%)`);
   return bestPreset;
 }
 function swapCompanionPresetEffects(currentEffects, newEffects) {

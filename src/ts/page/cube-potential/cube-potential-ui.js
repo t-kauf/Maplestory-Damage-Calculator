@@ -5,12 +5,14 @@ import {
   rankingsInProgress,
   switchPotentialType,
   selectCubeSlot,
+  clearCubeRankingsCache,
   getRarityColor,
   calculateComparison,
   getPercentileForGain,
   initializeCubePotential
 } from "@ts/page/cube-potential/cube-potential.js";
 import { gearLabStore } from "@ts/store/gear-lab-store.js";
+import { Chart } from "chart.js/auto";
 import {
   SLOT_NAMES,
   SLOT_SPECIFIC_POTENTIALS,
@@ -20,6 +22,7 @@ import {
 import { calculateRankingsForRarity, runCubeSimulation } from "@ts/page/cube-potential/cube-simulation.js";
 import { calculateSlotSetGain } from "@ts/page/cube-potential/cube-potential.js";
 import { loadoutStore } from "@ts/store/loadout.store.js";
+import { debounce } from "@ts/utils/event-emitter.js";
 let currentRankingsPage = 1;
 let summarySortColumn = "regular";
 let summarySortDescending = true;
@@ -356,6 +359,12 @@ async function initializeCubePotentialUI() {
   updateCubePotentialUI();
   updateClassWarning();
   exposeGlobalFunctions();
+  loadoutStore.on("stat:changed", debounce((_) => {
+    clearCubeRankingsCache();
+    calculateComparisonAndDisplay();
+    const button = document.getElementById("cube-main-tab-comparison");
+    button?.click();
+  }, 1500));
 }
 function loadCubeDataFromStore() {
   const cubeData = gearLabStore.getCubeSlotData();
@@ -501,7 +510,6 @@ function setupRankingsControls() {
       slotSelector.value = SLOT_NAMES[0].id;
       console.warn(`currentCubeSlot "${currentCubeSlot}" not found in options, defaulting to "${SLOT_NAMES[0].id}"`);
     }
-    console.log(`Rankings slot selector populated with ${SLOT_NAMES.length} options, current value: ${slotSelector.value}`);
   }
   if (!slotSelector.hasAttribute("data-listener-attached")) {
     slotSelector.addEventListener("change", () => {
@@ -639,14 +647,14 @@ function displaySimulationResults(results) {
                     </div>
 
                     <!-- Detailed Results Dropdown -->
-                    <details style="background: rgba(0, 0, 0, 0.05); border-radius: 8px; padding: 10px; margin-top: 10px;">
+                    <details class="sim-detail-results" data-strategy="${strategyKey}" style="background: rgba(0, 0, 0, 0.05); border-radius: 8px; padding: 10px; margin-top: 10px;">
                         <summary style="cursor: pointer; font-weight: 600; color: var(--accent-primary); user-select: none; font-size: 0.95em;">
                             View Detailed Results (Slot Stats & Distribution)
                         </summary>
                         <div id="${detailsId}" style="margin-top: 15px;">
                             <!-- Sub-tabs -->
                             <div style="display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 2px solid rgba(0, 0, 0, 0.1); padding-bottom: 0; overflow-x: auto;">
-                                <button class="sim-detail-tab active" data-strategy="${strategyKey}" data-tab="distribution" onclick="window.switchSimDetailTab('${strategyKey}', 'distribution')" style="padding: 8px 16px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-primary); transition: all 0.3s; white-space: nowrap;">Distribution</button>
+                                <button class="sim-detail-tab active" data-strategy="${strategyKey}" data-tab="distribution" onclick="window.switchSimDetailTab('${strategyKey}', 'distribution')" style="padding: 8px 16px; background: none; border: none; border-bottom: 3px solid var(--accent-primary); cursor: pointer; font-weight: 600; color: var(--text-primary); transition: all 0.3s; white-space: nowrap;">Distribution</button>
                                 <button class="sim-detail-tab" data-strategy="${strategyKey}" data-tab="min" onclick="window.switchSimDetailTab('${strategyKey}', 'min')" style="padding: 8px 16px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-primary); transition: all 0.3s; white-space: nowrap;">Min (+${min.toFixed(2)}%)</button>
                                 <button class="sim-detail-tab" data-strategy="${strategyKey}" data-tab="p25" onclick="window.switchSimDetailTab('${strategyKey}', 'p25')" style="padding: 8px 16px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-primary); transition: all 0.3s; white-space: nowrap;">P25 (+${p25.toFixed(2)}%)</button>
                                 <button class="sim-detail-tab" data-strategy="${strategyKey}" data-tab="median" onclick="window.switchSimDetailTab('${strategyKey}', 'median')" style="padding: 8px 16px; background: none; border: none; border-bottom: 3px solid transparent; cursor: pointer; font-weight: 600; color: var(--text-primary); transition: all 0.3s; white-space: nowrap;">Median (+${median.toFixed(2)}%)</button>
@@ -706,7 +714,7 @@ function displaySimulationResults(results) {
     rarityWeightedWorstFirst: { name: "Rarity-Weighted Worst First", desc: "Like Worst First but factors in how close a slot is to its next rarity upgrade, prioritizing slots near upgrade thresholds." },
     dpOptimal: { name: "DP Optimal", desc: "Mathematically optimal strategy that cubes the slot with highest expected marginal DPS gain, accounting for tier-up probability and future rarity potential." }
   };
-  const sortedStrategies = Object.keys(results).sort((a, b) => (results[b]?.avgGain || 0) - (results[a]?.avgGain || 0));
+  const sortedStrategies = Object.keys(results).filter((key) => key !== "dpOptimal").sort((a, b) => (results[b]?.avgGain || 0) - (results[a]?.avgGain || 0));
   resultsDiv.innerHTML = `
         <div style="margin-bottom: 20px;">
             <h3 style="color: var(--accent-primary); margin-bottom: 10px; font-size: 1.2em; font-weight: 600;">
@@ -725,13 +733,38 @@ function displaySimulationResults(results) {
         <div style="background: linear-gradient(135deg, rgba(138, 43, 226, 0.1), rgba(75, 0, 130, 0.05)); border: 2px solid rgba(138, 43, 226, 0.3); border-radius: 12px; padding: 20px; margin-top: 20px;">
             <h4 style="color: var(--accent-primary); margin-bottom: 10px;">Strategy Descriptions</h4>
             <div style="color: var(--text-secondary); font-size: 0.9em; line-height: 1.6;">
-                ${Object.keys(strategyInfo).map((key) => `
+                ${Object.keys(strategyInfo).filter((key) => key !== "dpOptimal").map((key) => `
                     <p style="margin-top: 8px;"><strong>${strategyInfo[key].name}:</strong> ${strategyInfo[key].desc}</p>
                 `).join("")}
             </div>
         </div>
     `;
   window.simulationResultsForCharts = { results, sortedStrategies, strategyInfo };
+  resultsDiv.querySelectorAll(".sim-detail-results").forEach((details) => {
+    const detailsElement = details;
+    detailsElement.addEventListener("toggle", () => {
+      if (detailsElement.open) {
+        const strategy = detailsElement.dataset.strategy;
+        if (!strategy) return;
+        const canvas = detailsElement.querySelector("canvas");
+        if (canvas && !canvas.chart) {
+          const storedData = window.simulationResultsForCharts;
+          if (storedData && storedData.results && storedData.results[strategy]) {
+            const strategyInfo2 = storedData.strategyInfo[strategy];
+            const gains = storedData.results[strategy].totalGains;
+            setTimeout(() => {
+              createSimulationDistributionChart(canvas.id, gains, strategyInfo2.name);
+            }, 50);
+          }
+        }
+        const distributionTab = detailsElement.querySelector('.sim-detail-tab[data-tab="distribution"]');
+        if (distributionTab) {
+          distributionTab.classList.add("active");
+          distributionTab.style.borderBottomColor = "var(--accent-primary)";
+        }
+      }
+    });
+  });
 }
 function createSimulationDistributionChart(canvasId, gains, label) {
   const canvas = document.getElementById(canvasId);
@@ -1303,7 +1336,12 @@ function switchSimDetailTab(strategy, tab) {
       button.style.borderBottomColor = "transparent";
     }
   });
-  document.querySelectorAll(`.sim-detail-content[data-strategy="${strategy}"]`).forEach((content) => {
+  const detailsContainer = document.getElementById(`sim-details-${strategy}`);
+  if (!detailsContainer) {
+    console.error(`Details container for strategy "${strategy}" not found`);
+    return;
+  }
+  detailsContainer.querySelectorAll(`.sim-detail-content[data-strategy="${strategy}"]`).forEach((content) => {
     const element = content;
     const shouldShow = element.dataset.tab === tab;
     element.style.display = shouldShow ? "block" : "none";

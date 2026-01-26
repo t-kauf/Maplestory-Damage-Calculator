@@ -2,6 +2,8 @@ import { formatNumber } from "@ts/utils/formatters.js";
 import { calculateAllStatWeights } from "./stat-predictions.js";
 import { PERCENTAGE_STATS, MULTIPLICATIVE_STATS, DEFAULT_STAT_INCREASES } from "./stat-predictions.js";
 import { loadoutStore } from "@ts/store/loadout.store.js";
+import { debounce } from "@ts/utils/event-emitter.js";
+import { resetCachedCharts } from "@ts/utils/stat-chart.js";
 function formatStatValue(value, statKey) {
   if (statKey === "damageAmp") {
     return `+${value.toFixed(1)}x`;
@@ -120,6 +122,10 @@ function updateStatPredictions() {
     return;
   }
   container.innerHTML = generateStatPredictionsHTML();
+  loadoutStore.on("stat:changed", debounce((_) => {
+    resetCachedCharts();
+    container.innerHTML = generateStatPredictionsHTML();
+  }, 700));
 }
 window.sortStatPredictions = function(tableType, colIndex, th) {
   const tableId = `stat-pred-table-${tableType}`;

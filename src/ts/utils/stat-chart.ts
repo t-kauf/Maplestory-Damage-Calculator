@@ -1,11 +1,10 @@
 import { CumulativeStatCalculator, ChartPoint } from '@ts/services/stat-calculation-service';
 import { loadoutStore } from '@ts/store/loadout.store.js';
 import { Chart, ChartType, ChartData, ChartOptions } from 'chart.js/auto';
+import { StatCalculationService } from '@ts/services/stat-calculation-service.js';
 
 // Store chart instances with proper typing
 const statWeightCharts: Record<string, Chart> = {};
-
-window.toggleStatChart = toggleStatChart;
 
 // Toggle stat weight chart visibility
 export function toggleStatChart(statKey: string, statLabel: string, isFlat: boolean = false): void {
@@ -28,6 +27,25 @@ export function toggleStatChart(statKey: string, statLabel: string, isFlat: bool
     }
 }
 
+/**
+ * Map legacy stat keys to proper STAT enum IDs
+ * Converts old chart statKey format to standardized STAT IDs
+ */
+function mapStatKeyToStatId(statKey: string): string {
+    const statKeyMap: Record<string, string> = {
+        'attack': 'attack',
+        'mainStat': 'mainStat',
+        'statDamage': 'mainStatPct',
+        'finalDamage': 'finalDamage',
+        'attackSpeed': 'attackSpeed',
+        'defPenMultiplier': 'defPen',
+        'bossDamage': 'bossDamage',
+        'normalDamage': 'normalDamage',
+    };
+
+    return statKeyMap[statKey] || statKey;
+}
+
 // Generate chart data for a stat
 export function generateStatChartData(statKey: string, statLabel: string, isFlat: boolean): ChartPoint[] {
     const stats = loadoutStore.getBaseStats();
@@ -40,24 +58,34 @@ export function generateStatChartData(statKey: string, statLabel: string, isFlat
     const minIncrease = isFlat ? (statKey === 'attack' ? 500 : 100) : 1;
     const maxIncrease = isFlat ? (statKey === 'attack' ? 15000 : 7500) : 75;
 
-    calculator.startSeries(stats, { weaponAttackBonus, monsterType, numSteps: numPoints });
+    calculator.startSeries(stats, { weaponAttackBonus, monsterType });
 
     const dataPoints: ChartPoint[] = [];
     let cumulativeIncrease = 0;
 
-    for (let i = 0; i <= numPoints; i++) {
-        const stepIncrease = isFlat && statKey === 'attack'
-            ? 500
-            : (i === 0 ? minIncrease : (maxIncrease - minIncrease) / numPoints);
+    // Map legacy statKey to proper STAT enum ID
+    const statId = mapStatKeyToStatId(statKey);
 
+    // For flat stats, use fixed step size for uniform increments
+    // For percentage stats, distribute evenly across the range
+    const stepIncrease = isFlat
+        ? (statKey === 'attack' ? 500 : 100)
+        : (maxIncrease - minIncrease) / numPoints;
+
+        let statCalculationService = calculator.statService;
+
+    for (let i = 0; i <= numPoints; i++) {
         cumulativeIncrease += stepIncrease;
 
-        if (isFlat && statKey === 'attack' && cumulativeIncrease > maxIncrease) {
+        // Stop if we exceed max increase for flat stats
+        if (isFlat && cumulativeIncrease > maxIncrease) {
             break;
         }
 
-        const point = calculator.nextStep(statKey, cumulativeIncrease, i, isFlat);
-        dataPoints.push(point);
+        // Use new simplified API - no isFlat or currentStep needed
+        const result = calculator.nextStep(statId, cumulativeIncrease, statCalculationService);
+        statCalculationService = result.statCalculationService;
+        dataPoints.push(result.point);
     }
 
     return dataPoints;
@@ -153,3 +181,21 @@ export function renderStatChart(statKey: string, statLabel: string, isFlat: bool
         } as ChartOptions<'line'>
     });
 }
+
+/**
+ * Clears all cached stat weight charts from memory
+ * Destroys Chart.js instances and removes them from the cache
+ * Called when stats change to force regeneration with updated data
+ */
+export function resetCachedCharts(): void {
+    for (const chartId in statWeightCharts) {
+        if (statWeightCharts[chartId]) {
+            statWeightCharts[chartId].destroy();
+            delete statWeightCharts[chartId];
+        }
+    }
+}
+
+// Expose to window for HTML onclick handlers
+window.toggleStatChart = toggleStatChart;
+window.resetCachedCharts = resetCachedCharts;

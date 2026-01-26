@@ -8,6 +8,8 @@ import { calculateAllStatWeights } from './stat-predictions';
 import { PERCENTAGE_STATS, MULTIPLICATIVE_STATS, DEFAULT_STAT_INCREASES } from './stat-predictions';
 import type { StatWeightResult } from '@ts/types/page/stat-hub/stat-hub.types';
 import { loadoutStore } from '@ts/store/loadout.store';
+import { debounce } from '@ts/utils/event-emitter';
+import { resetCachedCharts } from '@ts/utils/stat-chart';
 
 /**
  * Format a stat increase value with appropriate units
@@ -198,6 +200,11 @@ export function updateStatPredictions(): void {
     }
 
     container.innerHTML = generateStatPredictionsHTML();
+
+    loadoutStore.on('stat:changed', debounce((_) => {
+        resetCachedCharts();
+        container.innerHTML = generateStatPredictionsHTML();
+    }, 700));
 }
 
 // Column sorting for stat predictions tables

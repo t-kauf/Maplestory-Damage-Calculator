@@ -2,7 +2,6 @@ import { CumulativeStatCalculator } from "@ts/services/stat-calculation-service.
 import { loadoutStore } from "@ts/store/loadout.store.js";
 import { Chart } from "chart.js/auto";
 const statWeightCharts = {};
-window.toggleStatChart = toggleStatChart;
 function toggleStatChart(statKey, statLabel, isFlat = false) {
   const chartId = `chart-${statKey}`;
   const rowId = `chart-row-${statKey}`;
@@ -17,6 +16,19 @@ function toggleStatChart(statKey, statLabel, isFlat = false) {
     chartRow.style.display = "none";
   }
 }
+function mapStatKeyToStatId(statKey) {
+  const statKeyMap = {
+    "attack": "attack",
+    "mainStat": "mainStat",
+    "statDamage": "mainStatPct",
+    "finalDamage": "finalDamage",
+    "attackSpeed": "attackSpeed",
+    "defPenMultiplier": "defPen",
+    "bossDamage": "bossDamage",
+    "normalDamage": "normalDamage"
+  };
+  return statKeyMap[statKey] || statKey;
+}
 function generateStatChartData(statKey, statLabel, isFlat) {
   const stats = loadoutStore.getBaseStats();
   const weaponAttackBonus = loadoutStore.getWeaponAttackBonus().totalAttack;
@@ -25,17 +37,20 @@ function generateStatChartData(statKey, statLabel, isFlat) {
   const numPoints = 50;
   const minIncrease = isFlat ? statKey === "attack" ? 500 : 100 : 1;
   const maxIncrease = isFlat ? statKey === "attack" ? 15e3 : 7500 : 75;
-  calculator.startSeries(stats, { weaponAttackBonus, monsterType, numSteps: numPoints });
+  calculator.startSeries(stats, { weaponAttackBonus, monsterType });
   const dataPoints = [];
   let cumulativeIncrease = 0;
+  const statId = mapStatKeyToStatId(statKey);
+  const stepIncrease = isFlat ? statKey === "attack" ? 500 : 100 : (maxIncrease - minIncrease) / numPoints;
+  let statCalculationService = calculator.statService;
   for (let i = 0; i <= numPoints; i++) {
-    const stepIncrease = isFlat && statKey === "attack" ? 500 : i === 0 ? minIncrease : (maxIncrease - minIncrease) / numPoints;
     cumulativeIncrease += stepIncrease;
-    if (isFlat && statKey === "attack" && cumulativeIncrease > maxIncrease) {
+    if (isFlat && cumulativeIncrease > maxIncrease) {
       break;
     }
-    const point = calculator.nextStep(statKey, cumulativeIncrease, i, isFlat);
-    dataPoints.push(point);
+    const result = calculator.nextStep(statId, cumulativeIncrease, statCalculationService);
+    statCalculationService = result.statCalculationService;
+    dataPoints.push(result.point);
   }
   return dataPoints;
 }
@@ -118,9 +133,20 @@ function renderStatChart(statKey, statLabel, isFlat) {
     }
   });
 }
+function resetCachedCharts() {
+  for (const chartId in statWeightCharts) {
+    if (statWeightCharts[chartId]) {
+      statWeightCharts[chartId].destroy();
+      delete statWeightCharts[chartId];
+    }
+  }
+}
+window.toggleStatChart = toggleStatChart;
+window.resetCachedCharts = resetCachedCharts;
 export {
   generateStatChartData,
   renderStatChart,
+  resetCachedCharts,
   toggleStatChart
 };
 //# sourceMappingURL=stat-chart.js.map

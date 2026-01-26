@@ -25,6 +25,7 @@ import {
     initializeWeaponPriorityUI
 } from "./weapon-levels/weapon-priority-ui";
 import { loadoutStore } from "@ts/store/loadout.store";
+import { skillCoefficientManager } from "@ts/services/skill-coefficient-manager";
 import { attachCompanionsEventListeners, initializeCompanionsUI, loadCompanionsUI } from "./companions/companions-ui";
 import { attachEquipmentEventListeners, initializeEquipmentUI, loadEquipmentUI } from "./equipment/equipment-ui";
 
@@ -62,6 +63,9 @@ class LoadoutPage extends BasePage {
         // Step 0: Initialize the loadout store (migrates data from legacy format if needed)
         await loadoutStore.initialize();
 
+        // Step 0.5: Initialize the skill coefficient manager
+        skillCoefficientManager.initialize();
+
         // Step 1: Initialize all UI elements (HTML generation)
         initializeBaseStatsUI();
         initializeWeaponsUI(); // Handles tab HTML and weapon grid
@@ -86,10 +90,6 @@ class LoadoutPage extends BasePage {
         attachMasteryEventListeners();
         attachCompanionsEventListeners();
         attachEquipmentEventListeners();
-
-        // Debug: Verify store is working
-        const baseStats = loadoutStore.getBaseStats();
-        console.log('Loadout page initialized. Base stats loaded:', baseStats.ATTACK);
     }
 }
 

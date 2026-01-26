@@ -10,13 +10,9 @@ import { extractText, parseBaseStatText } from "@ts/utils/ocr.js";
 import { showToast } from "@ts/utils/notifications.js";
 import { loadoutStore } from "@ts/store/loadout.store.js";
 import { STAT_TYPE, STAT } from "@ts/types/constants.js";
-function getCalculateFunction() {
-  return window.calculate;
-}
 const CORE_COMBAT_STATS = ["ATTACK", "DEFENSE", "CRIT_RATE", "CRIT_DAMAGE", "ATTACK_SPEED"];
 const MAIN_STATS = ["STR", "DEX", "INT", "LUK"];
 const DAMAGE_MODIFIERS = [
-  "STAT_DAMAGE",
   "DAMAGE",
   "DAMAGE_AMP",
   "BASIC_ATTACK_DAMAGE",
@@ -65,6 +61,7 @@ function generateStatInputsHTML() {
   html += MAIN_STAT_PCT.map(generateStatInputHTML).join("");
   html += `
         <input type="hidden" id="mainStat" value="${STAT.PRIMARY_MAIN_STAT.defaultValue}">
+        <input type="hidden" id="statDamage" value="${STAT.STAT_DAMAGE.defaultValue}">
         <input type="hidden" id="secondaryMainStat" value="${STAT.SECONDARY_MAIN_STAT.defaultValue}">
         ${generateMasteryHiddenInputs()}
         <input type="hidden" id="skillCoeff" value="0">
@@ -201,7 +198,7 @@ function attachCharacterLevelListener() {
     levelInput.addEventListener("change", () => {
       const level = parseInt(levelInput.value) || 0;
       updateSkillCoefficient();
-      loadoutStore.updateCharacter({ level });
+      loadoutStore.setCharacterLevel(level);
     });
   }
 }
@@ -227,8 +224,8 @@ function attachPasteAreaListener() {
             inputElement.style.outline = "";
           }, { once: true });
           const className = loadoutStore.getCharacter().class;
-          const primaryInput = document.getElementById("primary-main-stat");
-          const secondaryInput = document.getElementById("secondary-main-stat");
+          const primaryInput = document.getElementById("mainStat");
+          const secondaryInput = document.getElementById("secondaryMainStat");
           const statType = getStatType(className, parsedStat[0]);
           if (statType === STAT_TYPE.PRIMARY) {
             primaryInput.value = parsedStat[1] || "1000";
@@ -249,8 +246,6 @@ function attachPasteAreaListener() {
         baseStatUpdates[key] = value;
       }
       loadoutStore.updateBaseStats(baseStatUpdates);
-      const calculate = getCalculateFunction();
-      if (calculate) calculate();
     } catch (e) {
       console.error(e);
       showToast(String(e), false);
@@ -266,8 +261,6 @@ function attachMainStatSyncListeners() {
     if (input) {
       input.addEventListener("input", () => {
         syncMainStatsToHidden();
-        const value = parseFloat(input.value) || 0;
-        loadoutStore.updateBaseStat(input.id, value);
       });
     }
   });
@@ -306,9 +299,11 @@ function syncMainStatsToHidden() {
     if (lukInput) primaryInput.value = lukInput.value || "1000";
     if (dexInput) secondaryInput.value = dexInput.value || "0";
   }
-}
-if (window.populateSkillDetails) {
-  window.populateSkillDetails();
+  loadoutStore.updateBaseStat(STAT.PRIMARY_MAIN_STAT.id, parseFloat(primaryInput.value));
+  const statDamageInput = document.getElementById(STAT.STAT_DAMAGE.id);
+  const statDamage = parseFloat(primaryInput.value) / 100;
+  statDamageInput.value = statDamage.toFixed(1);
+  loadoutStore.updateBaseStat(STAT.STAT_DAMAGE.id, statDamage);
 }
 function initializeBaseStatsUI() {
   const container = document.getElementById("setup-base-stats");
