@@ -393,7 +393,7 @@ export function calculateEquippedDamage(slotId: EquipmentSlotId): ComparisonCalc
     // Calculate passive gains from equipped item's job skill levels (if any)
     let passiveGains: ComparisonCalculationResult['passiveGains'] = undefined;
 
-    if (currentClass) {
+    if (currentClass && characterLevel != null) {
         // Convert equipped data to ComparisonItem format for passive calculation
         const equippedAsComparisonItem: ComparisonItem = {
             guid: 'equipped',

@@ -140,7 +140,7 @@ function calculateEquippedDamage(slotId) {
   const characterLevel = loadoutStore.getCharacterLevel();
   const service = new StatCalculationService(baseStats);
   let passiveGains = void 0;
-  if (currentClass) {
+  if (currentClass && characterLevel != null) {
     const equippedAsComparisonItem = {
       guid: "equipped",
       name: "Equipped Item",
