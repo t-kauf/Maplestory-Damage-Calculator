@@ -10,8 +10,8 @@ const EQUIPMENT_SLOTS = [
   { id: "gloves", name: "Gloves", hasMainStat: false },
   { id: "boots", name: "Boots", hasMainStat: false },
   { id: "ring", name: "Ring", hasMainStat: true },
-  { id: "neck", name: "Neck", hasMainStat: true },
-  { id: "eye-accessory", name: "Eye Accessory", hasMainStat: true }
+  { id: "eye-accessory", name: "Eye Accessory", hasMainStat: true },
+  { id: "neck", name: "Neck", hasMainStat: true }
 ];
 let equipmentData = {
   head: null,
