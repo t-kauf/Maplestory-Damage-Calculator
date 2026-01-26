@@ -313,6 +313,13 @@ export class StatCalculationService {
             case STAT.DEF_PEN.id:
                 // Defense penetration uses diminishing returns formula with factor 100
                 return this.addDiminishingReturnStatCore(statId, value, 100);
+            case STAT.SKILL_LEVEL_3RD.id:
+            case STAT.SKILL_LEVEL_4TH.id:
+            case STAT.SKILL_LEVEL_ALL.id:
+                // Skill level changes require recalculating the skill coefficient
+                this.addPercentageStatCore(statId, value);
+                this.refreshSkillCoefficient();
+                return this;
             default:
                 // Most stats (critDamage, bossDamage, critRate, etc.) use simple addition
                 return this.addPercentageStatCore(statId, value);
@@ -346,6 +353,13 @@ export class StatCalculationService {
             case STAT.DEF_PEN.id:
                 // Defense penetration uses diminishing returns formula with factor 100
                 return this.subtractDiminishingReturnStatCore(statId, value, 100);
+            case STAT.SKILL_LEVEL_3RD.id:
+            case STAT.SKILL_LEVEL_4TH.id:
+            case STAT.SKILL_LEVEL_ALL.id:
+                // Skill level changes require recalculating the skill coefficient
+                this.subtractStatCore(statId, value);
+                this.refreshSkillCoefficient();
+                return this;
             default:
                 // Most stats (critDamage, bossDamage, etc.) use simple subtraction
                 return this.subtractStatCore(statId, value);

@@ -81,6 +81,14 @@ function calculateItemDamage(slotId, item) {
   const currentClass = loadoutStore.getSelectedClass();
   const characterLevel = loadoutStore.getCharacterLevel();
   const service = new StatCalculationService(baseStats);
+  const equippedData = getEquippedItemData(slotId);
+  if (equippedData) {
+    service.subtract(STAT.ATTACK.id, equippedData.attack);
+    service.subtract(STAT.PRIMARY_MAIN_STAT.id, equippedData.mainStat);
+    equippedData.statLines.forEach((statLine) => {
+      service.subtract(statLine.type, statLine.value);
+    });
+  }
   service.add(STAT.ATTACK.id, item.attack);
   service.add(STAT.PRIMARY_MAIN_STAT.id, item.mainStat);
   item.statLines.forEach((statLine) => {
@@ -128,7 +136,6 @@ function calculateEquippedDamage(slotId) {
   const equippedData = getEquippedItemData(slotId);
   if (!equippedData) return null;
   const baseStats = loadoutStore.getBaseStats();
-  console.log(baseStats);
   const service = new StatCalculationService(baseStats);
   const bossResult = service.compute("boss");
   const normalResult = service.compute("normal");

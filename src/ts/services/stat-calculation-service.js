@@ -180,6 +180,12 @@ const _StatCalculationService = class _StatCalculationService {
         return this.addDiminishingReturnStatCore(statId, value, 150);
       case STAT.DEF_PEN.id:
         return this.addDiminishingReturnStatCore(statId, value, 100);
+      case STAT.SKILL_LEVEL_3RD.id:
+      case STAT.SKILL_LEVEL_4TH.id:
+      case STAT.SKILL_LEVEL_ALL.id:
+        this.addPercentageStatCore(statId, value);
+        this.refreshSkillCoefficient();
+        return this;
       default:
         return this.addPercentageStatCore(statId, value);
     }
@@ -209,6 +215,12 @@ const _StatCalculationService = class _StatCalculationService {
         return this.subtractDiminishingReturnStatCore(statId, value, 150);
       case STAT.DEF_PEN.id:
         return this.subtractDiminishingReturnStatCore(statId, value, 100);
+      case STAT.SKILL_LEVEL_3RD.id:
+      case STAT.SKILL_LEVEL_4TH.id:
+      case STAT.SKILL_LEVEL_ALL.id:
+        this.subtractStatCore(statId, value);
+        this.refreshSkillCoefficient();
+        return this;
       default:
         return this.subtractStatCore(statId, value);
     }

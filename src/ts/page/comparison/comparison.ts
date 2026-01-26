@@ -293,11 +293,24 @@ export function calculateItemDamage(
     // Calculate using StatCalculationService
     const service = new StatCalculationService(baseStats);
 
-    // Add item attack and main stat
+    // Remove equipped item stats from this slot to ensure clean comparison
+    const equippedData = getEquippedItemData(slotId);
+    if (equippedData) {
+        // Subtract equipped item's attack and main stat
+        service.subtract(STAT.ATTACK.id, equippedData.attack);
+        service.subtract(STAT.PRIMARY_MAIN_STAT.id, equippedData.mainStat);
+
+        // Subtract equipped item's stat lines
+        equippedData.statLines.forEach(statLine => {
+            service.subtract(statLine.type, statLine.value);
+        });
+    }
+
+    // Add comparison item attack and main stat
     service.add(STAT.ATTACK.id, item.attack);
     service.add(STAT.PRIMARY_MAIN_STAT.id, item.mainStat);
 
-    // Add stat lines
+    // Add comparison item stat lines
     item.statLines.forEach(statLine => {
         service.add(statLine.type, statLine.value);
     });
@@ -370,7 +383,6 @@ export function calculateEquippedDamage(slotId: EquipmentSlotId): ComparisonCalc
     if (!equippedData) return null;
 
     const baseStats = loadoutStore.getBaseStats();
-    console.log(baseStats);
 
     // Base stats already include the equipped item's contribution (both direct stats and passive gains)
     const service = new StatCalculationService(baseStats);

@@ -263,7 +263,7 @@
     background: var(--opt-gradient-artifact);
 }
 
-.optimization-tab-button[data-tab="scompanions"].active,
+.optimization-tab-button[data-tab="companions"].active,
 .optimization-tab-button[data-tab="scroll-optimizer"].active {
     background: linear-gradient(135deg,
         rgba(20, 184, 166, 0.15),
