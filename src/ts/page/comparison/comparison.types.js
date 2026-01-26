@@ -1,0 +1,11 @@
+const ANIMATION_DURATION_MS = 200;
+const AUTO_CALCULATE_DELAY_MS = 500;
+const UNDO_DURATION_MS = 1e4;
+const MAX_STAT_LINES = 10;
+export {
+  ANIMATION_DURATION_MS,
+  AUTO_CALCULATE_DELAY_MS,
+  MAX_STAT_LINES,
+  UNDO_DURATION_MS
+};
+//# sourceMappingURL=comparison.types.js.map
