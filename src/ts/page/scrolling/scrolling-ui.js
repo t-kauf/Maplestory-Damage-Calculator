@@ -40,7 +40,7 @@ function generateMySlotPerformanceHTML() {
   return `
         <div class="scrolling-banner">
             <div class="optimization-info-banner__text">
-                <strong>Equipment Slot Analysis:</strong> Track individual equipment slot values in isolation. Each slot's DPS gain is calculated by comparing damage WITH that slot's stats vs damage WITH zero stats from that slot. DPS updates automatically as you type.
+                <strong>Equipment Slot Analysis:</strong> Track individual equipment slot values in isolation. Each slot's DPS gain is calculated by comparing damage WITH that slot's stats vs damage WITH zero stats from that slot.
             </div>
         </div>
 

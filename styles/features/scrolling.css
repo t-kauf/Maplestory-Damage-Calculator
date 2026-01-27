@@ -58,7 +58,7 @@
 .summary-metric-value.atk { color: #f97316; }
 .summary-metric-value.main { color: var(--color-success); }
 .summary-metric-value.amp { color: var(--color-secondary); }
-.summary-metric-value.dps { color: var(--color-primary); }
+.summary-metric-value.dps { color: var(--tab-teal); }
 
 /* Equipment Slots Grid */
 .scrolling-slots-grid {

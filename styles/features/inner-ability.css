@@ -3,18 +3,11 @@
    Cyberpunk Fintech Terminal × Gaming HUD
    ======================================== */
 
-/* Premium Typography Import */
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 /* ========================================
    DESIGN TOKENS - Premium Color & Spacing System
    ======================================== */
 
 :root {
-    /* Typography - Premium Pairing */
-    --ia-font-display: 'Space Grotesk', -apple-system, sans-serif;
-    --ia-font-mono: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
-
     /* Glassmorphism Surfaces - using colors.css */
     --ia-glass-bg: var(--glass-bg);
     --ia-glass-border: var(--glass-border);
@@ -109,7 +102,7 @@
     border: 2px solid var(--ia-glass-border);
     border-radius: 10px;
     cursor: pointer;
-    font-family: var(--ia-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.9rem;
     color: var(--text-secondary);
@@ -235,7 +228,7 @@
 }
 
 .ia-equipped-checkbox-wrapper label {
-    font-family: var(--ia-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.9rem;
     color: var(--text-primary);
@@ -299,7 +292,7 @@
 }
 
 .ia-line-number {
-    font-family: var(--ia-font-display);
+    font-family: var(--font-display);
     font-size: 0.7rem;
     font-weight: 700;
     letter-spacing: 0.08em;
@@ -311,7 +304,7 @@
 /* Premium Inputs */
 .ia-line-card label {
     display: block;
-    font-family: var(--ia-font-display);
+    font-family: var(--font-display);
     font-size: 0.75rem;
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -327,7 +320,7 @@
     background: var(--ia-surface-elevated);
     border: 1px solid var(--ia-glass-border);
     border-radius: 8px;
-    font-family: var(--ia-font-display);
+    font-family: var(--font-display);
     font-size: 0.9rem;
     font-weight: 500;
     color: var(--text-primary);
@@ -344,7 +337,7 @@
 }
 
 .ia-line-card input[type="number"] {
-    font-family: var(--ia-font-mono);
+    font-family: var(--font-mono);
     font-variant-numeric: tabular-nums;
     font-weight: 600;
 }
@@ -356,7 +349,7 @@
     padding: 4px 10px;
     background: var(--ia-gradient-success);
     border-radius: 6px;
-    font-family: var(--ia-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.75rem;
     letter-spacing: 0.02em;
@@ -368,7 +361,7 @@
 
 /* DPS Values - Premium Mono */
 .ia-dps-value {
-    font-family: var(--ia-font-mono);
+    font-family: var(--font-mono);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
     letter-spacing: -0.02em;
@@ -442,14 +435,14 @@
 }
 
 .ia-line-breakdown-stat {
-    font-family: var(--ia-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.9rem;
     color: var(--text-primary);
 }
 
 .ia-line-breakdown-value {
-    font-family: var(--ia-font-mono);
+    font-family: var(--font-mono);
     font-weight: 700;
     font-variant-numeric: tabular-nums;
     color: var(--ia-equipment);
@@ -480,7 +473,7 @@
     display: flex;
     align-items: center;
     gap: var(--ia-space-sm);
-    font-family: var(--ia-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.9rem;
     color: var(--text-primary);
@@ -541,7 +534,7 @@
     width: 24px;
     height: 24px;
     border-radius: 6px;
-    font-family: var(--ia-font-display);
+    font-family: var(--font-display);
     font-weight: 700;
     font-size: 0.75rem;
     color: white;
@@ -623,7 +616,7 @@
 }
 
 .ia-combo-card h4 {
-    font-family: var(--ia-font-display);
+    font-family: var(--font-display);
     font-weight: 700;
     font-size: 1rem;
     color: var(--text-primary);
@@ -652,7 +645,7 @@
     border: 1px solid var(--ia-glass-border);
     border-left: 3px solid var(--ia-inner-ability);
     border-radius: 0 8px 8px 0;
-    font-family: var(--ia-font-display);
+    font-family: var(--font-display);
     font-weight: 500;
     font-size: 0.9rem;
     color: var(--text-primary);
@@ -672,7 +665,7 @@
     border-radius: 10px;
     padding: var(--ia-space-lg);
     text-align: center;
-    font-family: var(--ia-font-mono);
+    font-family: var(--font-mono);
     font-weight: 700;
     font-size: 1.1rem;
     color: var(--ia-equipment);
@@ -694,7 +687,7 @@
     text-align: center;
     padding: var(--ia-space-2xl);
     color: var(--text-secondary);
-    font-family: var(--ia-font-display);
+    font-family: var(--font-display);
     font-size: 0.95rem;
     font-style: italic;
     opacity: 0.6;

@@ -38,10 +38,6 @@
    ======================================== */
 
 :root {
-    /* Typography */
-    --wl-font-display: 'Inter', -apple-system, sans-serif;
-    --wl-font-mono: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
-
     /* Rarity Color Palette - using colors.css */
     --wl-rarity-normal: var(--rarity-normal);
     --wl-rarity-rare: var(--rarity-rare);
@@ -128,7 +124,7 @@
 
 .wl-info-banner-content {
     color: var(--text-primary);
-    font-family: var(--wl-font-display);
+    font-family: var(--font-display);
     font-size: 0.9rem;
     line-height: 1.6;
 }
@@ -167,7 +163,7 @@
 
 .wl-warning-banner-text {
     color: #ef4444;
-    font-family: var(--wl-font-display);
+    font-family: var(--font-display);
     font-weight: 700;
     font-size: 0.9rem;
     letter-spacing: -0.01em;
@@ -199,7 +195,7 @@
 
 .wl-summary-label {
     display: block;
-    font-family: var(--wl-font-display);
+    font-family: var(--font-display);
     font-size: 0.85rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -208,7 +204,7 @@
 }
 
 .wl-summary-value {
-    font-family: var(--wl-font-mono);
+    font-family: var(--font-mono);
     font-size: 1.8rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
@@ -296,7 +292,7 @@
     color: var(--text-secondary);
     font-size: 0.8rem;
     padding: var(--wl-space-lg) 0;
-    font-family: var(--wl-font-display);
+    font-family: var(--font-display);
 }
 
 /* ========================================
@@ -410,7 +406,7 @@
    ======================================== */
 
 .weapon-header {
-    font-family: var(--wl-font-display);
+    font-family: var(--font-display);
     font-size: 0.85rem;
     font-weight: 700;
     letter-spacing: 0.05em;
@@ -524,7 +520,7 @@
     background: var(--wl-surface-card);
     border: 2px solid var(--wl-border-medium);
     border-radius: 6px;
-    font-family: var(--wl-font-display);
+    font-family: var(--font-display);
     font-size: 0.75rem;
     font-weight: 700;
     color: var(--text-secondary);
@@ -642,7 +638,7 @@
 
 .weapon-input-group label {
     display: block;
-    font-family: var(--wl-font-display);
+    font-family: var(--font-display);
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -656,7 +652,7 @@
     background: var(--wl-surface-card);
     border: 1px solid var(--wl-border-medium);
     border-radius: 8px;
-    font-family: var(--wl-font-mono);
+    font-family: var(--font-mono);
     font-size: 0.95rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
@@ -682,7 +678,7 @@
    ======================================== */
 
 .weapon-stats {
-    font-family: var(--wl-font-mono);
+    font-family: var(--font-mono);
 }
 
 .weapon-inventory-display {
@@ -712,7 +708,7 @@
     font-weight: 600;
     color: var(--text-secondary);
     margin-bottom: 2px;
-    font-family: var(--wl-font-display);
+    font-family: var(--font-display);
 }
 
 .weapon-equipped-value {
@@ -741,7 +737,7 @@
 }
 
 .weapon-efficiency-text {
-    font-family: var(--wl-font-mono);
+    font-family: var(--font-mono);
     font-size: 0.75rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
@@ -792,7 +788,7 @@
 
 .wl-priority-header {
     text-align: center;
-    font-family: var(--wl-font-display);
+    font-family: var(--font-display);
     font-size: 0.9rem;
     font-weight: 700;
     color: var(--text-secondary);
@@ -806,7 +802,7 @@
     gap: var(--wl-space-sm);
     justify-content: center;
     align-items: center;
-    font-family: var(--wl-font-display);
+    font-family: var(--font-display);
     font-size: 0.95rem;
     line-height: 1.8;
 }
@@ -874,7 +870,7 @@
 
 .wl-currency-header {
     text-align: center;
-    font-family: var(--wl-font-display);
+    font-family: var(--font-display);
     font-size: 0.9rem;
     font-weight: 700;
     color: var(--text-secondary);
@@ -892,7 +888,7 @@
 }
 
 .wl-currency-label {
-    font-family: var(--wl-font-display);
+    font-family: var(--font-display);
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -904,7 +900,7 @@
     background: var(--wl-surface-card);
     border: 2px solid var(--wl-border-medium);
     border-radius: 10px;
-    font-family: var(--wl-font-mono);
+    font-family: var(--font-mono);
     font-size: 0.95rem;
     font-weight: 600;
     font-variant-numeric: tabular-nums;
@@ -955,7 +951,7 @@
 
 .wl-currency-metric-label {
     display: block;
-    font-family: var(--wl-font-display);
+    font-family: var(--font-display);
     font-size: 0.8rem;
     font-weight: 600;
     color: var(--text-secondary);
@@ -963,7 +959,7 @@
 }
 
 .wl-currency-metric-value {
-    font-family: var(--wl-font-mono);
+    font-family: var(--font-mono);
     font-size: 1.4rem;
     font-weight: 700;
     font-variant-numeric: tabular-nums;
@@ -980,7 +976,7 @@
     padding: var(--wl-space-md);
     background: rgba(255, 255, 255, 0.03);
     border-radius: 8px;
-    font-family: var(--wl-font-display);
+    font-family: var(--font-display);
     font-size: 0.9rem;
 }
 
@@ -1036,7 +1032,7 @@
     background: linear-gradient(135deg, #10b981, #059669);
     border: none;
     border-radius: 10px;
-    font-family: var(--wl-font-display);
+    font-family: var(--font-display);
     font-size: 0.9rem;
     font-weight: 700;
     color: #ffffff;

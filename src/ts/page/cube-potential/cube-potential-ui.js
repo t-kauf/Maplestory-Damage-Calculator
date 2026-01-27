@@ -1032,7 +1032,7 @@ function displayRankings(rankings, rarity) {
   const pageRankings = rankings.slice(startIdx, endIdx);
   let html = `
         <div style="margin-bottom: 20px;">
-            <h3 style="color: var(--accent-primary); margin-bottom: 10px;">
+            <h3 style="color: var(--tab-purple); margin-bottom: 10px;">
                 Top Potential Combinations for ${rarity.charAt(0).toUpperCase() + rarity.slice(1)} Rarity
             </h3>
             <p style="color: var(--text-secondary); font-size: 0.9em;">
@@ -1055,14 +1055,14 @@ function displayRankings(rankings, rarity) {
   pageRankings.forEach((combo, idx) => {
     const rank = startIdx + idx + 1;
     const formatLine = (line) => {
-      const primeTag = line.prime ? ' <span style="color: var(--accent-primary); font-weight: 600;">(Prime)</span>' : "";
+      const primeTag = line.prime ? ' <span style="color: var(--tab-purple); font-weight: 600;">(Prime)</span>' : "";
       const isPercentStat = line.stat.includes("%");
       const valueSuffix = isPercentStat ? "%" : "";
       return `${line.stat}: ${line.value}${valueSuffix}${primeTag}`;
     };
     html += `
             <tr>
-                <td style="font-weight: 700; color: var(--accent-primary);">#${rank}</td>
+                <td style="font-weight: 700; color: var(--tab-purple);">#${rank}</td>
                 <td style="text-align: center;">${formatLine(combo.line1)}</td>
                 <td style="text-align: center;">${formatLine(combo.line2)}</td>
                 <td style="text-align: center;">${formatLine(combo.line3)}</td>

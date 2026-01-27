@@ -13,10 +13,6 @@
     --cube-space-xl: 24px;
     --cube-space-2xl: 32px;
 
-    /* Typography */
-    --cube-font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --cube-font-mono: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
-
     /* Animation */
     --cube-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
     --cube-duration: 200ms;
@@ -63,20 +59,17 @@
 
 /* === Slot Selector Section === */
 .cube-slot-selector-wrapper {
-    background: linear-gradient(135deg, rgba(0, 122, 255, 0.08), rgba(88, 86, 214, 0.05));
-    border: 2px solid rgba(0, 122, 255, 0.2);
     border-radius: 16px;
-    padding: var(--cube-space-xl);
     margin-bottom: var(--cube-space-xl);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
 }
 
 .cube-slot-label {
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 1.05em;
     letter-spacing: -0.01em;
-    color: var(--accent-primary);
+    color: var(--tab-purple);
     display: block;
     margin-bottom: var(--cube-space-lg);
 }
@@ -92,7 +85,7 @@
 .cube-slot-btn {
     position: relative;
     padding: var(--cube-space-sm) var(--cube-space-lg);
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.9em;
     letter-spacing: -0.01em;
@@ -135,8 +128,6 @@
     display: flex;
     gap: var(--cube-space-sm);
     margin-bottom: var(--cube-space-xl);
-    padding: var(--cube-space-sm);
-    background: var(--cube-surface-tertiary);
     border-radius: 12px;
     overflow-x: auto;
 }
@@ -147,7 +138,7 @@
     align-items: center;
     gap: var(--cube-space-sm);
     padding: var(--cube-space-md) var(--cube-space-lg);
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.95em;
     letter-spacing: -0.01em;
@@ -208,7 +199,7 @@
 }
 
 .cube-control-label {
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.9em;
     letter-spacing: -0.01em;
@@ -228,7 +219,7 @@
     gap: var(--cube-space-xs);
     flex: 1;
     padding: var(--cube-space-md) var(--cube-space-lg);
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.9em;
     letter-spacing: -0.01em;
@@ -253,8 +244,8 @@
 }
 
 .cube-potential-type-btn.active {
-    background: var(--accent-primary);
-    border-color: var(--accent-primary);
+    background: var(--tab-purple);
+    border-color: var(--tab-purple);
     color: white;
     box-shadow: 0 4px 12px rgba(0, 122, 255, 0.3);
 }
@@ -267,7 +258,7 @@
 .cube-rarity-select {
     width: 100%;
     padding: var(--cube-space-md) var(--cube-space-lg);
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.9em;
     letter-spacing: -0.01em;
@@ -291,7 +282,7 @@
 
 .cube-rarity-select:focus {
     outline: none;
-    border-color: var(--accent-primary);
+    border-color: var(--tab-purple);
     box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
 }
 
@@ -370,7 +361,7 @@
 }
 
 .cube-set-card-title {
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 700;
     font-size: 1.1em;
     letter-spacing: -0.02em;
@@ -386,7 +377,7 @@
 }
 
 .cube-set-card-subtitle {
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 500;
     font-size: 0.85em;
     color: var(--text-secondary);
@@ -407,7 +398,7 @@
 
 .cube-line-label {
     display: block;
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.85em;
     letter-spacing: -0.01em;
@@ -418,7 +409,7 @@
 .cube-line-select {
     width: 100%;
     padding: var(--cube-space-md);
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 500;
     font-size: 0.9em;
     background: var(--cube-surface-tertiary);
@@ -441,7 +432,7 @@
 
 .cube-line-select:focus {
     outline: none;
-    border-color: var(--accent-primary);
+    border-color: var(--tab-purple);
     box-shadow: 0 0 0 2px rgba(0, 122, 255, 0.1);
 }
 
@@ -480,7 +471,7 @@
 }
 
 .cube-progress-text {
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.9em;
     text-align: center;
@@ -494,16 +485,16 @@
 }
 
 .cube-summary-title {
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 700;
     font-size: 1.3em;
     letter-spacing: -0.02em;
-    color: var(--accent-primary);
+    color: var(--tab-purple);
     margin: 0 0 var(--cube-space-sm);
 }
 
 .cube-summary-description {
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 400;
     font-size: 0.95em;
     line-height: 1.6;
@@ -521,16 +512,16 @@
 }
 
 .cube-simulation-title {
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 700;
     font-size: 1.3em;
     letter-spacing: -0.02em;
-    color: var(--accent-primary);
+    color: var(--tab-purple);
     margin: 0 0 var(--cube-space-sm);
 }
 
 .cube-simulation-description {
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 400;
     font-size: 0.95em;
     line-height: 1.6;
@@ -560,7 +551,7 @@
 }
 
 .cube-sim-label {
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.9em;
     letter-spacing: -0.01em;
@@ -569,7 +560,7 @@
 
 .cube-sim-input {
     padding: var(--cube-space-md);
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 500;
     font-size: 0.95em;
     background: var(--cube-surface-tertiary);
@@ -581,7 +572,7 @@
 
 .cube-sim-input:focus {
     outline: none;
-    border-color: var(--accent-primary);
+    border-color: var(--tab-purple);
     box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15);
 }
 
@@ -593,11 +584,11 @@
     gap: var(--cube-space-sm);
     width: 100%;
     padding: var(--cube-space-md) var(--cube-space-xl);
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-weight: 700;
     font-size: 1em;
     letter-spacing: -0.01em;
-    background: linear-gradient(135deg, var(--accent-primary), rgba(88, 86, 214, 0.8));
+    background: linear-gradient(135deg, var(--tab-purple), rgb(94 91 231 / 80%));
     border: none;
     border-radius: 10px;
     color: white;
@@ -643,8 +634,7 @@
 
 /* === Dark Mode Overrides === */
 .dark .cube-slot-selector-wrapper {
-    background: linear-gradient(135deg, rgba(0, 122, 255, 0.12), rgba(88, 86, 214, 0.08));
-    border-color: rgba(0, 122, 255, 0.3);
+
 }
 
 .dark .cube-context-controls {
@@ -730,7 +720,7 @@
     color: var(--text-primary);
     transition: all 0.3s;
     white-space: nowrap;
-    font-family: var(--cube-font-display);
+    font-family: var(--font-display);
     font-size: 0.9em;
 }
 

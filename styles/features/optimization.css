@@ -35,10 +35,6 @@
    ======================================== */
 
 :root {
-    /* Reuse existing Inner Ability tokens */
-    --opt-font-display: var(--ia-font-display, 'Space Grotesk', -apple-system, sans-serif);
-    --opt-font-mono: var(--ia-font-mono, 'JetBrains Mono', 'SF Mono', 'Consolas', monospace);
-
     /* Tab-specific accent colors - each main tab gets unique color */
     --opt-tab-item-comparison: var(--tab-blue);
     --opt-tab-inner-ability: var(--tab-pink);
@@ -94,7 +90,7 @@
    ======================================== */
 
 #page-optimization {
-    font-family: var(--opt-font-display);
+    font-family: var(--font-display);
 }
 
 #character-setup-card,
@@ -141,7 +137,7 @@
     border: none;
     border-radius: 8px;
     cursor: pointer;
-    font-family: var(--opt-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.8125rem;
     letter-spacing: 0.02em;
@@ -319,7 +315,7 @@
 }
 
 .optimization-page-title {
-    font-family: var(--opt-font-display);
+    font-family: var(--font-display);
     font-size: 1.5rem;
     font-weight: 700;
     letter-spacing: -0.03em;
@@ -339,9 +335,6 @@
 .optimization-sub-tabs {
     display: flex;
     gap: var(--opt-space-sm);
-    padding: var(--opt-space-sm);
-    background: var(--opt-surface-subtle);
-    border: 1px solid var(--opt-glass-border);
     border-radius: 10px;
     margin-bottom: var(--opt-space-lg);
 }
@@ -353,7 +346,7 @@
     border: 1px solid transparent;
     border-radius: 7px;
     cursor: pointer;
-    font-family: var(--opt-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.75rem;
     letter-spacing: 0.02em;
@@ -577,7 +570,7 @@
     border: 1px solid var(--opt-glass-border);
     border-radius: 8px;
     cursor: pointer;
-    font-family: var(--opt-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.8125rem;
     color: var(--text-secondary);

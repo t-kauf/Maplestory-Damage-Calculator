@@ -4,18 +4,11 @@
    Base class + Variants + Utilities
    ======================================== */
 
-/* Premium Typography Import */
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
-
 /* ========================================
    DESIGN TOKENS - Premium Color & Spacing System
    ======================================== */
 
 :root {
-    /* Typography - Premium Pairing */
-    --table-font-display: 'Space Grotesk', -apple-system, sans-serif;
-    --table-font-mono: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
-
     /* Premium Gradients */
     --table-gradient-primary: var(--gradient-secondary);
     --table-gradient-rank-1: linear-gradient(135deg, var(--color-warning-light), var(--color-warning), var(--color-warning-dark));
@@ -74,7 +67,7 @@
 .table th {
     padding: var(--table-space-md) var(--table-space-lg);
     text-align: left;
-    font-family: var(--table-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.8125rem;
     letter-spacing: 0.02em;
@@ -129,7 +122,7 @@
 
 .table td {
     padding: var(--table-space-md) var(--table-space-lg);
-    font-family: var(--table-font-display);
+    font-family: var(--font-display);
     font-size: 0.9rem;
     color: var(--text-primary);
 }
@@ -445,7 +438,7 @@
 .ia-table th {
     padding: 12px;
     text-align: left;
-    font-family: var(--table-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.95em;
     color: var(--color-primary-dark);
@@ -503,7 +496,7 @@
 .stat-weight-table th {
     padding: 12px 10px;
     text-align: right;
-    font-family: var(--table-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.9em;
     color: var(--color-primary-dark);
@@ -552,7 +545,7 @@
 .mastery-table th {
     padding: 12px 8px;
     text-align: center;
-    font-family: var(--table-font-display);
+    font-family: var(--font-display);
     font-weight: 600;
     font-size: 0.9em;
     color: var(--color-primary-dark);
@@ -586,7 +579,7 @@
 .mastery-table td {
     padding: 10px 8px;
     text-align: center;
-    font-family: var(--table-font-display);
+    font-family: var(--font-display);
     font-size: 0.9em;
     vertical-align: middle;
 }

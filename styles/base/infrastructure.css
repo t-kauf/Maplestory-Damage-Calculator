@@ -1,4 +1,16 @@
 /* ========================================
+   GLOBAL TYPOGRAPHY
+   ======================================== */
+
+body {
+    font-family: var(--font-display);
+}
+
+code, pre, .mono {
+    font-family: var(--font-mono);
+}
+
+/* ========================================
    INFRASTRUCTURE COMPONENTS
    ======================================== */
 

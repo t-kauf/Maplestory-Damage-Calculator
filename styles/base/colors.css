@@ -10,7 +10,17 @@
    var(--color-primary)              // Use in other CSS files
    ======================================== */
 
+/* Premium Typography Import */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
 :root {
+    /* ========================================
+       TYPOGRAPHY - Global Fonts
+       Applied globally via body/html element
+       ======================================== */
+    --font-display: 'Space Grotesk', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', 'SF Mono', 'Consolas', monospace;
+
     /* ========================================
        PRIMARY BRAND COLORS
        ======================================== */
