@@ -492,6 +492,7 @@ export interface EquipStatChanges {
     passiveGains: {
         old: ReturnType<typeof calculatePassiveGainsForItem>;
         new: ReturnType<typeof calculatePassiveGainsForItem>;
+        diff: Record<string, number>;
     };
     hasAnyChanges: boolean;
 }
@@ -556,24 +557,25 @@ export function calculateEquipStatChanges(
         )
         : { statChanges: {}, breakdown: [], complexPassives: [], complexStatChanges: {} };
 
-    // Calculate difference
-    const diff: Record<string, number> = {};
-
-    // Direct stats diff
+    // Calculate direct stats diff ONLY (no passive gains)
+    const directDiff: Record<string, number> = {};
     Object.keys({ ...oldDirectStats, ...newDirectStats }).forEach(stat => {
         const oldValue = oldDirectStats[stat] || 0;
         const newValue = newDirectStats[stat] || 0;
-        diff[stat] = newValue - oldValue;
+        directDiff[stat] = newValue - oldValue;
     });
 
-    // Passive gains diff
+    // Calculate passive gains diff (separate from direct stats)
+    const passiveDiff: Record<string, number> = {};
     Object.keys({ ...oldPassiveGains.statChanges, ...newPassiveGains.statChanges }).forEach(stat => {
         const oldValue = oldPassiveGains.statChanges[stat] || 0;
         const newValue = newPassiveGains.statChanges[stat] || 0;
-        diff[stat] = (diff[stat] || 0) + (newValue - oldValue);
+        passiveDiff[stat] = newValue - oldValue;
     });
 
-    const hasAnyChanges = Object.values(diff).some(v => v !== 0) ||
+    const hasAnyChanges =
+        Object.values(directDiff).some(v => v !== 0) ||
+        Object.values(passiveDiff).some(v => v !== 0) ||
         oldPassiveGains.breakdown.length > 0 ||
         newPassiveGains.breakdown.length > 0;
 
@@ -581,11 +583,12 @@ export function calculateEquipStatChanges(
         directStats: {
             old: oldDirectStats,
             new: newDirectStats,
-            diff
+            diff: directDiff
         },
         passiveGains: {
             old: oldPassiveGains,
-            new: newPassiveGains
+            new: newPassiveGains,
+            diff: passiveDiff
         },
         hasAnyChanges
     };
@@ -604,8 +607,8 @@ function formatStatForDisplay(statId: string): string {
  * Check if a stat should display as a percentage
  */
 function isStatPercentage(statId: string): boolean {
-    // Raw value stats (not shown as percentage): HitChance, MaxHp, Attack, MainStat, Defense
-    return !['hitChance', 'maxHp', 'attack', 'mainStat', 'defense'].includes(statId);
+    // Raw value stats (not shown as percentage): HitChance, MaxHp, Attack, MainStat, Defense, Skill Levels
+    return !['hitChance', 'maxHp', 'attack', 'mainStat', 'defense', 'skillLevel1st', 'skillLevel2nd', 'skillLevel3rd', 'skillLevel4th', 'skillLevelAll'].includes(statId);
 }
 
 /**
@@ -614,18 +617,8 @@ function isStatPercentage(statId: string): boolean {
 function createEquipStatComparisonTable(statChanges: EquipStatChanges): string {
     const { directStats: { old: oldDirect, new: newDirect, diff: directDiff }, passiveGains } = statChanges;
 
-    // Calculate passive stat differences
-    const passiveDiff: Record<string, number> = {};
-    const allPassiveStats = new Set([
-        ...Object.keys(passiveGains.old.statChanges),
-        ...Object.keys(passiveGains.new.statChanges)
-    ]);
-
-    allPassiveStats.forEach(stat => {
-        const oldValue = passiveGains.old.statChanges[stat] || 0;
-        const newValue = passiveGains.new.statChanges[stat] || 0;
-        passiveDiff[stat] = newValue - oldValue;
-    });
+    // Use pre-calculated passive diff from calculateEquipStatChanges
+    const { diff: passiveDiff } = passiveGains;
 
     // Filter direct stats to only show affected ones (where diff != 0)
     const affectedDirectStats = Object.entries(directDiff).filter(([stat, diff]) => diff !== 0);
@@ -649,7 +642,7 @@ function createEquipStatComparisonTable(statChanges: EquipStatChanges): string {
             const isPercent = isStatPercentage(stat);
 
             const formatValue = (val: number): string => {
-                const displayValue = isPercent ? val.toFixed(1).replace(/\.0$/, '') : Math.floor(val).toString();
+                const displayValue = val.toFixed(2).replace(/\.00$/, '');
                 return `${displayValue}${isPercent ? '%' : ''}`;
             };
 
@@ -697,7 +690,7 @@ function createEquipStatComparisonTable(statChanges: EquipStatChanges): string {
             const isPercent = isStatPercentage(stat);
 
             const formatValue = (val: number): string => {
-                const displayValue = isPercent ? val.toFixed(1).replace(/\.0$/, '') : Math.floor(val).toString();
+                const displayValue = val.toFixed(2).replace(/\.00$/, '');
                 return `${displayValue}${isPercent ? '%' : ''}`;
             };
 
@@ -826,15 +819,6 @@ export function showEquipConfirmModal(
             wrappedResolve('yes');
         };
 
-        // Create No button
-        const noBtn = document.createElement('button');
-        noBtn.className = 'modal-btn btn-no';
-        noBtn.textContent = 'Equip - Keep Stats';
-        noBtn.onclick = () => {
-            overlay.remove();
-            wrappedResolve('no');
-        };
-
         // Create Cancel button
         const cancelBtn = document.createElement('button');
         cancelBtn.className = 'modal-btn btn-cancel';
@@ -846,7 +830,6 @@ export function showEquipConfirmModal(
 
         // Assemble modal
         buttonContainer.appendChild(yesBtn);
-        buttonContainer.appendChild(noBtn);
         buttonContainer.appendChild(cancelBtn);
 
         modalBox.appendChild(title);

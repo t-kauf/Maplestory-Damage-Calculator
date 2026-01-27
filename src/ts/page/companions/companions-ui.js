@@ -1304,11 +1304,7 @@ window.equipPreset = async function(presetId) {
     if (userChoice === "cancel") {
       return;
     }
-    if (userChoice === "no") {
-      loadoutStore.setEquippedPresetId(presetId);
-      updateContributedStatsForPreset(presetId);
-      renderPresetsPanel();
-    } else if (userChoice === "yes") {
+    if (userChoice === "yes") {
       const newStats = swapCompanionPresetEffects(currentPresetEffects, newPresetEffects);
       loadoutStore.updateBaseStats(newStats);
       loadoutStore.setEquippedPresetId(presetId);
@@ -1350,22 +1346,6 @@ function showEquipConfirmModal(presetId, currentEffects, newEffects) {
       overlay.remove();
       resolve("yes");
     };
-    const noBtn = document.createElement("button");
-    noBtn.className = "modal-btn btn-no";
-    noBtn.style.background = "linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))";
-    noBtn.style.borderColor = "rgba(255, 255, 255, 0.3)";
-    noBtn.style.color = "rgba(255, 255, 255, 0.7)";
-    noBtn.textContent = "No - Just Switch";
-    noBtn.onclick = () => {
-      overlay.remove();
-      resolve("no");
-    };
-    noBtn.onmouseenter = () => {
-      noBtn.style.background = "rgba(255, 255, 255, 0.1)";
-    };
-    noBtn.onmouseleave = () => {
-      noBtn.style.background = "linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))";
-    };
     const cancelBtn = document.createElement("button");
     cancelBtn.className = "modal-btn btn-cancel";
     cancelBtn.textContent = "Cancel";
@@ -1374,7 +1354,6 @@ function showEquipConfirmModal(presetId, currentEffects, newEffects) {
       resolve("cancel");
     };
     buttonContainer.appendChild(yesBtn);
-    buttonContainer.appendChild(noBtn);
     buttonContainer.appendChild(cancelBtn);
     modalBox.appendChild(title);
     modalBox.appendChild(message);

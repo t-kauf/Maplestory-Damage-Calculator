@@ -867,6 +867,7 @@ export class LoadoutStore extends EventEmitter {
      */
     updateEquipment(slotId: EquipmentSlotId, data: EquipmentSlotData): void {
         this.data.equipment[slotId] = data;
+        this.emit(`equipment-updated`, { slotId, data});
         this.saveDualWrite();
     }
 

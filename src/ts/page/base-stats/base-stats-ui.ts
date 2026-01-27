@@ -408,7 +408,9 @@ export function loadBaseStatsUI(): void {
         const value = baseStats[statKey as StatKey];
         const input = document.getElementById(stat.id) as HTMLInputElement;
         if (input) {
-            input.value = value.toString();
+            // Round to 1 decimal place if there's a decimal, strip trailing .0
+            const formattedValue = Number.isInteger(value) ? value.toString() : parseFloat(value.toFixed(1)).toString();
+            input.value = formattedValue;
         }
     });
 
@@ -424,4 +426,14 @@ export function attachBaseStatsEventListeners(): void {
     attachPasteAreaListener();
     attachMainStatSyncListeners();
     attachStatInputListeners();
+    attachItemEquippedListener();
+}
+
+/**
+ * Attach listener for item equipped event
+ */
+function attachItemEquippedListener(): void {
+    loadoutStore.on('item-equipped', () => {
+        loadBaseStatsUI();
+    });
 }

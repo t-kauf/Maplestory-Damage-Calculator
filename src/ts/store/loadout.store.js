@@ -629,6 +629,7 @@ const _LoadoutStore = class _LoadoutStore extends EventEmitter {
    */
   updateEquipment(slotId, data) {
     this.data.equipment[slotId] = data;
+    this.emit(`equipment-updated`, { slotId, data });
     this.saveDualWrite();
   }
   /**

@@ -228,27 +228,29 @@ function calculateEquipStatChanges(slotId, newItem) {
     newItem,
     { currentClass, characterLevel, baseStats }
   ) : { statChanges: {}, breakdown: [], complexPassives: [], complexStatChanges: {} };
-  const diff = {};
+  const directDiff = {};
   Object.keys({ ...oldDirectStats, ...newDirectStats }).forEach((stat) => {
     const oldValue = oldDirectStats[stat] || 0;
     const newValue = newDirectStats[stat] || 0;
-    diff[stat] = newValue - oldValue;
+    directDiff[stat] = newValue - oldValue;
   });
+  const passiveDiff = {};
   Object.keys({ ...oldPassiveGains.statChanges, ...newPassiveGains.statChanges }).forEach((stat) => {
     const oldValue = oldPassiveGains.statChanges[stat] || 0;
     const newValue = newPassiveGains.statChanges[stat] || 0;
-    diff[stat] = (diff[stat] || 0) + (newValue - oldValue);
+    passiveDiff[stat] = newValue - oldValue;
   });
-  const hasAnyChanges = Object.values(diff).some((v) => v !== 0) || oldPassiveGains.breakdown.length > 0 || newPassiveGains.breakdown.length > 0;
+  const hasAnyChanges = Object.values(directDiff).some((v) => v !== 0) || Object.values(passiveDiff).some((v) => v !== 0) || oldPassiveGains.breakdown.length > 0 || newPassiveGains.breakdown.length > 0;
   return {
     directStats: {
       old: oldDirectStats,
       new: newDirectStats,
-      diff
+      diff: directDiff
     },
     passiveGains: {
       old: oldPassiveGains,
-      new: newPassiveGains
+      new: newPassiveGains,
+      diff: passiveDiff
     },
     hasAnyChanges
   };
@@ -258,20 +260,11 @@ function formatStatForDisplay(statId) {
   return statEntry?.label || statId;
 }
 function isStatPercentage(statId) {
-  return !["hitChance", "maxHp", "attack", "mainStat", "defense"].includes(statId);
+  return !["hitChance", "maxHp", "attack", "mainStat", "defense", "skillLevel1st", "skillLevel2nd", "skillLevel3rd", "skillLevel4th", "skillLevelAll"].includes(statId);
 }
 function createEquipStatComparisonTable(statChanges) {
   const { directStats: { old: oldDirect, new: newDirect, diff: directDiff }, passiveGains } = statChanges;
-  const passiveDiff = {};
-  const allPassiveStats = /* @__PURE__ */ new Set([
-    ...Object.keys(passiveGains.old.statChanges),
-    ...Object.keys(passiveGains.new.statChanges)
-  ]);
-  allPassiveStats.forEach((stat) => {
-    const oldValue = passiveGains.old.statChanges[stat] || 0;
-    const newValue = passiveGains.new.statChanges[stat] || 0;
-    passiveDiff[stat] = newValue - oldValue;
-  });
+  const { diff: passiveDiff } = passiveGains;
   const affectedDirectStats = Object.entries(directDiff).filter(([stat, diff]) => diff !== 0);
   const affectedPassiveStats = Object.entries(passiveDiff).filter(([stat, diff]) => diff !== 0);
   const hasDirectChanges = affectedDirectStats.length > 0;
@@ -286,7 +279,7 @@ function createEquipStatComparisonTable(statChanges) {
       const newValue = newDirect[stat] || 0;
       const isPercent = isStatPercentage(stat);
       const formatValue = (val) => {
-        const displayValue = isPercent ? val.toFixed(1).replace(/\.0$/, "") : Math.floor(val).toString();
+        const displayValue = val.toFixed(2).replace(/\.00$/, "");
         return `${displayValue}${isPercent ? "%" : ""}`;
       };
       const oldClass = oldValue > 0 ? "stat-value-negative" : "stat-value-neutral";
@@ -327,7 +320,7 @@ function createEquipStatComparisonTable(statChanges) {
       const newValue = passiveGains.new.statChanges[stat] || 0;
       const isPercent = isStatPercentage(stat);
       const formatValue = (val) => {
-        const displayValue = isPercent ? val.toFixed(1).replace(/\.0$/, "") : Math.floor(val).toString();
+        const displayValue = val.toFixed(2).replace(/\.00$/, "");
         return `${displayValue}${isPercent ? "%" : ""}`;
       };
       const oldClass = oldValue > 0 ? "stat-value-negative" : "stat-value-neutral";
@@ -422,13 +415,6 @@ function showEquipConfirmModal(slotId, newItem) {
       overlay.remove();
       wrappedResolve("yes");
     };
-    const noBtn = document.createElement("button");
-    noBtn.className = "modal-btn btn-no";
-    noBtn.textContent = "Equip - Keep Stats";
-    noBtn.onclick = () => {
-      overlay.remove();
-      wrappedResolve("no");
-    };
     const cancelBtn = document.createElement("button");
     cancelBtn.className = "modal-btn btn-cancel";
     cancelBtn.textContent = "Cancel";
@@ -437,7 +423,6 @@ function showEquipConfirmModal(slotId, newItem) {
       wrappedResolve("cancel");
     };
     buttonContainer.appendChild(yesBtn);
-    buttonContainer.appendChild(noBtn);
     buttonContainer.appendChild(cancelBtn);
     modalBox.appendChild(title);
     modalBox.appendChild(message);

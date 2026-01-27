@@ -35,6 +35,7 @@ import { showToast } from '@ts/utils/notifications';
 import { displayResults } from './results-display';
 import { StatCalculationService } from '@ts/services/stat-calculation-service.js';
 import type { EquipmentSlotData } from '@ts/types/page/equipment/equipment.types';
+import { debounce } from '@ts/utils/event-emitter';
 
 // ============================================================================
 // STATE
@@ -95,7 +96,7 @@ export function generateComparisonHTML(): string {
                 <h3 class="comparison-column-header comparison-column-header--equipped">Currently Equipped</h3>
                 <p class="equipped-description">
                     Equipped item stats are assumed to be included in your Base Stats tab inputs.
-                    To edit equipped items, go to the <a href="#equipment" class="equipped-link" data-navigable="true">Equipment tab</a>.
+                    To edit equipped items, go to the <a href="#/setup/equipment" class="equipped-link" data-navigable="true">Equipment tab</a>.
                 </p>
                 <div class="equipped-item-card">
                     <div class="equipped-card-header">
@@ -356,7 +357,7 @@ function createItemCard(item: ComparisonItem, itemNumber: number): HTMLElement {
                     </svg>
                     <span>Add Stat</span>
                 </button>
-                <button style="display:none;" class="comparison-action-btn comparison-action-btn--equip" aria-label="Equip this item" data-guid="${item.guid}">
+                <button class="comparison-action-btn comparison-action-btn--equip" aria-label="Equip this item" data-guid="${item.guid}">
                     <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                         <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 1 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
                     </svg>
@@ -479,6 +480,12 @@ function attachEventListeners(): void {
     if (calculateButton) {
         calculateButton.onclick = handleCalculate;
     }
+
+    loadoutStore.on('equipment-updated', debounce((update: { slotId: EquipmentSlotId, data: EquipmentSlotData }) => {
+        if (update.slotId === localStorage.getItem('lastSelectedComparisonSlot')) {
+            switchSlot(update.slotId);
+        }
+    }, 500));
 }
 
 /**
@@ -608,29 +615,28 @@ async function handleEquipItem(guid: string): Promise<void> {
     if (userChoice === 'yes') {
         // Apply stats - need to subtract old and add new
         const baseStats = loadoutStore.getBaseStats();
-        const subtractService = new StatCalculationService(baseStats);
+        const service = new StatCalculationService(baseStats);
 
         // Subtract old equipped item stats
         if (equippedItem) {
-            subtractService.subtract(STAT.ATTACK.id, equippedItem.attack);
-            subtractService.subtract(STAT.PRIMARY_MAIN_STAT.id, equippedItem.mainStat || 0);
+            service.subtract(STAT.ATTACK.id, equippedItem.attack);
+            service.subtract(STAT.PRIMARY_MAIN_STAT.id, equippedItem.mainStat || 0);
 
             equippedItem.statLines?.forEach(statLine => {
-                subtractService.subtract(statLine.type, statLine.value);
+                service.subtract(statLine.type, statLine.value);
             });
         }
 
         // Add new item stats
-        const addService = new StatCalculationService(subtractService.getStats());
-        addService.add(STAT.ATTACK.id, item.attack);
-        addService.add(STAT.PRIMARY_MAIN_STAT.id, item.mainStat);
+        service.add(STAT.ATTACK.id, item.attack);
+        service.add(STAT.PRIMARY_MAIN_STAT.id, item.mainStat);
 
         item.statLines.forEach(statLine => {
-            addService.add(statLine.type, statLine.value);
+            service.add(statLine.type, statLine.value);
         });
 
         // Update base stats in loadoutStore
-        loadoutStore.updateBaseStats(addService.getStats());
+        loadoutStore.updateBaseStats(service.getStats());
     }
 
     // Update equipment slot with new item data
@@ -654,6 +660,7 @@ async function handleEquipItem(guid: string): Promise<void> {
     // Trigger recalculation
     handleCalculate();
 
+    loadoutStore.emit('item-equipped');
     showToast(`Equipped ${item.name}`, true);
 }
 

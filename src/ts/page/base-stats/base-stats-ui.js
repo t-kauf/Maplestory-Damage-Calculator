@@ -324,7 +324,8 @@ function loadBaseStatsUI() {
     const value = baseStats[statKey];
     const input = document.getElementById(stat.id);
     if (input) {
-      input.value = value.toString();
+      const formattedValue = Number.isInteger(value) ? value.toString() : parseFloat(value.toFixed(1)).toString();
+      input.value = formattedValue;
     }
   });
   syncMainStatsToHidden();
@@ -334,6 +335,12 @@ function attachBaseStatsEventListeners() {
   attachPasteAreaListener();
   attachMainStatSyncListeners();
   attachStatInputListeners();
+  attachItemEquippedListener();
+}
+function attachItemEquippedListener() {
+  loadoutStore.on("item-equipped", () => {
+    loadBaseStatsUI();
+  });
 }
 export {
   attachBaseStatsEventListeners,

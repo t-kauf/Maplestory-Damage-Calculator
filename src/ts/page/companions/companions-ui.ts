@@ -1823,12 +1823,7 @@ function assignCompanionToSlot(companionKey: CompanionKey): void {
             return;
         }
 
-        if (userChoice === 'no') {
-            // User says stats are NOT incorporated - just switch presets
-            loadoutStore.setEquippedPresetId(presetId);
-            updateContributedStatsForPreset(presetId);
-            renderPresetsPanel();
-        } else if (userChoice === 'yes') {
+        if (userChoice === 'yes') {
             // User says stats ARE incorporated - need to subtract old and add new
             // Use StatCalculationService to properly calculate new base stats
             const newStats = swapCompanionPresetEffects(currentPresetEffects, newPresetEffects);
@@ -1856,7 +1851,7 @@ function showEquipConfirmModal(
     presetId: CompanionPresetId,
     currentEffects: Record<string, number>,
     newEffects: Record<string, number>
-): Promise<'yes' | 'no' | 'cancel'> {
+): Promise<'yes' | 'cancel'> {
     return new Promise((resolve) => {
         // Remove any existing modal
         const existingModal = document.getElementById('equip-preset-modal');
@@ -1901,26 +1896,6 @@ function showEquipConfirmModal(
             resolve('yes');
         };
 
-        // Create No button
-        const noBtn = document.createElement('button');
-        noBtn.className = 'modal-btn btn-no';
-        noBtn.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))';
-        noBtn.style.borderColor = 'rgba(255, 255, 255, 0.3)';
-        noBtn.style.color = 'rgba(255, 255, 255, 0.7)';
-        noBtn.textContent = 'No - Just Switch';
-        noBtn.onclick = () => {
-            overlay.remove();
-            resolve('no');
-        };
-
-        // Hover for neutral No button
-        noBtn.onmouseenter = () => {
-            noBtn.style.background = 'rgba(255, 255, 255, 0.1)';
-        };
-        noBtn.onmouseleave = () => {
-            noBtn.style.background = 'linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.02))';
-        };
-
         // Create Cancel button
         const cancelBtn = document.createElement('button');
         cancelBtn.className = 'modal-btn btn-cancel';
@@ -1932,7 +1907,6 @@ function showEquipConfirmModal(
 
         // Assemble modal
         buttonContainer.appendChild(yesBtn);
-        buttonContainer.appendChild(noBtn);
         buttonContainer.appendChild(cancelBtn);
 
         modalBox.appendChild(title);
