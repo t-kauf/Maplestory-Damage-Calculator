@@ -433,6 +433,7 @@ function renderPresetRow(presetId, presetData, isEquipped, showDpsComparison, cu
                     ">\u2713 EQUIPPED</div>
                 ` : `
                     <button onclick="window.equipPreset('${presetId}')" style="
+                    display:none;
                         margin-left: auto;
                         padding: 6px 14px;
                         background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.1));
