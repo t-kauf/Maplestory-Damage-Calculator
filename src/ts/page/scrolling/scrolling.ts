@@ -513,7 +513,7 @@ export function createL85Strategies(): ScrollStrategy[] {
     // Base strategy: Slot 1 15% Lock-In
     strategies.push({
         id: 'L85_slot1_15_lock',
-        name: 'Slot 1 15% Lock-In',
+        name: 'Slot 1 15% Lock-In (5/10 15% - Rest 70%)',
         description: '15% L85 on slot 1, reset until success. Then 15% on slots 5&10, 70% on others. No resets after slot 1 succeeds.',
         selectScroll: (slot) => {
             if (slot === 1) return 'L85_15';
@@ -535,7 +535,7 @@ export function createL85Strategies(): ScrollStrategy[] {
     // Base strategy: Slot 1 and 2 15% Lock-In
     strategies.push({
         id: 'L85_slot12_15_lock',
-        name: 'Slot 1+2 15% Lock-In',
+        name: 'Slot 1+2 15% Lock-In (5/10 15% - Rest 70%)',
         description: '15% L85 on slot 1 and 2, reset until success on both. Then 15% on slots 5&10, 70% on others. No resets after slot 2 succeeds.',
         selectScroll: (slot) => {
             if (slot === 1) return 'L85_15';
@@ -565,7 +565,7 @@ export function createL85Strategies(): ScrollStrategy[] {
     // Base strategy: Slot 1 and 2 and 3 15% Lock-In
     strategies.push({
         id: 'L85_slot123_15_lock',
-        name: 'Slot 1+2+3 15% Lock-In',
+        name: 'Slot 1+2+3 15% Lock-In (5/10 15% - Rest 70%)',
         description: '15% L85 on slot 1, 2 and 3, reset until success on all. Then 15% on slots 5&10, 70% on others. No resets after slot 2 succeeds.',
         selectScroll: (slot) => {
             if (slot === 1) return 'L85_15';
@@ -603,11 +603,12 @@ export function createL85Strategies(): ScrollStrategy[] {
     // Slot 1 Lock + All 30%
     strategies.push({
         id: 'L85_slot1_lock_then_30',
-        name: 'Slot 1 Lock + All 30%',
-        description: 'Lock slot 1 with 15%, then use 30% L85 for all remaining slots. Higher risk/reward for high budgets.',
+        name: 'Slot 1 15% Lock-In (5/10 15% - Rest 30%)',
+        description: '15% on slot 1, reset until success. Then 15% on slots 5&10, 30% on others. No resets after slot 1 succeeds.',
         selectScroll: (slot) => {
-            if (slot === 1) return 'L85_15';
-            return 'L85_30';
+                if (slot === 1) return 'L85_15';
+                if (slot === 5 || slot === 10) return 'L85_15';
+                return 'L85_30';
         },
         shouldResetEarly: (slotResults, currentSlot) => {
             if (currentSlot === 1 && slotResults.length >= 1) {
@@ -624,7 +625,7 @@ export function createL85Strategies(): ScrollStrategy[] {
     // Slot 1 Lock + High Success Requirement
     strategies.push({
         id: 'L85_slot1_lock_7plus',
-        name: 'Slot 1 Lock + 7+ Successes',
+        name: 'Slot 1 15% Lock-In (5/10 15% - Rest 70% - Reset <7 Successes)',
         description: 'Lock slot 1, then 15% on slots 5&10, 70% elsewhere. Reset if <7 total successes. Very high budget.',
         selectScroll: (slot) => {
             if (slot === 1) return 'L85_15';
@@ -648,7 +649,7 @@ export function createL85Strategies(): ScrollStrategy[] {
     // Double Lock: Slot 1 + Slot 5
     strategies.push({
         id: 'L85_slot1_5_double_lock',
-        name: 'Slot 1+5 Double Lock',
+        name: 'Slot 1+5 15% Lock-In (10 15% - Rest 70%)',
         description: 'Reset until slot 1 succeeds with a 15%, 70% until slot 5, reset until slot 15% suceeds here too, 70% until slot 10 where finish off with 15%.',
         selectScroll: (slot) => {
             if (slot === 1 || slot === 5) return 'L85_15';
@@ -679,9 +680,29 @@ export function createL85Strategies(): ScrollStrategy[] {
     // Slot 1 Lock + All 15% (Ultra Aggressive)
     strategies.push({
         id: 'L85_slot1_lock_all_15',
-        name: 'Slot 1 Lock + All 15%',
-        description: 'Lock slot 1, then use 15% L85 for ALL remaining slots. Ultra-aggressive, extreme budget required.',
+        name: 'Slot 1 15% Lock-In + All 15%',
+        description: 'Lock slot 1, then use 15% L85 for ALL remaining slots.',
         selectScroll: () => 'L85_15',
+        shouldResetEarly: (slotResults, currentSlot) => {
+            if (currentSlot === 1 && slotResults.length >= 1) {
+                const slot1 = slotResults[0];
+                if (!slot1.success && !slot1.unfunded) {
+                    return true;
+                }
+            }
+            return false;
+        },
+        shouldReset: () => false
+    });
+
+     strategies.push({
+        id: 'L85_slot1_lock_all_30',
+        name: 'Slot 1 15% Lock-In + All 30%',
+        description: '15% on slot 1, reset until success. Then 30% on all other slots. No resets after slot 1 succeeds.',
+          selectScroll: (slot) => {
+            if (slot === 1) return 'L85_15';
+            return 'L85_30';
+        },
         shouldResetEarly: (slotResults, currentSlot) => {
             if (currentSlot === 1 && slotResults.length >= 1) {
                 const slot1 = slotResults[0];
