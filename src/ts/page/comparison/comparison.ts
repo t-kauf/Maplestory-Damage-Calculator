@@ -475,3 +475,318 @@ export function getAllSlotConfigs(): EquipmentSlotConfig[] {
 export function generateDefaultItemName(slotId: EquipmentSlotId, itemCount: number): string {
     return `Item ${itemCount + 1}`;
 }
+
+// ============================================================================
+// EQUIP CONFIRMATION MODAL
+// ============================================================================
+
+/**
+ * Result of equip stat changes calculation
+ */
+export interface EquipStatChanges {
+    directStats: {
+        old: Record<string, number>;
+        new: Record<string, number>;
+        diff: Record<string, number>;
+    };
+    passiveGains: {
+        old: ReturnType<typeof calculatePassiveGainsForItem>;
+        new: ReturnType<typeof calculatePassiveGainsForItem>;
+    };
+    hasAnyChanges: boolean;
+}
+
+/**
+ * Calculate stat changes between old equipped item and new comparison item
+ * @param slotId - Equipment slot ID
+ * @param newItem - Comparison item to equip
+ * @returns Stat changes including passive gains
+ */
+export function calculateEquipStatChanges(
+    slotId: EquipmentSlotId,
+    newItem: ComparisonItem
+): EquipStatChanges {
+    const baseStats = loadoutStore.getBaseStats();
+    const currentClass = loadoutStore.getSelectedClass();
+    const characterLevel = loadoutStore.getCharacterLevel();
+
+    // Get old equipped item
+    const equippedData = getEquippedItemData(slotId);
+
+    // Calculate direct stats for old item
+    const oldDirectStats: Record<string, number> = {};
+    if (equippedData) {
+        oldDirectStats[STAT.ATTACK.id] = equippedData.attack;
+        oldDirectStats[STAT.PRIMARY_MAIN_STAT.id] = equippedData.mainStat;
+        equippedData.statLines.forEach(statLine => {
+            oldDirectStats[statLine.type] = (oldDirectStats[statLine.type] || 0) + statLine.value;
+        });
+    }
+
+    // Calculate direct stats for new item
+    const newDirectStats: Record<string, number> = {};
+    newDirectStats[STAT.ATTACK.id] = newItem.attack;
+    newDirectStats[STAT.PRIMARY_MAIN_STAT.id] = newItem.mainStat;
+    newItem.statLines.forEach(statLine => {
+        newDirectStats[statLine.type] = (newDirectStats[statLine.type] || 0) + statLine.value;
+    });
+
+    // Calculate passive gains for old item
+    const oldPassiveGains = equippedData && currentClass
+        ? calculatePassiveGainsForItem(
+            {
+                guid: 'old',
+                name: 'Old Item',
+                attack: equippedData.attack,
+                mainStat: equippedData.mainStat,
+                statLines: equippedData.statLines.map(sl => ({
+                    type: sl.type as StatId,
+                    value: sl.value
+                }))
+            },
+            { currentClass, characterLevel, baseStats }
+        )
+        : { statChanges: {}, breakdown: [], complexPassives: [], complexStatChanges: {} };
+
+    // Calculate passive gains for new item
+    const newPassiveGains = currentClass
+        ? calculatePassiveGainsForItem(
+            newItem,
+            { currentClass, characterLevel, baseStats }
+        )
+        : { statChanges: {}, breakdown: [], complexPassives: [], complexStatChanges: {} };
+
+    // Calculate difference
+    const diff: Record<string, number> = {};
+
+    // Direct stats diff
+    Object.keys({ ...oldDirectStats, ...newDirectStats }).forEach(stat => {
+        const oldValue = oldDirectStats[stat] || 0;
+        const newValue = newDirectStats[stat] || 0;
+        diff[stat] = newValue - oldValue;
+    });
+
+    // Passive gains diff
+    Object.keys({ ...oldPassiveGains.statChanges, ...newPassiveGains.statChanges }).forEach(stat => {
+        const oldValue = oldPassiveGains.statChanges[stat] || 0;
+        const newValue = newPassiveGains.statChanges[stat] || 0;
+        diff[stat] = (diff[stat] || 0) + (newValue - oldValue);
+    });
+
+    const hasAnyChanges = Object.values(diff).some(v => v !== 0) ||
+        oldPassiveGains.breakdown.length > 0 ||
+        newPassiveGains.breakdown.length > 0;
+
+    return {
+        directStats: {
+            old: oldDirectStats,
+            new: newDirectStats,
+            diff
+        },
+        passiveGains: {
+            old: oldPassiveGains,
+            new: newPassiveGains
+        },
+        hasAnyChanges
+    };
+}
+
+/**
+ * Format stat name for display
+ */
+function formatStatForDisplay(statId: string): string {
+    // Find the STAT entry with matching ID
+    const statEntry = Object.values(STAT).find(stat => stat.id === statId);
+    return statEntry?.label || statId;
+}
+
+/**
+ * Check if a stat should display as a percentage
+ */
+function isStatPercentage(statId: string): boolean {
+    // Raw value stats (not divided by 10): HitChance, MaxHp, Attack, MainStat
+    return !['hitChance', 'maxHp', 'attack', 'primaryMainStat'].includes(statId);
+}
+
+/**
+ * Create stat comparison table HTML for equip modal
+ */
+function createEquipStatComparisonTable(statChanges: EquipStatChanges): string {
+    const { diff, passiveGains } = statChanges;
+    const hasPassiveGains = passiveGains.old.breakdown.length > 0 || passiveGains.new.breakdown.length > 0;
+
+    if (!hasPassiveGains && Object.keys(diff).length === 0) {
+        return '<div style="text-align: center; color: var(--text-secondary); padding: 20px;">No stat changes</div>';
+    }
+
+    let rows = '';
+
+    // Show passive gains breakdown if available
+    if (hasPassiveGains) {
+        // Combine all passive stat changes
+        const allPassives = new Set([
+            ...Object.keys(passiveGains.old.statChanges),
+            ...Object.keys(passiveGains.new.statChanges)
+        ]);
+
+        if (allPassives.size > 0) {
+            rows += '<tr><td colspan="3" style="background: rgba(0, 122, 255, 0.1); padding: 12px; text-align: center; font-weight: 600; color: var(--text-primary);">Passive Stat Gains (Job Skills)</td></tr>';
+
+            for (const stat of allPassives) {
+                const oldValue = passiveGains.old.statChanges[stat] || 0;
+                const newValue = passiveGains.new.statChanges[stat] || 0;
+                const diffValue = newValue - oldValue;
+
+                const isPercent = isStatPercentage(stat);
+                const formatValue = (val: number): string => {
+                    if (val === 0) return '-';
+                    const displayValue = isPercent ? val.toFixed(1).replace(/\.0$/, '') : val;
+                    return `${displayValue}${isPercent ? '%' : ''}`;
+                };
+
+                const oldClass = oldValue > 0 ? 'stat-value-negative' : 'stat-value-neutral';
+                const newClass = newValue > 0 ? 'stat-value-positive' : 'stat-value-neutral';
+                const diffClass = diffValue > 0 ? 'stat-value-positive' : diffValue < 0 ? 'stat-value-negative' : 'stat-value-neutral';
+
+                rows += `
+                    <tr>
+                        <td>${formatStatForDisplay(stat)}</td>
+                        <td class="${oldClass}">${formatValue(oldValue)}</td>
+                        <td class="${newClass}">${formatValue(newValue)}</td>
+                    </tr>
+                `;
+            }
+        }
+    }
+
+    return `
+        <table class="stat-table">
+            <thead>
+                <tr>
+                    <th>Passive Stat</th>
+                    <th>Losing</th>
+                    <th>Gaining</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${rows || '<tr><td colspan="3" style="text-align: center; color: var(--text-secondary); padding: 20px;">No passive stat changes</td></tr>'}
+            </tbody>
+        </table>
+    `;
+}
+
+/**
+ * Show equip confirmation modal
+ * @param slotId - Equipment slot ID
+ * @param newItem - Comparison item to equip
+ * @returns Promise with user choice
+ */
+export function showEquipConfirmModal(
+    slotId: EquipmentSlotId,
+    newItem: ComparisonItem
+): Promise<'yes' | 'no' | 'cancel'> {
+    return new Promise((resolve) => {
+        // Remove any existing modal
+        const existingModal = document.getElementById('equip-comparison-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        // Calculate stat changes
+        const statChanges = calculateEquipStatChanges(slotId, newItem);
+
+        // Create modal overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'equip-comparison-modal';
+        overlay.className = 'modal-overlay';
+
+        // Create modal box
+        const modalBox = document.createElement('div');
+        modalBox.className = 'modal-box';
+
+        // Get slot config for display name
+        const slotConfig = getSlotConfig(slotId);
+        const slotName = slotConfig?.name || slotId;
+
+        // Create title
+        const title = document.createElement('h2');
+        title.className = 'modal-title';
+        title.textContent = `Equip ${newItem.name}`;
+
+        // Create message
+        const message = document.createElement('p');
+        message.className = 'modal-message';
+        message.innerHTML = `
+            Are you sure you want to equip <strong>${newItem.name}</strong> to the <strong>${slotName}</strong> slot?<br>
+            <br>
+            This will:
+            <ul style="text-align: left; margin: 12px 0; padding-left: 24px;">
+                <li>Subtract the stats of your currently equipped item from base stats</li>
+                <li>Add the stats of ${newItem.name} to base stats</li>
+                <li>Convert your old equipped item into a comparison item</li>
+            </ul>
+        `;
+
+        // Create stat comparison table
+        const tableContainer = document.createElement('div');
+        tableContainer.className = 'stat-comparison-table';
+        tableContainer.innerHTML = createEquipStatComparisonTable(statChanges);
+
+        // Create button container
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'modal-buttons';
+
+        // Create Yes button
+        const yesBtn = document.createElement('button');
+        yesBtn.className = 'modal-btn btn-yes';
+        yesBtn.textContent = 'Equip - Apply Stats';
+        yesBtn.onclick = () => {
+            overlay.remove();
+            resolve('yes');
+        };
+
+        // Create No button
+        const noBtn = document.createElement('button');
+        noBtn.className = 'modal-btn btn-no';
+        noBtn.textContent = 'Equip - Keep Stats';
+        noBtn.onclick = () => {
+            overlay.remove();
+            resolve('no');
+        };
+
+        // Create Cancel button
+        const cancelBtn = document.createElement('button');
+        cancelBtn.className = 'modal-btn btn-cancel';
+        cancelBtn.textContent = 'Cancel';
+        cancelBtn.onclick = () => {
+            overlay.remove();
+            resolve('cancel');
+        };
+
+        // Assemble modal
+        buttonContainer.appendChild(yesBtn);
+        buttonContainer.appendChild(noBtn);
+        buttonContainer.appendChild(cancelBtn);
+
+        modalBox.appendChild(title);
+        modalBox.appendChild(message);
+        modalBox.appendChild(tableContainer);
+        modalBox.appendChild(buttonContainer);
+
+        overlay.appendChild(modalBox);
+        document.body.appendChild(overlay);
+
+        // Handle ESC key
+        const escHandler = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                overlay.remove();
+                document.removeEventListener('keydown', escHandler);
+                resolve('cancel');
+            }
+        };
+        document.addEventListener('keydown', escHandler);
+
+        // Focus on Yes button by default
+        yesBtn.focus();
+    });
+}

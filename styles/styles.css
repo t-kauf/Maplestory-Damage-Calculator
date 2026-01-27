@@ -20,6 +20,7 @@
 @import url('./components/tables.css');
 @import url('./components/tabs.css');
 @import url('./components/selectors.css');
+@import url('./components/modal.css');
 
 /* Features */
 @import url('./features/companions.css');

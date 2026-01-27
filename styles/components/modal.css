@@ -1,0 +1,205 @@
+/* ========================================
+   SHARED MODAL STYLES
+   Used by: Companions, Comparison Equipment
+   ======================================== */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.modal-box {
+    background: var(--background);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 500px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-title {
+    margin: 0 0 16px 0;
+    font-size: 1.5em;
+    font-weight: 700;
+    color: var(--text-primary);
+    text-align: center;
+}
+
+.modal-message {
+    margin: 0 0 20px 0;
+    font-size: 1em;
+    color: var(--text-secondary);
+    text-align: center;
+    line-height: 1.5;
+}
+
+/* Stat Comparison Table */
+.stat-comparison-table {
+    margin: 20px 0;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border-color);
+}
+
+.stat-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9em;
+}
+
+.stat-table thead {
+    background: linear-gradient(135deg, rgba(0, 122, 255, 0.15), rgba(88, 86, 214, 0.1));
+    border-bottom: 2px solid rgba(0, 122, 255, 0.3);
+}
+
+.stat-table th {
+    padding: 10px 12px;
+    text-align: center;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.stat-table tbody tr {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.stat-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.stat-table td {
+    padding: 8px 12px;
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+.stat-table td:first-child {
+    text-align: left;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Stat value colors */
+.stat-value-positive {
+    color: #10b981;
+    font-weight: 600;
+}
+
+.stat-value-negative {
+    color: #ef4444;
+    font-weight: 600;
+}
+
+.stat-value-neutral {
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+/* Modal Button Container */
+.modal-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    justify-content: center;
+}
+
+.modal-btn {
+    flex: 1;
+    padding: 12px 20px;
+    border: 2px solid;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95em;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.btn-yes {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.1));
+    border-color: #10b981;
+    color: #10b981;
+}
+
+.btn-yes:hover {
+    background: rgba(16, 185, 129, 0.25);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.btn-no {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.1));
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
+
+.btn-no:hover {
+    background: rgba(59, 130, 246, 0.25);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-cancel {
+    background: linear-gradient(135deg, rgba(107, 114, 128, 0.15), rgba(107, 114, 128, 0.1));
+    border-color: rgba(255, 255, 255, 0.3);
+    color: var(--text-secondary);
+}
+
+.btn-cancel:hover {
+    background: rgba(107, 114, 128, 0.25);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+}
+
+/* Scrollbar for modal content */
+.modal-box::-webkit-scrollbar {
+    width: 8px;
+}
+
+.modal-box::-webkit-scrollbar-track {
+    background: var(--background);
+    border-radius: 4px;
+}
+
+.modal-box::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.modal-box::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}

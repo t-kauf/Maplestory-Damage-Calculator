@@ -22,7 +22,8 @@ import {
     calculateEquippedDamage,
     EQUIPMENT_SLOTS,
     generateDefaultItemName,
-    getSlotConfig
+    getSlotConfig,
+    showEquipConfirmModal
 } from './comparison';
 import type { ComparisonItem, EquipmentSlotId, ComparisonStatLine } from '@ts/types/page/gear-lab/gear-lab.types';
 import type { StatId } from '@ts/types/constants';
@@ -354,12 +355,12 @@ function createItemCard(item: ComparisonItem, itemNumber: number): HTMLElement {
                     </svg>
                     <span>Add Stat</span>
                 </button>
-                <!--<button class="comparison-action-btn comparison-action-btn--equip" aria-label="Equip this item" data-guid="${item.guid}">
+                <button class="comparison-action-btn comparison-action-btn--equip" aria-label="Equip this item" data-guid="${item.guid}">
                     <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                         <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 1 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
                     </svg>
                     <span>Equip</span>
-                </button>-->
+                </button>
             </div>
         </div>
     `;
@@ -561,23 +562,97 @@ function handleAddStatLine(guid: string): void {
 /**
  * Handle equip button click
  */
-function handleEquipItem(guid: string): void {
+async function handleEquipItem(guid: string): Promise<void> {
     const item = getComparisonItems(currentSlot).find(i => i.guid === guid);
     if (!item) return;
 
-    // Update equipment slot with item data
-    gearLabStore.updateEquipmentSlot(currentSlot, {
+    // Show equip confirmation modal
+    const userChoice = await showEquipConfirmModal(currentSlot, item);
+
+    if (userChoice === 'cancel') {
+        return;
+    }
+
+    // Get currently equipped item data
+    const equipmentData = loadoutStore.getEquipmentData();
+    const equippedItem = equipmentData[currentSlot];
+
+    if (userChoice === 'yes') {
+        // Apply stats - need to subtract old and add new
+        const baseStats = loadoutStore.getBaseStats();
+        const subtractService = new StatCalculationService(baseStats);
+
+        // Subtract old equipped item stats
+        if (equippedItem) {
+            subtractService.subtract(STAT.ATTACK.id, equippedItem.attack);
+            subtractService.subtract(STAT.PRIMARY_MAIN_STAT.id, equippedItem.mainStat || 0);
+
+            equippedItem.statLines?.forEach(statLine => {
+                subtractService.subtract(statLine.type, statLine.value);
+            });
+        }
+
+        // Convert old equipped item to comparison item and add to list
+        if (equippedItem && equippedItem.name) {
+            const oldItemAsComparison: Omit<ComparisonItem, 'guid'> = {
+                name: equippedItem.name,
+                attack: equippedItem.attack,
+                mainStat: equippedItem.mainStat || 0,
+                statLines: equippedItem.statLines?.map(sl => ({
+                    type: sl.type as StatId,
+                    value: sl.value
+                })) || []
+            };
+            addComparisonItem(currentSlot, oldItemAsComparison);
+        }
+
+        // Add new item stats
+        const addService = new StatCalculationService(subtractService.getStats());
+        addService.add(STAT.ATTACK.id, item.attack);
+        addService.add(STAT.PRIMARY_MAIN_STAT.id, item.mainStat);
+
+        item.statLines.forEach(statLine => {
+            addService.add(statLine.type, statLine.value);
+        });
+
+        // Update base stats in loadoutStore
+        loadoutStore.updateBaseStats(addService.getStats());
+    } else if (userChoice === 'no') {
+        // Don't apply stats - just convert old item to comparison item
+        if (equippedItem && equippedItem.name) {
+            const oldItemAsComparison: Omit<ComparisonItem, 'guid'> = {
+                name: equippedItem.name,
+                attack: equippedItem.attack,
+                mainStat: equippedItem.mainStat || 0,
+                statLines: equippedItem.statLines?.map(sl => ({
+                    type: sl.type as StatId,
+                    value: sl.value
+                })) || []
+            };
+            addComparisonItem(currentSlot, oldItemAsComparison);
+        }
+    }
+
+    // Update equipment slot with new item data
+    loadoutStore.updateEquipment(currentSlot, {
+        name: item.name,
         attack: item.attack,
         mainStat: item.mainStat,
-        damageAmp: 0
+        statLines: item.statLines.map(sl => ({
+            type: sl.type,
+            value: sl.value
+        }))
     });
 
-    // Remove the comparison item
+    // Remove the comparison item we just equipped
     removeComparisonItem(currentSlot, guid);
 
     // Re-render
     renderComparisonItems();
     renderEquippedItem();
+
+    // Trigger recalculation
+    handleCalculate();
 
     showToast(`Equipped ${item.name}`, true);
 }
