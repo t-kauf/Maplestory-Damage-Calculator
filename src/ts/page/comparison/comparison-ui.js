@@ -9,11 +9,12 @@ import {
   calculateEquippedDamage,
   EQUIPMENT_SLOTS,
   generateDefaultItemName,
-  getSlotConfig
+  getSlotConfig,
+  showEquipConfirmModal
 } from "./comparison.js";
+import { STAT } from "@ts/types/constants.js";
 import { generateStatTypeOptionsHTML } from "@ts/page/equipment/equipment.js";
 import { loadoutStore } from "@ts/store/loadout.store.js";
-import { gearLabStore } from "@ts/store/gear-lab-store.js";
 import { showToast } from "@ts/utils/notifications.js";
 import { displayResults } from "./results-display.js";
 import { StatCalculationService } from "@ts/services/stat-calculation-service.js";
@@ -257,12 +258,12 @@ function createItemCard(item, itemNumber) {
                     </svg>
                     <span>Add Stat</span>
                 </button>
-                <!--<button class="comparison-action-btn comparison-action-btn--equip" aria-label="Equip this item" data-guid="${item.guid}">
+                <button class="comparison-action-btn comparison-action-btn--equip" aria-label="Equip this item" data-guid="${item.guid}">
                     <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
                         <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 1 1 1 1.06-1.06l2.094 2.093 3.473-4.425a.267.267 0 0 1 .02-.022z"/>
                     </svg>
                     <span>Equip</span>
-                </button>-->
+                </button>
             </div>
         </div>
     `;
@@ -384,6 +385,18 @@ function handleAddItem() {
   switchToItem(newItem.guid);
   triggerAutoCalculate();
 }
+function convertEquippedToComparisonItem(equippedItem) {
+  if (!equippedItem?.name) return null;
+  return {
+    name: equippedItem.name,
+    attack: equippedItem.attack,
+    mainStat: equippedItem.mainStat || 0,
+    statLines: equippedItem.statLines?.map((sl) => ({
+      type: sl.type,
+      value: sl.value
+    })) || []
+  };
+}
 function handleAddStatLine(guid) {
   const item = getComparisonItems(currentSlot).find((i) => i.guid === guid);
   if (!item) return;
@@ -391,17 +404,52 @@ function handleAddStatLine(guid) {
   renderItemStatLines(guid);
   triggerAutoCalculate();
 }
-function handleEquipItem(guid) {
+async function handleEquipItem(guid) {
   const item = getComparisonItems(currentSlot).find((i) => i.guid === guid);
   if (!item) return;
-  gearLabStore.updateEquipmentSlot(currentSlot, {
+  const userChoice = await showEquipConfirmModal(currentSlot, item);
+  if (userChoice === "cancel") {
+    return;
+  }
+  const equipmentData = loadoutStore.getEquipmentData();
+  const equippedItem = equipmentData[currentSlot];
+  if (equippedItem) {
+    const oldItemAsComparison = convertEquippedToComparisonItem(equippedItem);
+    if (oldItemAsComparison) {
+      addComparisonItem(currentSlot, oldItemAsComparison);
+    }
+  }
+  if (userChoice === "yes") {
+    const baseStats = loadoutStore.getBaseStats();
+    const subtractService = new StatCalculationService(baseStats);
+    if (equippedItem) {
+      subtractService.subtract(STAT.ATTACK.id, equippedItem.attack);
+      subtractService.subtract(STAT.PRIMARY_MAIN_STAT.id, equippedItem.mainStat || 0);
+      equippedItem.statLines?.forEach((statLine) => {
+        subtractService.subtract(statLine.type, statLine.value);
+      });
+    }
+    const addService = new StatCalculationService(subtractService.getStats());
+    addService.add(STAT.ATTACK.id, item.attack);
+    addService.add(STAT.PRIMARY_MAIN_STAT.id, item.mainStat);
+    item.statLines.forEach((statLine) => {
+      addService.add(statLine.type, statLine.value);
+    });
+    loadoutStore.updateBaseStats(addService.getStats());
+  }
+  loadoutStore.updateEquipment(currentSlot, {
+    name: item.name,
     attack: item.attack,
     mainStat: item.mainStat,
-    damageAmp: 0
+    statLines: item.statLines.map((sl) => ({
+      type: sl.type,
+      value: sl.value
+    }))
   });
   removeComparisonItem(currentSlot, guid);
   renderComparisonItems();
   renderEquippedItem();
+  handleCalculate();
   showToast(`Equipped ${item.name}`, true);
 }
 function handleCalculate() {

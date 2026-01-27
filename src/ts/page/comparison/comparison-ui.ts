@@ -27,6 +27,7 @@ import {
 } from './comparison';
 import type { ComparisonItem, EquipmentSlotId, ComparisonStatLine } from '@ts/types/page/gear-lab/gear-lab.types';
 import type { StatId } from '@ts/types/constants';
+import { STAT } from '@ts/types/constants';
 import { generateStatTypeOptionsHTML } from '@ts/page/equipment/equipment';
 import { loadoutStore } from '@ts/store/loadout.store';
 import { gearLabStore } from '@ts/store/gear-lab-store';
@@ -543,6 +544,25 @@ function handleAddItem(): void {
 }
 
 /**
+ * Convert equipped item to comparison item format
+ * @param equippedItem - Equipment slot data
+ * @returns Comparison item data without guid, or null if invalid
+ */
+function convertEquippedToComparisonItem(equippedItem: EquipmentSlotData): Omit<ComparisonItem, 'guid'> | null {
+    if (!equippedItem?.name) return null;
+
+    return {
+        name: equippedItem.name,
+        attack: equippedItem.attack,
+        mainStat: equippedItem.mainStat || 0,
+        statLines: equippedItem.statLines?.map(sl => ({
+            type: sl.type as StatId,
+            value: sl.value
+        })) || []
+    };
+}
+
+/**
  * Handle add stat line button click
  */
 function handleAddStatLine(guid: string): void {
@@ -577,6 +597,14 @@ async function handleEquipItem(guid: string): Promise<void> {
     const equipmentData = loadoutStore.getEquipmentData();
     const equippedItem = equipmentData[currentSlot];
 
+    // Convert old equipped item to comparison item and add to list
+    if (equippedItem) {
+        const oldItemAsComparison = convertEquippedToComparisonItem(equippedItem);
+        if (oldItemAsComparison) {
+            addComparisonItem(currentSlot, oldItemAsComparison);
+        }
+    }
+
     if (userChoice === 'yes') {
         // Apply stats - need to subtract old and add new
         const baseStats = loadoutStore.getBaseStats();
@@ -592,20 +620,6 @@ async function handleEquipItem(guid: string): Promise<void> {
             });
         }
 
-        // Convert old equipped item to comparison item and add to list
-        if (equippedItem && equippedItem.name) {
-            const oldItemAsComparison: Omit<ComparisonItem, 'guid'> = {
-                name: equippedItem.name,
-                attack: equippedItem.attack,
-                mainStat: equippedItem.mainStat || 0,
-                statLines: equippedItem.statLines?.map(sl => ({
-                    type: sl.type as StatId,
-                    value: sl.value
-                })) || []
-            };
-            addComparisonItem(currentSlot, oldItemAsComparison);
-        }
-
         // Add new item stats
         const addService = new StatCalculationService(subtractService.getStats());
         addService.add(STAT.ATTACK.id, item.attack);
@@ -617,20 +631,6 @@ async function handleEquipItem(guid: string): Promise<void> {
 
         // Update base stats in loadoutStore
         loadoutStore.updateBaseStats(addService.getStats());
-    } else if (userChoice === 'no') {
-        // Don't apply stats - just convert old item to comparison item
-        if (equippedItem && equippedItem.name) {
-            const oldItemAsComparison: Omit<ComparisonItem, 'guid'> = {
-                name: equippedItem.name,
-                attack: equippedItem.attack,
-                mainStat: equippedItem.mainStat || 0,
-                statLines: equippedItem.statLines?.map(sl => ({
-                    type: sl.type as StatId,
-                    value: sl.value
-                })) || []
-            };
-            addComparisonItem(currentSlot, oldItemAsComparison);
-        }
     }
 
     // Update equipment slot with new item data

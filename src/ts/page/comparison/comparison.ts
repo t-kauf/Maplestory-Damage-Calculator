@@ -612,7 +612,7 @@ function isStatPercentage(statId: string): boolean {
  * Create stat comparison table HTML for equip modal
  */
 function createEquipStatComparisonTable(statChanges: EquipStatChanges): string {
-    const { diff, passiveGains } = statChanges;
+    const { directStats: { diff }, passiveGains } = statChanges;
     const hasPassiveGains = passiveGains.old.breakdown.length > 0 || passiveGains.new.breakdown.length > 0;
 
     if (!hasPassiveGains && Object.keys(diff).length === 0) {
