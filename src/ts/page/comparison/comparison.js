@@ -290,7 +290,7 @@ function createEquipStatComparisonTable(statChanges) {
                     <td>${formatStatForDisplay(stat)}</td>
                     <td class="${oldClass}">${formatValue(oldValue)}</td>
                     <td class="${newClass}">${formatValue(newValue)}</td>
-                    <td class="${diffClass}">${diffValue > 0 ? "+" : ""}${formatValue(diffValue)}</td>
+                    <td class="${diffClass}">${diffValue > 0 ? "+" : diffValue < 0 ? "-" : ""}${formatValue(Math.abs(diffValue))}</td>
                 </tr>
             `;
     });
@@ -331,7 +331,7 @@ function createEquipStatComparisonTable(statChanges) {
                     <td>${formatStatForDisplay(stat)}</td>
                     <td class="${oldClass}">${formatValue(oldValue)}</td>
                     <td class="${newClass}">${formatValue(newValue)}</td>
-                    <td class="${diffClass}">${diffValue > 0 ? "+" : ""}${formatValue(diffValue)}</td>
+                    <td class="${diffClass}">${diffValue > 0 ? "+" : diffValue < 0 ? "-" : ""}${formatValue(Math.abs(diffValue))}</td>
                 </tr>
             `;
     });
@@ -408,6 +408,13 @@ function showEquipConfirmModal(slotId, newItem) {
     tableContainer.innerHTML = createEquipStatComparisonTable(statChanges);
     const buttonContainer = document.createElement("div");
     buttonContainer.className = "modal-buttons";
+    const equipNoAdjustBtn = document.createElement("button");
+    equipNoAdjustBtn.className = "modal-btn btn-no-adjust";
+    equipNoAdjustBtn.textContent = "Equip Only - Don't Apply Stats";
+    equipNoAdjustBtn.onclick = () => {
+      overlay.remove();
+      wrappedResolve("no");
+    };
     const yesBtn = document.createElement("button");
     yesBtn.className = "modal-btn btn-yes";
     yesBtn.textContent = "Equip - Apply Stats";
@@ -422,6 +429,7 @@ function showEquipConfirmModal(slotId, newItem) {
       overlay.remove();
       wrappedResolve("cancel");
     };
+    buttonContainer.appendChild(equipNoAdjustBtn);
     buttonContainer.appendChild(yesBtn);
     buttonContainer.appendChild(cancelBtn);
     modalBox.appendChild(title);

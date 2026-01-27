@@ -655,7 +655,7 @@ function createEquipStatComparisonTable(statChanges: EquipStatChanges): string {
                     <td>${formatStatForDisplay(stat)}</td>
                     <td class="${oldClass}">${formatValue(oldValue)}</td>
                     <td class="${newClass}">${formatValue(newValue)}</td>
-                    <td class="${diffClass}">${diffValue > 0 ? '+' : ''}${formatValue(diffValue)}</td>
+                    <td class="${diffClass}">${diffValue > 0 ? '+' : diffValue < 0 ? '-' : ''}${formatValue(Math.abs(diffValue))}</td>
                 </tr>
             `;
         });
@@ -703,7 +703,7 @@ function createEquipStatComparisonTable(statChanges: EquipStatChanges): string {
                     <td>${formatStatForDisplay(stat)}</td>
                     <td class="${oldClass}">${formatValue(oldValue)}</td>
                     <td class="${newClass}">${formatValue(newValue)}</td>
-                    <td class="${diffClass}">${diffValue > 0 ? '+' : ''}${formatValue(diffValue)}</td>
+                    <td class="${diffClass}">${diffValue > 0 ? '+' : diffValue < 0 ? '-' : ''}${formatValue(Math.abs(diffValue))}</td>
                 </tr>
             `;
         });
@@ -810,6 +810,15 @@ export function showEquipConfirmModal(
         const buttonContainer = document.createElement('div');
         buttonContainer.className = 'modal-buttons';
 
+        // Create "Equip Only - Don't Apply Stats" button
+        const equipNoAdjustBtn = document.createElement('button');
+        equipNoAdjustBtn.className = 'modal-btn btn-no-adjust';
+        equipNoAdjustBtn.textContent = 'Equip Only - Don\'t Apply Stats';
+        equipNoAdjustBtn.onclick = () => {
+            overlay.remove();
+            wrappedResolve('no');
+        };
+
         // Create Yes button
         const yesBtn = document.createElement('button');
         yesBtn.className = 'modal-btn btn-yes';
@@ -829,6 +838,7 @@ export function showEquipConfirmModal(
         };
 
         // Assemble modal
+        buttonContainer.appendChild(equipNoAdjustBtn);
         buttonContainer.appendChild(yesBtn);
         buttonContainer.appendChild(cancelBtn);
 

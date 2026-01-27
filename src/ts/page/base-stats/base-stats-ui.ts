@@ -13,6 +13,7 @@ import { extractText, parseBaseStatText } from '@ts/utils/ocr';
 import { showToast } from '@ts/utils/notifications';
 import { loadoutStore } from '@ts/store/loadout.store';
 import { STAT_TYPE, STAT, type StatConfig, type StatKey } from '@ts/types/constants';
+import { debounce } from '@ts/utils/event-emitter';
 
 // Stat categories for organizing the UI
 const CORE_COMBAT_STATS: StatKey[] = ['ATTACK', 'DEFENSE', 'CRIT_RATE', 'CRIT_DAMAGE', 'ATTACK_SPEED'];
@@ -436,4 +437,8 @@ function attachItemEquippedListener(): void {
     loadoutStore.on('item-equipped', () => {
         loadBaseStatsUI();
     });
+
+    loadoutStore.on('stat:changed', debounce(() => {
+        loadBaseStatsUI();
+    }, 500));
 }

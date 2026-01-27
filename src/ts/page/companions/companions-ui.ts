@@ -587,7 +587,6 @@ function renderPresetRow(
                     ">✓ EQUIPPED</div>
                 ` : `
                     <button onclick="window.equipPreset('${presetId}')" style="
-                    display:none;
                         margin-left: auto;
                         padding: 6px 14px;
                         background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.1));
@@ -1835,6 +1834,11 @@ function assignCompanionToSlot(companionKey: CompanionKey): void {
             loadoutStore.setEquippedPresetId(presetId);
             updateContributedStatsForPreset(presetId);
             renderPresetsPanel();
+        } else if (userChoice === 'no') {
+            // User says stats are NOT incorporated - just switch presets without adjusting
+            loadoutStore.setEquippedPresetId(presetId);
+            updateContributedStatsForPreset(presetId);
+            renderPresetsPanel();
         }
     } else {
         // No equip effects - just switch presets
@@ -1851,7 +1855,7 @@ function showEquipConfirmModal(
     presetId: CompanionPresetId,
     currentEffects: Record<string, number>,
     newEffects: Record<string, number>
-): Promise<'yes' | 'cancel'> {
+): Promise<'yes' | 'no' | 'cancel'> {
     return new Promise((resolve) => {
         // Remove any existing modal
         const existingModal = document.getElementById('equip-preset-modal');
@@ -1876,9 +1880,17 @@ function showEquipConfirmModal(
         // Create message
         const message = document.createElement('p');
         message.className = 'modal-message';
-        message.textContent = 'Are the stats from the currently equipped preset already incorporated in your input stats?';
+        message.innerHTML = `
+            Are the stats from the currently equipped preset already incorporated in your input stats?<br>
+            <br>
+            This will:
+            <ul style="text-align: left; margin: 12px 0; padding-left: 24px;">
+                <li>Subtract the stats of your current preset from base stats</li>
+                <li>Add the stats of ${presetId.replace('preset', '#')} to base stats</li>
+            </ul>
+        `;
 
-        // Create stat comparison table
+        // Create stat comparison table container
         const tableContainer = document.createElement('div');
         tableContainer.className = 'stat-comparison-table';
         tableContainer.innerHTML = createStatComparisonTable(currentEffects, newEffects);
@@ -1887,10 +1899,19 @@ function showEquipConfirmModal(
         const buttonContainer = document.createElement('div');
         buttonContainer.className = 'modal-buttons';
 
+        // Create "Equip Without Adjusting" button
+        const equipNoAdjustBtn = document.createElement('button');
+        equipNoAdjustBtn.className = 'modal-btn btn-no-adjust';
+        equipNoAdjustBtn.textContent = 'Equip Only - Don\'t Adjust Stats';
+        equipNoAdjustBtn.onclick = () => {
+            overlay.remove();
+            resolve('no');
+        };
+
         // Create Yes button
         const yesBtn = document.createElement('button');
         yesBtn.className = 'modal-btn btn-yes';
-        yesBtn.textContent = 'Yes - Adjust Stats';
+        yesBtn.textContent = 'Equip - Adjust Stats';
         yesBtn.onclick = () => {
             overlay.remove();
             resolve('yes');
@@ -1906,6 +1927,7 @@ function showEquipConfirmModal(
         };
 
         // Assemble modal
+        buttonContainer.appendChild(equipNoAdjustBtn);
         buttonContainer.appendChild(yesBtn);
         buttonContainer.appendChild(cancelBtn);
 
@@ -1945,36 +1967,40 @@ function createStatComparisonTable(
         ...Object.keys(newEffects)
     ]);
 
-    // Filter out Attack stat
+    // Filter out Attack stat - companions don't provide raw attack, only attack percentage
     allStats.delete('Attack');
 
     if (allStats.size === 0) {
         return '<div style="text-align: center; color: var(--text-secondary);">No stat changes</div>';
     }
 
+    // Create the table with losing/gaining/net change format
     let rows = '';
     for (const stat of allStats) {
         const currentValue = currentEffects[stat] || 0;
         const newValue = newEffects[stat] || 0;
+        const diffValue = newValue - currentValue;
 
         // Determine if this stat displays as a percentage
         const isPercentage = !['hitChance', 'maxHp', 'attack', 'mainStat'].includes(stat);
 
         const formatValue = (val: number): string => {
             if (val === 0) return '-';
-            const displayValue = isPercentage ? val.toFixed(1).replace(/\.0$/, '') : val;
-            return `+${displayValue}${isPercentage ? '%' : ''}`;
+            const displayValue = val.toFixed(2).replace(/\.00$/, '');
+            return `${displayValue}${isPercentage ? '%' : ''}`;
         };
 
         // Determine color class
         const currentClass = currentValue > 0 ? 'stat-value-negative' : 'stat-value-neutral';
         const newClass = newValue > 0 ? 'stat-value-positive' : 'stat-value-neutral';
+        const diffClass = diffValue > 0 ? 'stat-value-positive' : diffValue < 0 ? 'stat-value-negative' : 'stat-value-neutral';
 
         rows += `
             <tr>
                 <td>${formatStat(stat)}</td>
                 <td class="${currentClass}">${formatValue(currentValue)}</td>
                 <td class="${newClass}">${formatValue(newValue)}</td>
+                <td class="${diffClass}">${diffValue > 0 ? '+' : diffValue < 0 ? '-' : ''}${formatValue(Math.abs(diffValue))}</td>
             </tr>
         `;
     }
@@ -1984,8 +2010,9 @@ function createStatComparisonTable(
             <thead>
                 <tr>
                     <th>Stat</th>
-                    <th>Current Preset</th>
-                    <th>New Preset</th>
+                    <th>Losing</th>
+                    <th>Gaining</th>
+                    <th>Net Change</th>
                 </tr>
             </thead>
             <tbody>

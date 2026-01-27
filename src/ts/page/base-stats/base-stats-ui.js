@@ -10,6 +10,7 @@ import { extractText, parseBaseStatText } from "@ts/utils/ocr.js";
 import { showToast } from "@ts/utils/notifications.js";
 import { loadoutStore } from "@ts/store/loadout.store.js";
 import { STAT_TYPE, STAT } from "@ts/types/constants.js";
+import { debounce } from "@ts/utils/event-emitter.js";
 const CORE_COMBAT_STATS = ["ATTACK", "DEFENSE", "CRIT_RATE", "CRIT_DAMAGE", "ATTACK_SPEED"];
 const MAIN_STATS = ["STR", "DEX", "INT", "LUK"];
 const DAMAGE_MODIFIERS = [
@@ -341,6 +342,9 @@ function attachItemEquippedListener() {
   loadoutStore.on("item-equipped", () => {
     loadBaseStatsUI();
   });
+  loadoutStore.on("stat:changed", debounce(() => {
+    loadBaseStatsUI();
+  }, 500));
 }
 export {
   attachBaseStatsEventListeners,

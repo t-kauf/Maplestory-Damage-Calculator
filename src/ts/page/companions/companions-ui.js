@@ -433,7 +433,6 @@ function renderPresetRow(presetId, presetData, isEquipped, showDpsComparison, cu
                     ">\u2713 EQUIPPED</div>
                 ` : `
                     <button onclick="window.equipPreset('${presetId}')" style="
-                    display:none;
                         margin-left: auto;
                         padding: 6px 14px;
                         background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(59, 130, 246, 0.1));
@@ -1310,6 +1309,10 @@ window.equipPreset = async function(presetId) {
       loadoutStore.setEquippedPresetId(presetId);
       updateContributedStatsForPreset(presetId);
       renderPresetsPanel();
+    } else if (userChoice === "no") {
+      loadoutStore.setEquippedPresetId(presetId);
+      updateContributedStatsForPreset(presetId);
+      renderPresetsPanel();
     }
   } else {
     loadoutStore.setEquippedPresetId(presetId);
@@ -1333,15 +1336,30 @@ function showEquipConfirmModal(presetId, currentEffects, newEffects) {
     title.textContent = `Equip ${presetId.replace("preset", "#")}`;
     const message = document.createElement("p");
     message.className = "modal-message";
-    message.textContent = "Are the stats from the currently equipped preset already incorporated in your input stats?";
+    message.innerHTML = `
+            Are the stats from the currently equipped preset already incorporated in your input stats?<br>
+            <br>
+            This will:
+            <ul style="text-align: left; margin: 12px 0; padding-left: 24px;">
+                <li>Subtract the stats of your current preset from base stats</li>
+                <li>Add the stats of ${presetId.replace("preset", "#")} to base stats</li>
+            </ul>
+        `;
     const tableContainer = document.createElement("div");
     tableContainer.className = "stat-comparison-table";
     tableContainer.innerHTML = createStatComparisonTable(currentEffects, newEffects);
     const buttonContainer = document.createElement("div");
     buttonContainer.className = "modal-buttons";
+    const equipNoAdjustBtn = document.createElement("button");
+    equipNoAdjustBtn.className = "modal-btn btn-no-adjust";
+    equipNoAdjustBtn.textContent = "Equip Only - Don't Adjust Stats";
+    equipNoAdjustBtn.onclick = () => {
+      overlay.remove();
+      resolve("no");
+    };
     const yesBtn = document.createElement("button");
     yesBtn.className = "modal-btn btn-yes";
-    yesBtn.textContent = "Yes - Adjust Stats";
+    yesBtn.textContent = "Equip - Adjust Stats";
     yesBtn.onclick = () => {
       overlay.remove();
       resolve("yes");
@@ -1353,6 +1371,7 @@ function showEquipConfirmModal(presetId, currentEffects, newEffects) {
       overlay.remove();
       resolve("cancel");
     };
+    buttonContainer.appendChild(equipNoAdjustBtn);
     buttonContainer.appendChild(yesBtn);
     buttonContainer.appendChild(cancelBtn);
     modalBox.appendChild(title);
@@ -1385,19 +1404,22 @@ function createStatComparisonTable(currentEffects, newEffects) {
   for (const stat of allStats) {
     const currentValue = currentEffects[stat] || 0;
     const newValue = newEffects[stat] || 0;
+    const diffValue = newValue - currentValue;
     const isPercentage = !["hitChance", "maxHp", "attack", "mainStat"].includes(stat);
     const formatValue = (val) => {
       if (val === 0) return "-";
-      const displayValue = isPercentage ? val.toFixed(1).replace(/\.0$/, "") : val;
-      return `+${displayValue}${isPercentage ? "%" : ""}`;
+      const displayValue = val.toFixed(2).replace(/\.00$/, "");
+      return `${displayValue}${isPercentage ? "%" : ""}`;
     };
     const currentClass = currentValue > 0 ? "stat-value-negative" : "stat-value-neutral";
     const newClass = newValue > 0 ? "stat-value-positive" : "stat-value-neutral";
+    const diffClass = diffValue > 0 ? "stat-value-positive" : diffValue < 0 ? "stat-value-negative" : "stat-value-neutral";
     rows += `
             <tr>
                 <td>${formatStat(stat)}</td>
                 <td class="${currentClass}">${formatValue(currentValue)}</td>
                 <td class="${newClass}">${formatValue(newValue)}</td>
+                <td class="${diffClass}">${diffValue > 0 ? "+" : diffValue < 0 ? "-" : ""}${formatValue(Math.abs(diffValue))}</td>
             </tr>
         `;
   }
@@ -1406,8 +1428,9 @@ function createStatComparisonTable(currentEffects, newEffects) {
             <thead>
                 <tr>
                     <th>Stat</th>
-                    <th>Current Preset</th>
-                    <th>New Preset</th>
+                    <th>Losing</th>
+                    <th>Gaining</th>
+                    <th>Net Change</th>
                 </tr>
             </thead>
             <tbody>
