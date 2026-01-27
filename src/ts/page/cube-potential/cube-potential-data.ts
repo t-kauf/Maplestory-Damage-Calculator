@@ -710,15 +710,7 @@ EQUIPMENT_POTENTIAL_DATA.normal.line3 = EQUIPMENT_POTENTIAL_DATA.normal.line1;
  */
 export const NON_COMBAT_POTENTIAL_STATS = [
     'Max HP %',
-    'Max MP %',
-    'Str %',
-    'Dex %',
-    'Int %',
-    'Luk %',
-    'Str',
-    'Dex',
-    'Int',
-    'Luk'
+    'Max MP %'
 ] as const;
 
 /**

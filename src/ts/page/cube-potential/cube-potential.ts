@@ -68,8 +68,6 @@ export interface ComparisonResult {
     setBGain: number;
     setBAbsoluteGain: number;
     deltaGain: number;
-    setAStats: any;
-    setBStats: any;
     slotId: CubeSlotId;
     rarity: Rarity;
 }
@@ -129,7 +127,7 @@ export function getStatIdFromPotentialStat(
         return STAT.PRIMARY_MAIN_STAT.id;
     }
 
-    // Use the mapping table
+    // Use the mapping table (keys are already in consistent case)
     return POTENTIAL_STAT_TO_STAT_ID[potentialStat] || null;
 }
 
@@ -174,15 +172,16 @@ export function potentialStatToDamageStat(
 
     // Check if it's a main stat percentage
     if (normalizedPotentialStat === `${normalizedMainStat} %`) {
-        return { stat: STAT.STAT_DAMAGE.id, value: value / 100, isMainStatPct: true };
+        return { stat: STAT.MAIN_STAT_PCT.id, value: value / 100, isMainStatPct: true };
     }
 
     // Check if it's a flat main stat
     if (normalizedPotentialStat === normalizedMainStat) {
-        return { stat: STAT.STAT_DAMAGE.id, value: value / 100, isMainStatPct: false };
+        return { stat: STAT.PRIMARY_MAIN_STAT.id, value: value / 100, isMainStatPct: false };
     }
 
     // Return mapped stat or null if not relevant
+    // Note: statMap keys use exact case matching (non-main stats)
     const statId = statMap[potentialStat];
     return {
         stat: statId || null,
@@ -233,9 +232,10 @@ export function lineExistsInRarity(
 export function calculateSlotSetGain(
     slotId: CubeSlotId,
     rarity: Rarity,
-    setData: PotentialSet,
+    setToRemoveData: PotentialSet,
+    setToAddData: PotentialSet,
     currentStats: BaseStats
-): { gain: number; stats: BaseStats; baselineStats: BaseStats } {
+): { gain: number; bossDPS: number } {
     const mainStat = getMainStatForClass();
 
     // Step 1: Calculate baseline by removing this set's contribution from current stats
@@ -243,7 +243,7 @@ export function calculateSlotSetGain(
 
     for (let lineNum = 1; lineNum <= 3; lineNum++) {
         const lineKey = `line${lineNum}` as keyof PotentialSet;
-        const line = setData[lineKey];
+        const line = setToRemoveData[lineKey];
         if (!line || !line.stat) continue;
 
         // Only process line if it exists in the current rarity for this slot
@@ -265,7 +265,7 @@ export function calculateSlotSetGain(
 
     for (let lineNum = 1; lineNum <= 3; lineNum++) {
         const lineKey = `line${lineNum}` as keyof PotentialSet;
-        const line = setData[lineKey];
+        const line = setToAddData[lineKey];
         if (!line || !line.stat) continue;
 
         if (!lineExistsInRarity(slotId, rarity, lineNum, line.stat, line.value, line.prime)) continue;
@@ -282,7 +282,7 @@ export function calculateSlotSetGain(
     const setDPS = setService.computeDPS('boss');
     const gain = ((setDPS - baselineDPS) / baselineDPS * 100);
 
-    return { gain, stats: setService.getStats(), baselineStats: baselineService.getStats() };
+    return { gain, bossDPS: setDPS };
 }
 
 /**
@@ -307,24 +307,20 @@ export function calculateComparison(
     const rarity = slotData.rarity;
 
     // Use shared function to calculate Set A
-    const setAResult = calculateSlotSetGain(currentCubeSlot, rarity, slotData.setA, currentStats);
+    const setAResult = calculateSlotSetGain(currentCubeSlot, rarity, slotData.setA, slotData.setA, currentStats);
     const setAGain = setAResult.gain;
-    const setAStats = setAResult.stats;
-    const baselineStats = setAResult.baselineStats;
 
     // Calculate Set B using the same baseline
-    const setBResult = calculateSlotSetGain(currentCubeSlot, rarity, slotData.setB, baselineStats);
-    const setBStats = setBResult.stats;
+    const setBResult = calculateSlotSetGain(currentCubeSlot, rarity, slotData.setA, slotData.setB, currentStats);
+    const setBStats = setBResult.gain;
 
-    const baselineDPS = new StatCalculationService(baselineStats).computeDPS('boss');
-    const setADPS = new StatCalculationService(setAStats).computeDPS('boss');
-    const setBDPS = new StatCalculationService(setBStats).computeDPS('boss');
+    const baselineDPS = new StatCalculationService(loadoutStore.getBaseStats()).computeDPS('boss');
 
     // Calculate gains
     // Set B Absolute Gain: compared to baseline (for ranking comparison)
-    const setBAbsoluteGain = ((setBDPS - baselineDPS) / baselineDPS * 100);
+    const setBAbsoluteGain = ((setBResult.bossDPS - baselineDPS) / baselineDPS * 100);
     // Set B Relative Gain: compared to Set A (shows the delta when swapping from A to B)
-    const setBGain = ((setBDPS - setADPS) / setADPS * 100);
+    const setBGain = ((setBResult.bossDPS - setAResult.bossDPS) / setAResult.bossDPS * 100);
     const deltaGain = setBGain - setAGain;
 
     return {
@@ -332,8 +328,6 @@ export function calculateComparison(
         setBGain,
         setBAbsoluteGain, // For ranking comparison
         deltaGain,
-        setAStats,
-        setBStats,
         slotId: currentCubeSlot,
         rarity: cubeSlotData[currentCubeSlot][currentPotentialType].rarity
     };

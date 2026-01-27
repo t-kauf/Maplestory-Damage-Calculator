@@ -39,10 +39,12 @@ function getStatIdFromPotentialStat(potentialStat, mainStat) {
   if (NON_COMBAT_POTENTIAL_STATS.includes(potentialStat)) {
     return null;
   }
-  if (mainStat && potentialStat === `${mainStat} %`) {
+  const normalizedPotentialStat = potentialStat.toLowerCase();
+  const normalizedMainStat = mainStat?.toLowerCase() || null;
+  if (normalizedMainStat && normalizedPotentialStat === `${normalizedMainStat} %`) {
     return STAT.MAIN_STAT_PCT.id;
   }
-  if (mainStat && potentialStat === mainStat) {
+  if (normalizedMainStat && normalizedPotentialStat === normalizedMainStat) {
     return STAT.PRIMARY_MAIN_STAT.id;
   }
   return POTENTIAL_STAT_TO_STAT_ID[potentialStat] || null;
@@ -50,6 +52,8 @@ function getStatIdFromPotentialStat(potentialStat, mainStat) {
 function potentialStatToDamageStat(potentialStat, value, accumulatedMainStatPct = 0) {
   const mainStat = getMainStatForClass();
   if (!mainStat) return { stat: null, value: 0, isMainStatPct: false };
+  const normalizedPotentialStat = potentialStat.toLowerCase();
+  const normalizedMainStat = mainStat.toLowerCase();
   const statMap = {
     "Critical Rate %": STAT.CRIT_RATE.id,
     "Critical Damage %": STAT.CRIT_DAMAGE.id,
@@ -62,11 +66,11 @@ function potentialStatToDamageStat(potentialStat, value, accumulatedMainStatPct 
     "Defense Penetration": STAT.DEF_PEN.id
     // Max HP % and Max MP % are non-combat stats, skip them
   };
-  if (potentialStat === `${mainStat} %`) {
-    return { stat: STAT.STAT_DAMAGE.id, value: value / 100, isMainStatPct: true };
+  if (normalizedPotentialStat === `${normalizedMainStat} %`) {
+    return { stat: STAT.MAIN_STAT_PCT.id, value: value / 100, isMainStatPct: true };
   }
-  if (potentialStat === mainStat) {
-    return { stat: STAT.STAT_DAMAGE.id, value: value / 100, isMainStatPct: false };
+  if (normalizedPotentialStat === normalizedMainStat) {
+    return { stat: STAT.PRIMARY_MAIN_STAT.id, value: value / 100, isMainStatPct: false };
   }
   const statId = statMap[potentialStat];
   return {
@@ -91,12 +95,12 @@ function lineExistsInRarity(slotId, rarity, lineNum, lineStat, lineValue, linePr
     (line) => line.stat === lineStat && line.value === lineValue && line.prime === linePrime
   );
 }
-function calculateSlotSetGain(slotId, rarity, setData, currentStats) {
+function calculateSlotSetGain(slotId, rarity, setToRemoveData, setToAddData, currentStats) {
   const mainStat = getMainStatForClass();
   const baselineService = new StatCalculationService(currentStats);
   for (let lineNum = 1; lineNum <= 3; lineNum++) {
     const lineKey = `line${lineNum}`;
-    const line = setData[lineKey];
+    const line = setToRemoveData[lineKey];
     if (!line || !line.stat) continue;
     if (!lineExistsInRarity(slotId, rarity, lineNum, line.stat, line.value, line.prime)) continue;
     const statId = getStatIdFromPotentialStat(line.stat, mainStat);
@@ -107,7 +111,7 @@ function calculateSlotSetGain(slotId, rarity, setData, currentStats) {
   const setService = new StatCalculationService(baselineService.getStats());
   for (let lineNum = 1; lineNum <= 3; lineNum++) {
     const lineKey = `line${lineNum}`;
-    const line = setData[lineKey];
+    const line = setToAddData[lineKey];
     if (!line || !line.stat) continue;
     if (!lineExistsInRarity(slotId, rarity, lineNum, line.stat, line.value, line.prime)) continue;
     const statId = getStatIdFromPotentialStat(line.stat, mainStat);
@@ -116,7 +120,7 @@ function calculateSlotSetGain(slotId, rarity, setData, currentStats) {
   }
   const setDPS = setService.computeDPS("boss");
   const gain = (setDPS - baselineDPS) / baselineDPS * 100;
-  return { gain, stats: setService.getStats(), baselineStats: baselineService.getStats() };
+  return { gain, bossDPS: setDPS };
 }
 function calculateComparison(cubeSlotData, currentCubeSlot2, currentPotentialType2) {
   const selectedClass = loadoutStore.getSelectedClass();
@@ -129,17 +133,13 @@ function calculateComparison(cubeSlotData, currentCubeSlot2, currentPotentialTyp
   const slotData = cubeSlotData[currentCubeSlot2][currentPotentialType2];
   const currentStats = loadoutStore.getBaseStats();
   const rarity = slotData.rarity;
-  const setAResult = calculateSlotSetGain(currentCubeSlot2, rarity, slotData.setA, currentStats);
+  const setAResult = calculateSlotSetGain(currentCubeSlot2, rarity, slotData.setA, slotData.setA, currentStats);
   const setAGain = setAResult.gain;
-  const setAStats = setAResult.stats;
-  const baselineStats = setAResult.baselineStats;
-  const setBResult = calculateSlotSetGain(currentCubeSlot2, rarity, slotData.setB, baselineStats);
-  const setBStats = setBResult.stats;
-  const baselineDPS = new StatCalculationService(baselineStats).computeDPS("boss");
-  const setADPS = new StatCalculationService(setAStats).computeDPS("boss");
-  const setBDPS = new StatCalculationService(setBStats).computeDPS("boss");
-  const setBAbsoluteGain = (setBDPS - baselineDPS) / baselineDPS * 100;
-  const setBGain = (setBDPS - setADPS) / setADPS * 100;
+  const setBResult = calculateSlotSetGain(currentCubeSlot2, rarity, slotData.setA, slotData.setB, currentStats);
+  const setBStats = setBResult.gain;
+  const baselineDPS = new StatCalculationService(loadoutStore.getBaseStats()).computeDPS("boss");
+  const setBAbsoluteGain = (setBResult.bossDPS - baselineDPS) / baselineDPS * 100;
+  const setBGain = (setBResult.bossDPS - setAResult.bossDPS) / setAResult.bossDPS * 100;
   const deltaGain = setBGain - setAGain;
   return {
     setAGain,
@@ -147,8 +147,6 @@ function calculateComparison(cubeSlotData, currentCubeSlot2, currentPotentialTyp
     setBAbsoluteGain,
     // For ranking comparison
     deltaGain,
-    setAStats,
-    setBStats,
     slotId: currentCubeSlot2,
     rarity: cubeSlotData[currentCubeSlot2][currentPotentialType2].rarity
   };

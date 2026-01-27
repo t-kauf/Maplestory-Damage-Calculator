@@ -584,15 +584,7 @@ EQUIPMENT_POTENTIAL_DATA.normal.line2 = EQUIPMENT_POTENTIAL_DATA.normal.line1;
 EQUIPMENT_POTENTIAL_DATA.normal.line3 = EQUIPMENT_POTENTIAL_DATA.normal.line1;
 const NON_COMBAT_POTENTIAL_STATS = [
   "Max HP %",
-  "Max MP %",
-  "Str %",
-  "Dex %",
-  "Int %",
-  "Luk %",
-  "Str",
-  "Dex",
-  "Int",
-  "Luk"
+  "Max MP %"
 ];
 const POTENTIAL_STAT_TO_STAT_ID = {
   "Critical Rate %": STAT.CRIT_RATE.id,

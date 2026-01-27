@@ -1195,10 +1195,10 @@ function displayAllSlotsSummary() {
   const summaryData = [];
   SLOT_NAMES.forEach((slot) => {
     const regularData = cubeData[slot.id].regular;
-    const regularResult = calculateSlotSetGain(slot.id, regularData.rarity, regularData.setA, currentStats);
+    const regularResult = calculateSlotSetGain(slot.id, regularData.rarity, regularData.setA, regularData.setB, currentStats);
     const regularGain = regularResult.gain;
     const bonusData = cubeData[slot.id].bonus;
-    const bonusResult = calculateSlotSetGain(slot.id, bonusData.rarity, bonusData.setA, currentStats);
+    const bonusResult = calculateSlotSetGain(slot.id, bonusData.rarity, regularData.setA, regularData.setB, currentStats);
     const bonusGain = bonusResult.gain;
     summaryData.push({
       slotId: slot.id,
