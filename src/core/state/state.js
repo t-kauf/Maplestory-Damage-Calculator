@@ -351,11 +351,12 @@ let selectedPreset = null;
 let selectedSlot = null; // { type: 'main' | 'sub', index: 0-5 }
 
 /**
- * Initialize empty presets
+ * Initialize empty presets - ensures all 20 presets exist
  */
 function initializePresets() {
-    if (Object.keys(presetsState).length === 0) {
-        for (let i = 1; i <= 10; i++) {
+    // Always ensure all 20 presets exist (handles old saves with fewer presets)
+    for (let i = 1; i <= 20; i++) {
+        if (!presetsState[`preset${i}`]) {
             presetsState[`preset${i}`] = {
                 main: null,
                 subs: [null, null, null, null, null, null]

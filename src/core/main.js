@@ -25,6 +25,7 @@ import {
     initializeCubePotential
 } from '@core/cube/cube-potential.js';
 import { applyItemToStats } from '@core/services/item-comparison-service.js';
+import { refreshBestPerSlot } from '@ui/best-per-slot.js';
 import {
     populateStageDropdown, selectContentType, updateStageDropdown
 } from '@core/base-stats/target-select.js';
@@ -53,6 +54,7 @@ export { getStats, getItemStats };
 
 // Main calculation orchestration
 export function calculate() {
+    console.log('[Main] calculate() function called');
     const baseStats = getStats('base');
     const equippedItem = getItemStats('equipped');
 
@@ -87,6 +89,9 @@ export function calculate() {
             const item = getItemStats(`item-${currentSlot}-${itemId}`);
             if (item) {
                 item.id = itemId;
+                // Read isNew flag from the item card's data attribute
+                const itemCard = document.getElementById(`comparison-item-${currentSlot}-${itemId}`);
+                item.isNew = itemCard?.dataset?.isNew === 'true';
                 comparisonItems.push(item);
             }
         });
@@ -106,7 +111,7 @@ export function calculate() {
         };
 
         const itemStats = applyItemToStats(baseStats, equippedItem, item, context);
-        resultsHTML += displayResults(item.name || `Item ${item.id}`, itemStats, `item-${currentSlot}-${item.id}`, false, equippedDamageValues);
+        resultsHTML += displayResults(item.name || `Item ${item.id}`, itemStats, `item-${currentSlot}-${item.id}`, false, equippedDamageValues, item.isNew);
     });
 
     document.getElementById('results-container').innerHTML = resultsHTML || '<p style="text-align: center; color: #b3d9ff;">Add comparison items to see results</p>';
@@ -121,6 +126,13 @@ export function calculate() {
     if (sidebarDpsElement) {
         sidebarDpsElement.textContent = formatDPS(equippedBossResults.dps);
     }
+    
+    // Update Best Per Slot dashboard with current slot's results
+    // Use setTimeout to ensure DOM has fully updated
+    setTimeout(() => {
+        console.log('[Main] Calling refreshBestPerSlot after calculate');
+        refreshBestPerSlot();
+    }, 50);
 }
 
 // Donation notification functions

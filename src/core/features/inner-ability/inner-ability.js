@@ -94,7 +94,7 @@ export function getBaselineStats() {
 export function getAllPresets() {
     const presets = [];
 
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 20; i++) {
         const isEquipped = document.getElementById(`preset-${i}-equipped`)?.checked || false;
         const lines = [];
 

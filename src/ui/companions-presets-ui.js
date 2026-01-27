@@ -53,10 +53,11 @@ function renderPresetsPanel() {
         </header>
     `;
 
-    // Render 10 user presets
-    for (let i = 1; i <= 5; i++) {
+    // Render 20 user presets
+    for (let i = 1; i <= 20; i++) {
         const presetId = `preset${i}`;
-        const presetData = presets[presetId];
+        // Use getPreset to ensure we always have valid preset data (handles missing presets from old saves)
+        const presetData = getPreset(presetId);
         const isEquipped = presetId === equippedPresetId;
 
         html += renderPresetRow(presetId, presetData, isEquipped, showDpsComparison, currentPresetEffects, false);

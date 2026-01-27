@@ -1,6 +1,7 @@
 // Slot-Specific Comparison Manager
 import { getSlotStats, setSlotData } from '@ui/equipment/equipment-tab.js';
 import { availableStats } from '@core/constants.js';
+import { updateEquipmentViewerButton, autoPopulateFromEquipmentViewer } from '@ui/comparison-ui.js';
 
 // Current selected slot
 let currentSlot = 'head';
@@ -54,8 +55,12 @@ export function initializeSlotComparison() {
 
     // Load items for the current slot AFTER DOM is ready
     // Use requestAnimationFrame to ensure DOM is fully rendered
-    requestAnimationFrame(() => {
-        window.loadSlotItems(currentSlot);
+    requestAnimationFrame(async () => {
+        await window.loadSlotItems(currentSlot);
+        // Update Equipment Viewer button visibility
+        updateEquipmentViewerButton();
+        // Auto-populate from Equipment Viewer data
+        await autoPopulateFromEquipmentViewer(currentSlot);
     });
 
     initialized = true;
@@ -77,10 +82,13 @@ export function checkPendingSlotNavigation() {
         }
 
         // Update equipped display and load items
-        requestAnimationFrame(() => {
+        requestAnimationFrame(async () => {
             updateEquippedItemDisplay(currentSlot);
-            window.loadSlotItems(currentSlot);
+            await window.loadSlotItems(currentSlot);
             updateSlotHeader(EQUIPMENT_SLOTS[currentSlot].name);
+            // Update Equipment Viewer button visibility
+            updateEquipmentViewerButton();
+            await autoPopulateFromEquipmentViewer(currentSlot);
         });
     }
 }
@@ -113,12 +121,22 @@ export async function switchComparisonSlot(slotId) {
         const itemsContainer = document.getElementById('comparison-items-container');
 
         if (tabsContainer) {
-            // Clone the add button before clearing to preserve it
+            // Clone the add button, import button, and refresh button before clearing to preserve them
             const addButton = tabsContainer.querySelector('button[data-type="add-button"]');
+            const importButton = tabsContainer.querySelector('button[data-type="import-button"]');
+            const refreshButton = tabsContainer.querySelector('button[data-type="refresh-button"]');
             const addButtonClone = addButton ? addButton.cloneNode(true) : null;
+            const importButtonClone = importButton ? importButton.cloneNode(true) : null;
+            const refreshButtonClone = refreshButton ? refreshButton.cloneNode(true) : null;
             tabsContainer.innerHTML = '';
             if (addButtonClone) {
                 tabsContainer.appendChild(addButtonClone);
+            }
+            if (importButtonClone) {
+                tabsContainer.appendChild(importButtonClone);
+            }
+            if (refreshButtonClone) {
+                tabsContainer.appendChild(refreshButtonClone);
             }
         }
 
@@ -137,6 +155,12 @@ export async function switchComparisonSlot(slotId) {
 
         // Update header
         updateSlotHeader(EQUIPMENT_SLOTS[slotId].name);
+        
+        // Update Equipment Viewer button visibility
+        updateEquipmentViewerButton();
+        
+        // Auto-populate from Equipment Viewer data
+        await autoPopulateFromEquipmentViewer(slotId);
 
 
     } catch (error) {

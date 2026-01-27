@@ -12,7 +12,7 @@ export function initializeHeroPowerPresets() {
 
     // Create premium tabs
     let tabsHTML = '<div class="ia-presets-tabs-container">';
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 20; i++) {
         const activeClass = i === 1 ? 'active' : '';
         tabsHTML += `<button class="ia-preset-tab ${activeClass}" id="preset-tab-${i}" onclick="switchPreset(${i})">${i}</button>`;
     }
@@ -20,7 +20,7 @@ export function initializeHeroPowerPresets() {
 
     // Create preset contents
     let contentsHTML = '';
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 20; i++) {
         contentsHTML += createPresetContentHTML(i, i === 1);
     }
 
@@ -66,7 +66,7 @@ export function createPresetContentHTML(presetId, isActive = false) {
 
 export function switchPreset(presetId) {
     // Hide all preset contents
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 20; i++) {
         const content = document.getElementById(`preset-${i}-content`);
         const tab = document.getElementById(`preset-tab-${i}`);
 
@@ -87,7 +87,7 @@ export function handlePresetEquipped(presetId) {
 
     if (checkbox.checked) {
         // Uncheck all other presets
-        for (let i = 1; i <= 10; i++) {
+        for (let i = 1; i <= 20; i++) {
             if (i !== presetId) {
                 const otherCheckbox = document.getElementById(`preset-${i}-equipped`);
                 const otherTab = document.getElementById(`preset-tab-${i}`);
@@ -112,7 +112,7 @@ export function handlePresetEquipped(presetId) {
 export function saveHeroPowerPresets() {
     const presets = {};
 
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 20; i++) {
         const isEquipped = document.getElementById(`preset-${i}-equipped`)?.checked || false;
         const lines = [];
 
@@ -142,7 +142,7 @@ export function loadHeroPowerPresets() {
     try {
         const presets = JSON.parse(saved);
 
-        for (let i = 1; i <= 10; i++) {
+        for (let i = 1; i <= 20; i++) {
             const preset = presets[i];
             if (!preset) continue;
 

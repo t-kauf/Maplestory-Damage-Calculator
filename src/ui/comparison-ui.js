@@ -22,6 +22,16 @@ import {
     getItem
 } from '@core/state/comparison-state.js';
 import { equipItemFromComparison, getCurrentSlot } from '@ui/comparison/slot-comparison.js';
+import { 
+    hasEquipmentViewerData, 
+    getItemsForSlot, 
+    getItemCountsBySlot,
+    getEquipmentViewerSlotName,
+    getItemsForSlotSeparated,
+    removeItemFromEquipmentViewer
+} from '../services/equipment-viewer-service.js';
+import { setSlotData, getSlotStats } from '@ui/equipment/equipment-tab.js';
+import { initializeBestPerSlot, refreshBestPerSlot } from '@ui/best-per-slot.js';
 
 // Track active comparison item
 let activeComparisonItemId = null;
@@ -162,12 +172,22 @@ window.loadSlotItems = async function(slotId) {
         const itemsContainer = document.getElementById('comparison-items-container');
 
         if (tabsContainer) {
-            // Preserve the add button
+            // Preserve the add button, import button, and refresh button
             const addButton = tabsContainer.querySelector('button[data-type="add-button"]');
+            const importButton = tabsContainer.querySelector('button[data-type="import-button"]');
+            const refreshButton = tabsContainer.querySelector('button[data-type="refresh-button"]');
             const addButtonClone = addButton ? addButton.cloneNode(true) : null;
+            const importButtonClone = importButton ? importButton.cloneNode(true) : null;
+            const refreshButtonClone = refreshButton ? refreshButton.cloneNode(true) : null;
             tabsContainer.innerHTML = '';
             if (addButtonClone) {
                 tabsContainer.appendChild(addButtonClone);
+            }
+            if (importButtonClone) {
+                tabsContainer.appendChild(importButtonClone);
+            }
+            if (refreshButtonClone) {
+                tabsContainer.appendChild(refreshButtonClone);
             }
         }
 
@@ -369,10 +389,11 @@ function createComparisonTab(currentSlot, itemId, guid, name) {
  * @param {Object} itemData - Item data
  * @returns {HTMLElement} Item card element
  */
-function createComparisonItemCard(currentSlot, itemId, guid, itemData = { name: '', attack: 0, stats: [] }) {
+function createComparisonItemCard(currentSlot, itemId, guid, itemData = { name: '', attack: 0, stats: [], isNew: false }) {
     const itemDiv = document.createElement('div');
     itemDiv.id = `comparison-item-${currentSlot}-${itemId}`;
     itemDiv.dataset.guid = guid;
+    itemDiv.dataset.isNew = itemData.isNew ? 'true' : 'false'; // Store isNew flag for retrieval
     itemDiv.className = 'comparison-item-card';
     itemDiv.style.display = 'none';
     itemDiv.setAttribute('role', 'tabpanel');
@@ -466,8 +487,9 @@ window.addComparisonItem = addComparisonItem;
 /**
  * Remove a comparison item
  * @param {number} itemId - UI item ID
+ * @param {boolean} skipConfirmation - If true, skip the Equipment Viewer removal confirmation
  */
-export async function removeComparisonItem(itemId) {
+export async function removeComparisonItem(itemId, skipConfirmation = false) {
     try {
         const currentSlot = getCurrentSlot();
         const guid = getGuidFromItemId(currentSlot, itemId);
@@ -481,6 +503,22 @@ export async function removeComparisonItem(itemId) {
         const tab = document.getElementById(`comparison-tab-${currentSlot}-${itemId}`);
 
         if (item && tab) {
+            // Get item name and attack before removing (for Equipment Viewer removal)
+            const nameInput = document.getElementById(`item-${currentSlot}-${itemId}-name`);
+            const attackInput = document.getElementById(`item-${currentSlot}-${itemId}-attack`);
+            const itemName = nameInput ? nameInput.value : '';
+            const itemAttack = attackInput ? parseFloat(attackInput.value) || 0 : 0;
+            
+            // Check if Equipment Viewer has data and ask if they want to remove from there too
+            let removeFromViewer = false;
+            if (!skipConfirmation && hasEquipmentViewerData() && itemName) {
+                removeFromViewer = confirm(
+                    `Remove "${itemName}" from comparison?\n\n` +
+                    `Click OK to also remove from Equipment Viewer.\n` +
+                    `Click Cancel to only remove from comparison (keep in Equipment Viewer).`
+                );
+            }
+            
             // Animate out
             item.style.opacity = '0';
             tab.style.opacity = '0';
@@ -492,6 +530,18 @@ export async function removeComparisonItem(itemId) {
 
                 // Update state
                 await removeItem(currentSlot, guid);
+                
+                // Remove from Equipment Viewer if confirmed
+                if (removeFromViewer && itemName) {
+                    const removed = removeItemFromEquipmentViewer(currentSlot, itemName, itemAttack);
+                    if (removed) {
+                        console.log('[ComparisonUI] Item also removed from Equipment Viewer');
+                        // Update button counts
+                        updateEquipmentViewerButton();
+                    } else {
+                        console.log('[ComparisonUI] Item not found in Equipment Viewer (may have been added manually)');
+                    }
+                }
 
                 if (activeComparisonItemId === itemId) {
                     const remainingTabs = document.querySelectorAll(`[id^="comparison-tab-${currentSlot}-"]`);
@@ -652,5 +702,575 @@ function hideEmptyComparisonState() {
     if (container) {
         const emptyStates = container.querySelectorAll('.comparison-empty-state');
         emptyStates.forEach(state => state.remove());
+    }
+}
+
+// ============================================================================
+// EQUIPMENT VIEWER INTEGRATION
+// ============================================================================
+
+// Track selected items for import
+let viewerItemsForImport = [];
+let selectedViewerItemIndices = new Set();
+
+/**
+ * Update the import and refresh button visibility based on Equipment Viewer data availability
+ * @param {number} retryCount - Number of retries remaining (for deferred execution)
+ */
+export function updateEquipmentViewerButton(retryCount = 3) {
+    console.log('[ComparisonUI] updateEquipmentViewerButton called, retries left:', retryCount);
+    const importBtn = document.getElementById('import-from-viewer-btn');
+    const refreshBtn = document.getElementById('refresh-from-viewer-btn');
+    
+    // At minimum need the import button
+    if (!importBtn) {
+        console.log('[ComparisonUI] Import button not found in DOM');
+        // Retry after a delay if button not found yet (tab might not be rendered)
+        if (retryCount > 0) {
+            setTimeout(() => updateEquipmentViewerButton(retryCount - 1), 500);
+        }
+        return;
+    }
+    
+    const currentSlot = getCurrentSlot();
+    console.log('[ComparisonUI] Current slot:', currentSlot);
+    const hasData = hasEquipmentViewerData();
+    console.log('[ComparisonUI] Has equipment viewer data:', hasData);
+    
+    if (hasData) {
+        const counts = getItemCountsBySlot();
+        console.log('[ComparisonUI] Item counts by slot:', counts);
+        const slotCount = counts[currentSlot] || 0;
+        console.log('[ComparisonUI] Slot count for', currentSlot, ':', slotCount);
+        
+        if (slotCount > 0) {
+            importBtn.style.display = 'flex';
+            if (refreshBtn) refreshBtn.style.display = 'flex';
+            const countSpan = document.getElementById('viewer-item-count');
+            if (countSpan) {
+                countSpan.textContent = slotCount.toString();
+            }
+            console.log('[ComparisonUI] Import and Refresh buttons shown');
+        } else {
+            importBtn.style.display = 'none';
+            if (refreshBtn) refreshBtn.style.display = 'none';
+            console.log('[ComparisonUI] Buttons hidden (no items for slot)');
+        }
+        // Initialize Best Per Slot dashboard when viewer data is available
+        initializeBestPerSlot();
+    } else {
+        importBtn.style.display = 'none';
+        if (refreshBtn) refreshBtn.style.display = 'none';
+        console.log('[ComparisonUI] Buttons hidden (no data)');
+    }
+}
+
+/**
+ * Open the Equipment Viewer import modal
+ */
+export function openEquipmentViewerImport() {
+    const currentSlot = getCurrentSlot();
+    const viewerSlotName = getEquipmentViewerSlotName(currentSlot);
+    
+    // Get items for current slot
+    viewerItemsForImport = getItemsForSlot(currentSlot);
+    selectedViewerItemIndices.clear();
+    
+    // Update modal info text
+    const infoEl = document.getElementById('ev-modal-slot-info');
+    if (infoEl) {
+        infoEl.textContent = `Select items to import for ${viewerSlotName || currentSlot}:`;
+    }
+    
+    // Populate items list
+    const listEl = document.getElementById('ev-modal-items-list');
+    const emptyEl = document.getElementById('ev-modal-empty');
+    
+    if (listEl) {
+        listEl.innerHTML = '';
+        
+        if (viewerItemsForImport.length === 0) {
+            listEl.style.display = 'none';
+            if (emptyEl) emptyEl.style.display = 'block';
+        } else {
+            listEl.style.display = 'flex';
+            if (emptyEl) emptyEl.style.display = 'none';
+            
+            viewerItemsForImport.forEach((item, index) => {
+                const itemEl = createViewerItemElement(item, index);
+                listEl.appendChild(itemEl);
+            });
+        }
+    }
+    
+    // Update selected count
+    updateSelectedCount();
+    
+    // Show modal
+    const modal = document.getElementById('equipment-viewer-modal');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+}
+window.openEquipmentViewerImport = openEquipmentViewerImport;
+
+/**
+ * Create DOM element for a viewer item in the import modal
+ */
+function createViewerItemElement(item, index) {
+    const div = document.createElement('div');
+    div.className = 'ev-modal-item';
+    div.dataset.index = index;
+    
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'ev-modal-item-checkbox';
+    checkbox.id = `ev-item-${index}`;
+    checkbox.addEventListener('change', () => {
+        if (checkbox.checked) {
+            selectedViewerItemIndices.add(index);
+            div.classList.add('selected');
+        } else {
+            selectedViewerItemIndices.delete(index);
+            div.classList.remove('selected');
+        }
+        updateSelectedCount();
+    });
+    
+    const details = document.createElement('div');
+    details.className = 'ev-modal-item-details';
+    
+    const name = document.createElement('div');
+    name.className = 'ev-modal-item-name';
+    name.textContent = item.name || `Item ${index + 1}`;
+    
+    const statsDiv = document.createElement('div');
+    statsDiv.className = 'ev-modal-item-stats';
+    
+    // Add attack stat
+    if (item.attack) {
+        const attackSpan = document.createElement('span');
+        attackSpan.className = 'ev-modal-item-stat ev-modal-item-stat--attack';
+        attackSpan.textContent = `ATK: ${item.attack}`;
+        statsDiv.appendChild(attackSpan);
+    }
+    
+    // Add other stats (limit to first 4)
+    const displayStats = (item.stats || []).slice(0, 4);
+    displayStats.forEach(stat => {
+        const statLabel = availableStats.find(s => s.value === stat.type)?.label || stat.type;
+        const shortLabel = statLabel.replace(' (%)', '').replace(' Monster Damage', '');
+        const statSpan = document.createElement('span');
+        statSpan.className = 'ev-modal-item-stat';
+        statSpan.textContent = `${shortLabel}: ${stat.value}`;
+        statsDiv.appendChild(statSpan);
+    });
+    
+    if ((item.stats || []).length > 4) {
+        const moreSpan = document.createElement('span');
+        moreSpan.className = 'ev-modal-item-stat';
+        moreSpan.textContent = `+${item.stats.length - 4} more`;
+        statsDiv.appendChild(moreSpan);
+    }
+    
+    details.appendChild(name);
+    details.appendChild(statsDiv);
+    
+    div.appendChild(checkbox);
+    div.appendChild(details);
+    
+    // Make entire row clickable
+    div.addEventListener('click', (e) => {
+        if (e.target !== checkbox) {
+            checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change'));
+        }
+    });
+    
+    return div;
+}
+
+/**
+ * Update the selected count in the modal
+ */
+function updateSelectedCount() {
+    const countEl = document.getElementById('ev-selected-count');
+    if (countEl) {
+        countEl.textContent = selectedViewerItemIndices.size.toString();
+    }
+    
+    // Enable/disable import button
+    const importBtn = document.querySelector('.ev-modal-btn--primary');
+    if (importBtn) {
+        importBtn.disabled = selectedViewerItemIndices.size === 0;
+    }
+}
+
+/**
+ * Close the Equipment Viewer import modal
+ */
+export function closeEquipmentViewerModal() {
+    const modal = document.getElementById('equipment-viewer-modal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    viewerItemsForImport = [];
+    selectedViewerItemIndices.clear();
+}
+window.closeEquipmentViewerModal = closeEquipmentViewerModal;
+
+/**
+ * Import selected items from the Equipment Viewer
+ */
+export async function importSelectedViewerItems() {
+    if (selectedViewerItemIndices.size === 0) return;
+    
+    const currentSlot = getCurrentSlot();
+    
+    try {
+        hideEmptyComparisonState();
+        
+        // Import each selected item
+        for (const index of selectedViewerItemIndices) {
+            const viewerItem = viewerItemsForImport[index];
+            if (!viewerItem) continue;
+            
+            // Get next item ID
+            const itemId = getSlotItemCount() + 1;
+            const guid = generateGuid();
+            
+            // Create UI
+            const tabsContainer = document.getElementById('comparison-tabs-container');
+            const tabButton = createComparisonTab(currentSlot, itemId, guid, viewerItem.name);
+            
+            const addButton = tabsContainer.querySelector('button[data-type="add-button"]');
+            tabsContainer.insertBefore(tabButton, addButton);
+            
+            const itemDiv = createComparisonItemCard(currentSlot, itemId, guid, {
+                name: viewerItem.name,
+                attack: viewerItem.attack,
+                stats: []
+            });
+            document.getElementById('comparison-items-container').appendChild(itemDiv);
+            
+            // Update mapping
+            currentItemMapping.set(itemId, guid);
+            
+            // Add stats to the UI
+            const statsContainer = document.getElementById(`item-${currentSlot}-${itemId}-stats-container`);
+            if (viewerItem.stats && viewerItem.stats.length > 0 && statsContainer) {
+                for (let i = 0; i < viewerItem.stats.length; i++) {
+                    const stat = viewerItem.stats[i];
+                    await addComparisonItemStat(itemId);
+                    
+                    const statId = i + 1;
+                    const typeInput = document.getElementById(`item-${currentSlot}-${itemId}-stat-${statId}-type`);
+                    const valueInput = document.getElementById(`item-${currentSlot}-${itemId}-stat-${statId}-value`);
+                    
+                    if (typeInput) {
+                        typeInput.value = stat.type;
+                        typeInput.setAttribute('onchange', `saveSlotItemData('${guid}')`);
+                    }
+                    if (valueInput) {
+                        valueInput.value = stat.value;
+                        valueInput.setAttribute('onchange', `saveSlotItemData('${guid}')`);
+                    }
+                }
+            }
+            
+            // Save to state
+            await updateItem(currentSlot, guid, {
+                name: viewerItem.name,
+                attack: viewerItem.attack,
+                stats: viewerItem.stats || []
+            });
+        }
+        
+        // Switch to the first newly imported item
+        const firstNewItemId = getSlotItemCount() - selectedViewerItemIndices.size + 1;
+        switchComparisonItemTab(firstNewItemId);
+        
+        // Close modal
+        closeEquipmentViewerModal();
+        
+        // Recalculate
+        calculate();
+        
+    } catch (error) {
+        console.error('[ComparisonUI] Failed to import viewer items:', error);
+        alert('Failed to import some items. Please try again.');
+    }
+}
+window.importSelectedViewerItems = importSelectedViewerItems;
+
+// ============================================================================
+// AUTO-POPULATE FROM EQUIPMENT VIEWER
+// ============================================================================
+
+/**
+ * Auto-populate the equipped item and comparison items from Equipment Viewer data
+ * @param {string} slotId - Calculator slot ID (e.g., 'head', 'chest')
+ */
+export async function autoPopulateFromEquipmentViewer(slotId) {
+    console.log('[ComparisonUI] autoPopulateFromEquipmentViewer called for slot:', slotId);
+    
+    if (!hasEquipmentViewerData()) {
+        console.log('[ComparisonUI] No equipment viewer data available');
+        return;
+    }
+    
+    const { equippedItem, comparisonItems } = getItemsForSlotSeparated(slotId);
+    console.log('[ComparisonUI] Found:', { equippedItem: !!equippedItem, comparisonCount: comparisonItems.length });
+    
+    // Set the equipped item in the Equipment tab
+    if (equippedItem) {
+        // Convert to the format expected by setSlotData
+        const statLines = (equippedItem.stats || []).map(stat => ({
+            type: stat.type,
+            value: parseFloat(stat.value) || 0
+        }));
+        
+        setSlotData(slotId, {
+            name: equippedItem.name,
+            attack: equippedItem.attack || 0,
+            mainStat: 0,
+            statLines: statLines
+        });
+        
+        // Update the equipped display in the comparison UI
+        updateEquippedDisplay(slotId, equippedItem);
+        console.log('[ComparisonUI] Set equipped item:', equippedItem.name);
+    }
+    
+    // Add comparison items
+    if (comparisonItems.length > 0) {
+        // Check how many items are already loaded
+        const existingCount = getSlotItemCount();
+        console.log('[ComparisonUI] Existing comparison items:', existingCount);
+        
+        // Only add items if there are none already
+        if (existingCount === 0) {
+            for (const viewerItem of comparisonItems) {
+                await addComparisonItemFromViewer(viewerItem);
+            }
+            
+            // Switch to first item tab if any were added
+            if (comparisonItems.length > 0) {
+                switchComparisonItemTab(1);
+            }
+            console.log('[ComparisonUI] Added', comparisonItems.length, 'comparison items');
+        }
+    }
+}
+
+/**
+ * Clear all comparison items for the current slot
+ */
+export async function clearAllComparisonItems() {
+    const currentSlot = getCurrentSlot();
+    console.log('[ComparisonUI] Clearing all comparison items for slot:', currentSlot);
+    
+    // Get all item IDs from the mapping
+    const itemIds = Array.from(currentItemMapping.keys());
+    
+    // Remove each item (without animation for speed)
+    for (const itemId of itemIds) {
+        const guid = currentItemMapping.get(itemId);
+        const item = document.getElementById(`comparison-item-${currentSlot}-${itemId}`);
+        const tab = document.getElementById(`comparison-tab-${currentSlot}-${itemId}`);
+        
+        if (item) item.remove();
+        if (tab) tab.remove();
+        
+        currentItemMapping.delete(itemId);
+        
+        // Remove from state
+        if (guid) {
+            await removeItem(currentSlot, guid);
+        }
+    }
+    
+    // Show empty state
+    showEmptyComparisonState();
+    
+    console.log('[ComparisonUI] Cleared all comparison items');
+}
+window.clearAllComparisonItems = clearAllComparisonItems;
+
+/**
+ * Refresh comparison items from Equipment Viewer (clear and re-pull)
+ */
+export async function refreshFromEquipmentViewer() {
+    const currentSlot = getCurrentSlot();
+    console.log('[ComparisonUI] Refreshing from Equipment Viewer for slot:', currentSlot);
+    
+    if (!hasEquipmentViewerData()) {
+        alert('No Equipment Viewer data available. Please load data in the Equipment Viewer first.');
+        return;
+    }
+    
+    // Clear existing items
+    await clearAllComparisonItems();
+    
+    // Re-populate from equipment viewer
+    const { equippedItem, comparisonItems } = getItemsForSlotSeparated(currentSlot);
+    console.log('[ComparisonUI] Found:', { equippedItem: !!equippedItem, comparisonCount: comparisonItems.length });
+    
+    // Set the equipped item
+    if (equippedItem) {
+        const statLines = (equippedItem.stats || []).map(stat => ({
+            type: stat.type,
+            value: parseFloat(stat.value) || 0
+        }));
+        
+        setSlotData(currentSlot, {
+            name: equippedItem.name,
+            attack: equippedItem.attack || 0,
+            mainStat: 0,
+            statLines: statLines
+        });
+        
+        updateEquippedDisplay(currentSlot, equippedItem);
+        console.log('[ComparisonUI] Set equipped item:', equippedItem.name);
+    }
+    
+    // Add comparison items
+    for (const viewerItem of comparisonItems) {
+        await addComparisonItemFromViewer(viewerItem);
+    }
+    
+    // Switch to first item tab if any were added
+    if (comparisonItems.length > 0) {
+        switchComparisonItemTab(1);
+    }
+    
+    console.log('[ComparisonUI] Refreshed', comparisonItems.length, 'comparison items from Equipment Viewer');
+    
+    // Recalculate
+    calculate();
+    
+    // Refresh the Best Per Slot dashboard
+    refreshBestPerSlot();
+}
+window.refreshFromEquipmentViewer = refreshFromEquipmentViewer;
+
+/**
+ * Update the equipped item display with data from Equipment Viewer
+ */
+function updateEquippedDisplay(slotId, equippedItem) {
+    const nameInput = document.getElementById('equipped-name');
+    const attackInput = document.getElementById('equipped-attack');
+    const statsContainer = document.getElementById('equipped-stats-container');
+    
+    if (nameInput) {
+        nameInput.value = equippedItem.name || '';
+    }
+    if (attackInput) {
+        attackInput.value = equippedItem.attack || 0;
+    }
+    
+    // Clear and rebuild stats
+    if (statsContainer && equippedItem.stats) {
+        statsContainer.innerHTML = '';
+        equippedItem.stats.forEach((stat, index) => {
+            addStatLineToEquippedDisplay(stat.type, stat.value, index + 1);
+        });
+    }
+}
+
+/**
+ * Add a stat line to the equipped display
+ */
+function addStatLineToEquippedDisplay(type, value, statId) {
+    const container = document.getElementById('equipped-stats-container');
+    if (!container) return;
+    
+    let optionsHTML = '';
+    availableStats.forEach(stat => {
+        const selected = stat.value === type ? 'selected' : '';
+        optionsHTML += `<option value="${stat.value}" ${selected}>${stat.label}</option>`;
+    });
+    
+    const statDiv = document.createElement('div');
+    statDiv.id = `equipped-stat-${statId}`;
+    statDiv.style.cssText = 'display: grid; grid-template-columns: 1fr 80px; gap: 8px; margin-bottom: 6px; align-items: end;';
+    
+    statDiv.innerHTML = `
+        <div class="input-group">
+            <label style="font-size: 0.8em;">Stat</label>
+            <select id="equipped-stat-${statId}-type" style="opacity: 0.9;">
+                ${optionsHTML}
+            </select>
+        </div>
+        <div class="input-group">
+            <label style="font-size: 0.8em;">Value</label>
+            <input type="number" step="0.1" id="equipped-stat-${statId}-value" value="${value}" style="opacity: 0.9;">
+        </div>
+    `;
+    
+    container.appendChild(statDiv);
+}
+
+/**
+ * Add a comparison item from Equipment Viewer data
+ */
+async function addComparisonItemFromViewer(viewerItem) {
+    try {
+        const currentSlot = getCurrentSlot();
+        const itemId = getSlotItemCount() + 1;
+        const guid = generateGuid();
+        
+        hideEmptyComparisonState();
+        
+        // Create UI
+        const tabsContainer = document.getElementById('comparison-tabs-container');
+        const tabButton = createComparisonTab(currentSlot, itemId, guid, viewerItem.name);
+        
+        const addButton = tabsContainer.querySelector('button[data-type="add-button"]');
+        tabsContainer.insertBefore(tabButton, addButton);
+        
+        const itemDiv = createComparisonItemCard(currentSlot, itemId, guid, {
+            name: viewerItem.name,
+            attack: viewerItem.attack,
+            stats: [],
+            isNew: viewerItem.isNew || false
+        });
+        document.getElementById('comparison-items-container').appendChild(itemDiv);
+        
+        // Update mapping
+        currentItemMapping.set(itemId, guid);
+        
+        // Add stats to the UI
+        const statsContainer = document.getElementById(`item-${currentSlot}-${itemId}-stats-container`);
+        if (viewerItem.stats && viewerItem.stats.length > 0 && statsContainer) {
+            for (let i = 0; i < viewerItem.stats.length; i++) {
+                const stat = viewerItem.stats[i];
+                await addComparisonItemStat(itemId);
+                
+                const statId = i + 1;
+                const typeInput = document.getElementById(`item-${currentSlot}-${itemId}-stat-${statId}-type`);
+                const valueInput = document.getElementById(`item-${currentSlot}-${itemId}-stat-${statId}-value`);
+                
+                if (typeInput) {
+                    typeInput.value = stat.type;
+                    typeInput.setAttribute('onchange', `saveSlotItemData('${guid}')`);
+                }
+                if (valueInput) {
+                    valueInput.value = stat.value;
+                    valueInput.setAttribute('onchange', `saveSlotItemData('${guid}')`);
+                }
+            }
+        }
+        
+        // Save to state (include isNew flag from viewer)
+        await updateItem(currentSlot, guid, {
+            name: viewerItem.name,
+            attack: viewerItem.attack,
+            stats: viewerItem.stats || [],
+            isNew: viewerItem.isNew || false
+        });
+        
+    } catch (error) {
+        console.error('[ComparisonUI] Failed to add comparison item from viewer:', error);
     }
 }

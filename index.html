@@ -938,6 +938,20 @@
                                 </svg>
                                 <span>Add Item</span>
                             </button>
+                            <button id="import-from-viewer-btn" class="comparison-add-tab-btn comparison-import-btn" data-type="import-button" onclick="openEquipmentViewerImport()" aria-label="Import items from Equipment Viewer" title="Import from Equipment Viewer" style="display: none;">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                    <path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/>
+                                    <path d="M7.646 1.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1-.708.708L8.5 2.707V11.5a.5.5 0 0 1-1 0V2.707L5.354 4.854a.5.5 0 1 1-.708-.708l3-3z"/>
+                                </svg>
+                                <span>Import (<span id="viewer-item-count">0</span>)</span>
+                            </button>
+                            <button id="refresh-from-viewer-btn" class="comparison-add-tab-btn comparison-refresh-btn" data-type="refresh-button" onclick="refreshFromEquipmentViewer()" aria-label="Refresh items from Equipment Viewer" title="Clear and re-pull from Equipment Viewer" style="display: none;">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                                    <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                                </svg>
+                                <span>Refresh</span>
+                            </button>
                         </div>
                         <!-- Comparison Items Content -->
                         <div id="comparison-items-container" class="comparison-items-container" role="presentation"></div>
@@ -957,6 +971,39 @@
                     <h3 class="comparison-results-title">Comparison Results</h3>
                     <div id="results-container" class="comparison-results-grid">
                         <!-- Results will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Best Per Slot Dashboard -->
+                <div id="best-per-slot-dashboard" class="best-slot-dashboard" style="display: none;">
+                    <div class="best-slot-header">
+                        <h3 class="best-slot-title">
+                            <svg width="18" height="18" viewBox="0 0 16 16" fill="currentColor">
+                                <path d="M2.5.5A.5.5 0 0 1 3 0h10a.5.5 0 0 1 .5.5c0 .538-.012 1.05-.034 1.536a3 3 0 1 1-1.133 5.89c-.79 1.865-1.878 2.777-2.833 3.011v2.173l1.425.356c.194.048.377.135.537.255L13.3 15.1a.5.5 0 0 1-.3.9H3a.5.5 0 0 1-.3-.9l1.838-1.379c.16-.12.343-.207.537-.255L6.5 13.11v-2.173c-.955-.234-2.043-1.146-2.833-3.012a3 3 0 1 1-1.132-5.89A33.076 33.076 0 0 1 2.5.5zm.099 2.54a2 2 0 0 0 .72 3.935c-.333-1.05-.588-2.346-.72-3.935zm10.083 3.935a2 2 0 0 0 .72-3.935c-.133 1.59-.388 2.885-.72 3.935zM3.504 1c.007.517.026 1.006.056 1.469.13 2.028.457 3.546.87 4.667C5.294 9.48 6.484 10 7 10a.5.5 0 0 1 .5.5v2.61a1 1 0 0 1-.757.97l-1.426.356a.5.5 0 0 0-.179.085L4.5 15h7l-.638-.479a.501.501 0 0 0-.18-.085l-1.425-.356a1 1 0 0 1-.757-.97V10.5A.5.5 0 0 1 9 10c.516 0 1.706-.52 2.57-2.864.413-1.12.74-2.64.87-4.667.03-.463.049-.952.056-1.469H3.504z"/>
+                            </svg>
+                            Best Gear Per Slot
+                        </h3>
+                        <div class="best-slot-mode-toggle">
+                            <button id="best-mode-boss" class="best-mode-btn active" onclick="setBestSlotMode('boss')" title="Optimize for Boss DPS">
+                                Boss
+                            </button>
+                            <button id="best-mode-normal" class="best-mode-btn" onclick="setBestSlotMode('normal')" title="Optimize for Normal Monster DPS">
+                                Mob
+                            </button>
+                            <button id="best-mode-balance" class="best-mode-btn" onclick="setBestSlotMode('balance')" title="Balanced (average of Boss + Normal)">
+                                Balance
+                            </button>
+                        </div>
+                        <button class="best-slot-refresh-btn" onclick="refreshBestPerSlot()" title="Refresh calculations">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                                <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                            </svg>
+                        </button>
+                    </div>
+                    <div id="best-slot-grid" class="best-slot-grid">
+                        <!-- Best items per slot will be populated here -->
+                        <div class="best-slot-loading">Loading equipment data...</div>
                     </div>
                 </div>
             </div>
@@ -1388,6 +1435,31 @@
         <!-- End Page: Stat Damage Predictions -->
     </div>
     <!-- End Main Content -->
+
+    <!-- Equipment Viewer Import Modal -->
+    <div id="equipment-viewer-modal" class="ev-modal-backdrop" style="display: none;">
+        <div class="ev-modal">
+            <div class="ev-modal-header">
+                <h3 class="ev-modal-title">Import from Equipment Viewer</h3>
+                <button class="ev-modal-close" onclick="closeEquipmentViewerModal()" aria-label="Close modal">×</button>
+            </div>
+            <div class="ev-modal-body">
+                <p class="ev-modal-info" id="ev-modal-slot-info">Select items to import for this slot:</p>
+                <div id="ev-modal-items-list" class="ev-modal-items-list">
+                    <!-- Items will be populated by JavaScript -->
+                </div>
+                <div class="ev-modal-empty" id="ev-modal-empty" style="display: none;">
+                    <span>No items found for this slot in Equipment Viewer</span>
+                </div>
+            </div>
+            <div class="ev-modal-footer">
+                <button class="ev-modal-btn ev-modal-btn--secondary" onclick="closeEquipmentViewerModal()">Cancel</button>
+                <button class="ev-modal-btn ev-modal-btn--primary" onclick="importSelectedViewerItems()">
+                    Import Selected (<span id="ev-selected-count">0</span>)
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Import Map for cleaner imports -->
     <script type="importmap">

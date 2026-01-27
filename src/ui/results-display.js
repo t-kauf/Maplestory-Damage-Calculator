@@ -8,13 +8,14 @@ window.calculateEquipmentSlotDPS = calculateEquipmentSlotDPS;
 window.toggleSubDetails = toggleSubDetails;
 window.toggleDetails = toggleDetails;
 
-export function displayResults(itemName, stats, uniqueId, isEquipped = false, equippedDamageValues = null) {
+export function displayResults(itemName, stats, uniqueId, isEquipped = false, equippedDamageValues = null, isNew = false) {
     // Use StatCalculationService for consistent damage calculation
     const service = new StatCalculationService(stats);
     const bossResults = service.compute('boss');
     const normalResults = service.compute('normal');
 
     const itemClass = isEquipped ? 'equipped-item' : 'comparison-item';
+    const newBadge = isNew ? '<span class="new-item-badge" title="New item - click to dismiss">🆕</span>' : '';
 
     const getPercentChangeBadge = (currentValue, referenceValue) => {
         if (!referenceValue || referenceValue === 0) return { badge: '', valueClass: '' };
@@ -106,9 +107,27 @@ export function displayResults(itemName, stats, uniqueId, isEquipped = false, eq
         }
     }
 
+    // Generate remove button for comparison items (not equipped)
+    let removeButtonHTML = '';
+    if (!isEquipped && uniqueId.startsWith('item-')) {
+        // Extract item ID from uniqueId (format: item-{slot}-{itemId})
+        const parts = uniqueId.split('-');
+        const itemId = parts[parts.length - 1];
+        removeButtonHTML = `
+            <button class="result-remove-btn" onclick="removeComparisonItem(${itemId})" title="Remove from comparison" aria-label="Remove ${itemName}">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                    <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708z"/>
+                </svg>
+            </button>
+        `;
+    }
+
     const html = `
-        <div class="result-panel ${itemClass}">
-            <h3>${itemName}</h3>
+        <div class="result-panel ${itemClass}${isNew ? ' new-item' : ''}" data-is-new="${isNew}">
+            <div class="result-panel-header">
+                <h3>${newBadge}${itemName}</h3>
+                ${removeButtonHTML}
+            </div>
 
         <div class="expected-damage">
             <div class="label">DPS (Boss)</div>
