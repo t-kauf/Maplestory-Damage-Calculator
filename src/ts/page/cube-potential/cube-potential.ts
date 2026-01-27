@@ -115,14 +115,18 @@ export function getStatIdFromPotentialStat(
         return null;
     }
 
-    // Main stat % maps to statDamage
-    if (mainStat && potentialStat === `${mainStat} %`) {
+    // Normalize for case-insensitive comparison
+    const normalizedPotentialStat = potentialStat.toLowerCase();
+    const normalizedMainStat = mainStat?.toLowerCase() || null;
+
+    // Main stat % maps to MAIN_STAT_PCT
+    if (normalizedMainStat && normalizedPotentialStat === `${normalizedMainStat} %`) {
         return STAT.MAIN_STAT_PCT.id;
     }
 
-    // Flat main stat (Str, Dex, Int, Luk without %) - signal to use addMainStat
-    if (mainStat && potentialStat === mainStat) {
-        return STAT.PRIMARY_MAIN_STAT.id; // Special marker for flat main stat
+    // Flat main stat - signal to use PRIMARY_MAIN_STAT
+    if (normalizedMainStat && normalizedPotentialStat === normalizedMainStat) {
+        return STAT.PRIMARY_MAIN_STAT.id;
     }
 
     // Use the mapping table
@@ -150,6 +154,10 @@ export function potentialStatToDamageStat(
     const mainStat = getMainStatForClass();
     if (!mainStat) return { stat: null, value: 0, isMainStatPct: false };
 
+    // Normalize for case-insensitive comparison
+    const normalizedPotentialStat = potentialStat.toLowerCase();
+    const normalizedMainStat = mainStat.toLowerCase();
+
     // Map potential stat to damage calculation stat
     const statMap: Record<string, string> = {
         'Critical Rate %': STAT.CRIT_RATE.id,
@@ -165,12 +173,12 @@ export function potentialStatToDamageStat(
     };
 
     // Check if it's a main stat percentage
-    if (potentialStat === `${mainStat} %`) {
+    if (normalizedPotentialStat === `${normalizedMainStat} %`) {
         return { stat: STAT.STAT_DAMAGE.id, value: value / 100, isMainStatPct: true };
     }
 
     // Check if it's a flat main stat
-    if (potentialStat === mainStat) {
+    if (normalizedPotentialStat === normalizedMainStat) {
         return { stat: STAT.STAT_DAMAGE.id, value: value / 100, isMainStatPct: false };
     }
 
