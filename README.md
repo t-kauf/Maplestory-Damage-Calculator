@@ -1,3 +1,7 @@
+Added a few key features to DJC-0DE's original work -
+1. Equipment Manager - allows you to store and view all equipment. Integrates with item comparison tool in the calculator so that you can easily compare stats of all equipment
+2. Expanded ability pages and companion pages to 20
+
 # MapleStory Damage Calculator
 
 A comprehensive damage calculator and optimization tool for MapleStory players. Plan your character progression, compare gear options, and maximize your damage output with detailed stat analysis.
