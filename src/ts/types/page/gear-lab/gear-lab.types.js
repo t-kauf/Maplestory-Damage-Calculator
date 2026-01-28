@@ -70,7 +70,17 @@ const DEFAULT_GEAR_LAB_DATA = {
       7: { id: 7, isEquipped: false, lines: [] },
       8: { id: 8, isEquipped: false, lines: [] },
       9: { id: 9, isEquipped: false, lines: [] },
-      10: { id: 10, isEquipped: false, lines: [] }
+      10: { id: 10, isEquipped: false, lines: [] },
+      11: { id: 11, isEquipped: false, lines: [] },
+      12: { id: 12, isEquipped: false, lines: [] },
+      13: { id: 13, isEquipped: false, lines: [] },
+      14: { id: 14, isEquipped: false, lines: [] },
+      15: { id: 15, isEquipped: false, lines: [] },
+      16: { id: 16, isEquipped: false, lines: [] },
+      17: { id: 17, isEquipped: false, lines: [] },
+      18: { id: 18, isEquipped: false, lines: [] },
+      19: { id: 19, isEquipped: false, lines: [] },
+      20: { id: 20, isEquipped: false, lines: [] }
     }
   },
   cubePotential: createDefaultCubeSlotData(),

@@ -1,0 +1,3546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Equipment Viewer</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js">/* --- Template generator override (Locked? + SF columns) --- */
+function downloadTemplate() {
+  try {
+    const headers = [
+      'Equipped?',
+      'Locked?',
+      'New?',
+      'Slot',
+      'Level',
+      'Rarity',
+      'Base Atk',
+      'Attack',
+      'Defense',
+      'Crit Rate',
+      'Crit Damage',
+      'Damage',
+      'Normal Monster',
+      'Boss Damage',
+      'Min Damage',
+      'Max Damage',
+      'Accuracy',
+      'Evasion',
+      '1st Job Skill',
+      '2nd Job Skill',
+      '3rd Job Skill',
+      'Max HP',
+      'Max MP'
+    ];
+
+    // Slot list for SF columns - use hardcoded list since DOM may not be ready
+    const slotOpts = ['Hat', 'Top', 'Bottom', 'Gloves', 'Ring', 'Eye', 'Cape', 'Shoulder', 'Belt', 'Boots', 'Necklace'];
+    const sfHeaders = slotOpts.map(s => `SF ${s}`);
+
+    // Example values for each column
+    const exampleValues = {
+      'Equipped?': 'Y or N',
+      'Locked?': 'Y or N',
+      'Slot': 'Hat/Top/Bottom/Gloves/Ring/Eye/Cape/Shoulder/Belt/Boots/Necklace',
+      'Level': 'e.g. 50',
+      'Rarity': 'Epic/Unique/Legendary',
+      'Base Atk': 'e.g. 1000',
+      'Attack': 'e.g. 500',
+      'Defense': 'e.g. 300',
+      'Crit Rate': '% e.g. 5.5',
+      'Crit Damage': '% e.g. 12.3',
+      'Damage': '% e.g. 8.0',
+      'Normal Monster': '% e.g. 10.0',
+      'Boss Damage': '% e.g. 15.0',
+      'Min Damage': '% e.g. 5.0',
+      'Max Damage': '% e.g. 5.0',
+      'Accuracy': 'e.g. 100',
+      'Evasion': 'e.g. 50',
+      '1st Job Skill': 'e.g. 2',
+      '2nd Job Skill': 'e.g. 3',
+      '3rd Job Skill': 'e.g. 1',
+      'Max HP': '% or flat e.g. 5.0 or 5000',
+      'Max MP': '% or flat e.g. 5.0 or 5000'
+    };
+
+    // Build example row
+    const exampleRow = headers.map(h => exampleValues[h] || '').concat(sfHeaders.map(() => '1-25'));
+    
+    // Build SF settings row (blank - user fills in)
+    const sfSettingsRow = headers.map(() => '').concat(sfHeaders.map(() => ''));
+
+    const ws = XLSX.utils.aoa_to_sheet([
+      headers.concat(sfHeaders),  // Row 1: Headers
+      exampleRow,                  // Row 2: Example values
+      sfSettingsRow                // Row 3: SF Settings (blank for user to fill)
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'MS Template.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('Template download failed: ' + (err && err.message ? err.message : err));
+    console.error(err);
+  }
+}
+
+/* --- Export modal wiring (define globals used by export button handler) --- */
+(function initExportModal() {
+  const exportModal = document.getElementById('export-modal');
+  const exportAmplifiedBtn = document.getElementById('export-amplified');
+  const exportBaseBtn = document.getElementById('export-base');
+  const exportCancelBtn = document.getElementById('export-cancel');
+
+  if (!exportModal || !exportAmplifiedBtn || !exportBaseBtn || !exportCancelBtn) return;
+
+  window.openExportModal = function openExportModal() {
+    exportModal.style.display = 'flex';
+  };
+
+  function closeExportModal() {
+    exportModal.style.display = 'none';
+  }
+
+  exportAmplifiedBtn.addEventListener('click', () => {
+    closeExportModal();
+    try { exportToExcel(true); } catch (e) { console.error(e); alert('Export failed: ' + e.message); }
+  });
+
+  exportBaseBtn.addEventListener('click', () => {
+    closeExportModal();
+    try { exportToExcel(false); } catch (e) { console.error(e); alert('Export failed: ' + e.message); }
+  });
+
+  exportCancelBtn.addEventListener('click', () => {
+    closeExportModal();
+  });
+
+  exportModal.addEventListener('click', (e) => {
+    if (e.target === exportModal) closeExportModal();
+  });
+})();
+
+/* --- Ensure openExportModal exists (fallback to confirm if modal not present) --- */
+window.openExportModal = function openExportModal() {
+  const exportModal = document.getElementById('export-modal');
+  const exportAmplifiedBtn = document.getElementById('export-amplified');
+  const exportBaseBtn = document.getElementById('export-base');
+  const exportCancelBtn = document.getElementById('export-cancel');
+
+  // If modal exists, show it (and wire once)
+  if (exportModal && exportAmplifiedBtn && exportBaseBtn && exportCancelBtn) {
+    // one-time wiring
+    if (!exportModal.__wired) {
+      const close = () => { exportModal.style.display = 'none'; };
+      exportAmplifiedBtn.addEventListener('click', () => { close(); exportToExcel(true); });
+      exportBaseBtn.addEventListener('click', () => { close(); exportToExcel(false); });
+      exportCancelBtn.addEventListener('click', () => close());
+      exportModal.addEventListener('click', (e) => { if (e.target === exportModal) close(); });
+      exportModal.__wired = true;
+    }
+    exportModal.style.display = 'flex';
+    return;
+  }
+
+  // Fallback: native confirm
+  const amplify = window.confirm('Export with Star Force amplified stats?\nOK = Yes, export SF amplified stats\nCancel = No, export base stats');
+  exportToExcel(!!amplify);
+};
+
+/* --- Export override: include SF levels + optional amplification --- */
+function exportToExcel(applySfAmplification) {
+  try {
+    if (!allItems || !allItems.length) {
+      alert('No equipment to export.');
+      return;
+    }
+
+    const headers = [
+      'Equipped?',
+      'Locked?',
+      'New?',
+      'Slot',
+      'Level',
+      'Rarity',
+      'Base Atk',
+      'Attack',
+      'Defense',
+      'Crit Rate',
+      'Crit Damage',
+      'Damage',
+      'Normal Monster',
+      'Boss Damage',
+      'Min Damage',
+      'Max Damage',
+      'Accuracy',
+      'Evasion',
+      '1st Job Skill',
+      '2nd Job Skill',
+      '3rd Job Skill',
+      'Max HP',
+      'Max MP'
+    ];
+
+    // Use constant slot list for SF columns
+    const slotOpts = ['Hat', 'Top', 'Bottom', 'Gloves', 'Ring', 'Eye', 'Cape', 'Shoulder', 'Belt', 'Boots', 'Necklace'];
+    const sfHeaders = slotOpts.map(s => `SF ${s}`);
+
+    // Amplification tables (0-25)
+    const sfAttackAmp = {0:0,1:0.1,2:0.2,3:0.3,4:0.4,5:0.6,6:0.75,7:0.9,8:1.05,9:1.2,10:1.5,11:1.75,12:2,13:2.25,14:2.5,15:3,16:3.5,17:4,18:4.5,19:5,20:6,21:7,22:9,23:12,24:15,25:20};
+    const sfSubAmp    = {0:0,1:0,2:0,3:0,4:0,5:0.1,6:0.1,7:0.1,8:0.1,9:0.1,10:0.25,11:0.25,12:0.25,13:0.25,14:0.25,15:0.5,16:0.6,17:0.7,18:0.8,19:0.9,20:1,21:1.1,22:1.3,23:1.6,24:2,25:2.5};
+
+    const percentFields = new Set(['Crit Rate','Crit Damage','Damage','Normal Monster','Boss Damage','Min Damage','Max Damage']);
+    function isHpMpPercent(col, v) {
+      if (col !== 'Max HP' && col !== 'Max MP') return false;
+      const n = Number(v);
+      return !Number.isNaN(n) && n <= 100;
+    }
+    function roundDownPercent01(n) { return Math.floor(n * 10) / 10; }
+    function roundDownInt(n) { return Math.floor(n); }
+
+    function asNumber(val) {
+      if (val === null || val === undefined || val === '') return null;
+      if (typeof val === 'number') return val;
+      const n = Number(String(val).replace(/,/g,'').trim());
+      return Number.isNaN(n) ? null : n;
+    }
+
+    function computeVal(item, col) {
+      const raw = item[col];
+      const n = asNumber(raw);
+      if (n === null) return raw;
+
+      const meta = new Set(['Slot','Level','Rarity','Equipped?','Locked?']);
+      if (meta.has(col)) return n;
+
+      const slot = String(item['Slot'] || '').trim();
+      const lvl = (starForceBySlot && starForceBySlot[slot]) ? Number(starForceBySlot[slot]) : 0;
+      const clamped = Math.max(0, Math.min(25, Math.floor(lvl)));
+
+        const isBase = (col === 'Base Atk');
+      const amp = clamped > 0 ? (isBase ? (sfAttackAmp[clamped] || 0) : (sfSubAmp[clamped] || 0)) : 0;
+
+      // Determine what the stored value represents:
+      // - Imported items (_manualFinal undefined/false): stored = BASE stats
+      // - Manually added items (_manualFinal = true): stored = FINAL stats (already amplified)
+      let exportValue;
+      
+      if (item._manualFinal) {
+        // Manually added - stored values are FINAL (already include SF)
+        if (applySfAmplification) {
+          // Export amplified: use as-is (already final)
+          exportValue = n;
+        } else {
+          // Export base: reverse SF to get base value
+          exportValue = amp > 0 ? n / (1 + amp) : n;
+        }
+      } else {
+        // Imported - stored values are BASE
+        if (applySfAmplification) {
+          // Export amplified: apply SF to base value
+          exportValue = amp > 0 ? n * (1 + amp) : n;
+        } else {
+          // Export base: use as-is (already base)
+          exportValue = n;
+        }
+      }
+
+      // Rounding: amplified rounds down (match display), base rounds to reasonable precision
+      const treatAsPct = percentFields.has(col) || isHpMpPercent(col, exportValue);
+      if (applySfAmplification) {
+        return treatAsPct ? roundDownPercent01(exportValue) : roundDownInt(exportValue);
+      } else {
+        return treatAsPct ? (Math.round(exportValue * 10) / 10) : Math.round(exportValue);
+      }
+    }
+
+    // Build AOA so SF headers ALWAYS exist
+    const aoa = [];
+    aoa.push(headers.concat(sfHeaders)); // header row
+
+    // Example values for each column (helps users understand expected format)
+    const exampleValues = {
+      'Equipped?': 'Y or N',
+      'Locked?': 'Y or N',
+      'Slot': 'Hat/Top/Bottom/Gloves/Ring/Eye/Cape/Shoulder/Belt/Boots/Necklace',
+      'Level': 'e.g. 50',
+      'Rarity': 'Epic/Unique/Legendary',
+      'Base Atk': 'e.g. 1000',
+      'Attack': 'e.g. 500',
+      'Defense': 'e.g. 300',
+      'Crit Rate': '% e.g. 5.5',
+      'Crit Damage': '% e.g. 12.3',
+      'Damage': '% e.g. 8.0',
+      'Normal Monster': '% e.g. 10.0',
+      'Boss Damage': '% e.g. 15.0',
+      'Min Damage': '% e.g. 5.0',
+      'Max Damage': '% e.g. 5.0',
+      'Accuracy': 'e.g. 100',
+      'Evasion': 'e.g. 50',
+      '1st Job Skill': 'e.g. 2',
+      '2nd Job Skill': 'e.g. 3',
+      '3rd Job Skill': 'e.g. 1',
+      'Max HP': '% or flat e.g. 5.0 or 5000',
+      'Max MP': '% or flat e.g. 5.0 or 5000'
+    };
+
+    // Row 1: Example/placeholder values
+    const exampleRow = [];
+    for (const h of headers) { exampleRow.push(exampleValues[h] || ''); }
+    for (const sfH of sfHeaders) { exampleRow.push('1-25'); }
+    aoa.push(exampleRow);
+
+    // Row 2: SF settings only (equipment columns blank)
+    const sfSettingsRow = [];
+    for (const h of headers) { sfSettingsRow.push(''); } // blank equipment columns
+    for (const sfH of sfHeaders) {
+      const slotName = sfH.slice(3).trim(); // "SF Hat" -> "Hat"
+      const lvl = (starForceBySlot && starForceBySlot[slotName]) ? Number(starForceBySlot[slotName]) : 0;
+      sfSettingsRow.push(lvl ? Math.max(0, Math.min(25, Math.floor(lvl))) : '');
+    }
+    aoa.push(sfSettingsRow);
+
+    // Equipment data rows (SF columns blank)
+    for (let i = 0; i < allItems.length; i++) {
+      const item = allItems[i];
+      const row = [];
+
+      // equipment columns
+      for (const h of headers) {
+        if (h === 'Equipped?' || h === 'Locked?') {
+          row.push(String(item[h] || '').trim().toUpperCase() === 'Y' ? 'Y' : '');
+          continue;
+        }
+        const v = item[h];
+        if (v === null || v === undefined || v === '') { row.push(''); continue; }
+        const n = asNumber(v);
+        row.push(n !== null ? computeVal(item, h) : v);
+      }
+
+      // SF columns blank for equipment rows
+      for (const sfH of sfHeaders) { row.push(''); }
+
+      aoa.push(row);
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'equipment_export.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('Export failed: ' + (err && err.message ? err.message : err));
+    console.error(err);
+  }
+}
+
+</script>
+  <style>
+    html, body {
+      height: 100%;
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      margin: 0;
+      padding: 16px;
+      background: #f5f5f5;
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden; /* only table scrolls */
+    }
+
+    #app-root {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    h1 {
+      margin-top: 0;
+      margin-bottom: 12px;
+    }
+
+    .top-row {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      align-items: stretch;
+      margin-top: 8px;
+      margin-bottom: 12px;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 260px;
+      gap: 16px;
+      align-items: stretch;
+      flex: 1;
+      min-height: 0;
+      max-width: 100%;
+    }
+
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+      min-width: 0;
+    }
+
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .card {
+      background: white;
+      border-radius: 8px;
+      padding: 12px 16px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      margin-bottom: 8px;
+    }
+
+    .upload-card {
+      margin-bottom: 8px;
+    }
+
+    .upload-row {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .upload-actions {
+      display: flex;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .card-equipment {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .filters > div {
+      min-width: 140px;
+    }
+
+    .filters-right {
+      margin-left: auto;
+    }
+
+    label {
+      font-size: 12px;
+      text-transform: uppercase;
+      color: #555;
+      display: block;
+      margin-bottom: 4px;
+    }
+
+    select, input[type="number"], input[type="text"] {
+      width: 100%;
+      padding: 6px 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      font-size: 13px;
+      box-sizing: border-box;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    thead {
+      position: sticky;
+      top: 0;
+      background: #fafafa;
+      z-index: 1;
+    }
+
+    th, td {
+      border-bottom: 1px solid #eee;
+      padding: 4px 6px;
+      text-align: left;
+      white-space: nowrap;
+    }
+
+    th.substats-start, td.substats-start {
+      border-left: 2px solid #ddd;
+    }
+
+    .scroll-table table td input,
+    .scroll-table table td select {
+      min-width: 75px;
+    }
+
+    .scroll-table table th[data-col="Equipped?"],
+.scroll-table table td[data-col="Equipped?"] {
+  width: 1px;
+  white-space: nowrap;
+  padding-left: 4px;
+  padding-right: 4px;
+  text-align: center;
+}
+.scroll-table table td[data-col="Equipped?"] input[type=checkbox] {
+  margin: 0 auto;
+  display: block;
+}
+
+.scroll-table table th[data-col="Locked?"],
+.scroll-table table td[data-col="Locked?"] {
+  width: 1px;
+  white-space: nowrap;
+  padding-left: 4px;
+  padding-right: 4px;
+  text-align: center;
+}
+.scroll-table table td[data-col="Locked?"] input[type=checkbox] {
+  margin: 0 auto;
+  display: block;
+}
+
+.scroll-table table th[data-col="New?"],
+.scroll-table table td[data-col="New?"] {
+  width: 1px;
+  white-space: nowrap;
+  padding-left: 4px;
+  padding-right: 4px;
+  text-align: center;
+}
+.scroll-table table td[data-col="New?"] input[type=checkbox] {
+  margin: 0 auto;
+  display: block;
+}
+
+tr.new-item {
+  background: #e3f2fd !important;
+}
+
+tr.new-item.equipped {
+  background: linear-gradient(90deg, #fff9c4 0%, #e3f2fd 100%) !important;
+}
+    .scroll-table table td[data-col="Equipped?"] input[type=checkbox] {
+      transform: scale(0.9);
+      margin: 0;
+    }
+
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+    }
+
+    th.sortable:hover {
+      background: #f0f0f0;
+    }
+
+    tbody tr:nth-child(even) {
+      background: #fcfcfc;
+    }
+
+    tbody tr.equipped {
+      background: #fff9c4;
+    }
+
+    tbody tr.locked {
+      background: #ffebee;
+    }
+
+    tbody tr.equipped.locked {
+      background: #ffe0e0;
+    }
+
+    button {
+      padding: 4px 8px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      background: #fafafa;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: #1976d2;
+      color: white;
+      border-color: #1976d2;
+    }
+
+    button.danger {
+      background: #e53935;
+      color: white;
+      border-color: #e53935;
+    }
+
+    .add-row-btn {
+      width: 100%;
+      padding: 10px 16px;
+      background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+      border: 2px dashed #4caf50;
+      border-radius: 6px;
+      color: #2e7d32;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .add-row-btn:hover {
+      background: linear-gradient(135deg, #c8e6c9 0%, #a5d6a7 100%);
+      border-color: #388e3c;
+      transform: translateY(-1px);
+    }
+
+    .add-row-btn:active {
+      transform: translateY(0);
+    }
+
+    tr.new-row-editing {
+      background: #e8f5e9 !important;
+    }
+
+    tr.new-row-editing input,
+    tr.new-row-editing select {
+      background: white;
+      border: 1px solid #4caf50;
+    }
+
+    button.link {
+      border: none;
+      background: none;
+      padding: 0;
+      color: #1976d2;
+      text-decoration: underline;
+      cursor: pointer;
+    }
+
+    .stat-filters {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 6px;
+      border-radius: 4px;
+      background: #fafafa;
+    }
+
+    .stat-filters label {
+      text-transform: none;
+      font-size: 12px;
+      margin: 0;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .stat-line-row {
+      display: grid;
+      grid-template-columns: 1.5fr 1fr auto;
+      gap: 4px;
+      margin-bottom: 4px;
+    }
+
+    .stat-line-row button {
+      padding-inline: 6px;
+    }
+
+    .section-title {
+      font-weight: 600;
+      margin-top: 8px;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+
+    .small-note {
+      font-size: 11px;
+      color: #777;
+    }
+
+    .scroll-table {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      overflow-x: auto; /* horizontal scroll for wide tables */
+      border-radius: 6px;
+      border: 1px solid #ddd;
+      background: white;
+      margin-top: 6px;
+    }
+
+    .summary-grid {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .summary-item {
+      flex: 1 1 140px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: #fafafa;
+      border: 1px solid #e0e0e0;
+    }
+
+    .summary-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      color: #666;
+      margin-bottom: 4px;
+    }
+
+    .summary-value {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .column-order-list {
+      margin-top: 4px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 6px;
+      background: #fafafa;
+      max-height: 200px;
+      overflow-y: auto;
+      font-size: 12px;
+    }
+
+    .column-order-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 4px;
+    }
+
+    .column-order-label {
+      flex: 1;
+    }
+
+    .column-order-controls {
+      display: flex;
+      gap: 4px;
+    }
+
+    .column-order-controls button {
+      padding: 2px 6px;
+      font-size: 11px;
+    }
+
+    .column-order-header,
+    .equipment-manager-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+    }
+
+    @media (max-width: 960px) {
+      body {
+        overflow: auto; /* fallback on small screens */
+      }
+      #app-root {
+        overflow: visible;
+      }
+      .layout {
+        grid-template-columns: 1fr;
+      }
+      .card-equipment {
+        height: auto;
+      }
+      .scroll-table {
+        max-height: 60vh;
+      }
+    }
+  
+
+.actions-inline{
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:center;
+  gap:10px;
+  white-space:nowrap;
+}
+.actions-inline .pair{
+  display:flex;
+  flex-wrap:nowrap;
+  align-items:center;
+  gap:6px;
+}
+.actions-inline select{
+  height:26px;
+  min-width:56px;
+}
+.actions-inline input[type="checkbox"]{
+  width:16px;
+  height:16px;
+  cursor:pointer;
+  accent-color:#1976d2;
+}
+.actions-inline .mini-label{
+  font-size:12px;
+  margin:0;
+}
+
+
+.modal-backdrop{position:fixed; inset:0; background:rgba(0,0,0,0.35); display:flex; align-items:center; justify-content:center; z-index:9999; padding:16px;}
+.modal{background:#fff; border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,0.25); max-width:420px; width:100%; padding:16px;}
+.modal-title{font-weight:700; font-size:16px; margin-bottom:8px;}
+.modal-text{font-size:14px; color:#333; margin-bottom:14px; line-height:1.35;}
+.modal-actions{display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap;}
+
+</style>
+</head>
+<body>
+  <div id="app-root">
+    <h1>Equipment Viewer</h1>
+
+    <div class="card upload-card">
+      <div class="upload-row">
+        <div style="flex:1; min-width:0;">
+          <label for="file-input">Upload Excel file</label>
+          <input type="file" id="file-input" accept=".xlsx,.xls,.csv" />
+        </div>
+        <div class="upload-actions">
+          <button id="download-template-btn">Download Template</button>
+          <button id="export-btn" class="primary">Export</button>
+          <button id="clear-data-btn" style="background:#d32f2f;">Clear Data</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top row: Overview -->
+    <div class="top-row">
+      <div class="card">
+        <div class="section-title">Overview</div>
+        <div class="summary-grid">
+          <div class="summary-item">
+            <div class="summary-label">Total Equipment</div>
+            <div class="summary-value" id="total-eqp-count">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">Inventory</div>
+            <div class="summary-value" id="inventory-count">0</div>
+          </div>
+          <div class="summary-item">
+            <div class="summary-label">Filtered Equipment</div>
+            <div class="summary-value" id="filtered-eqp-count">0</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="layout">
+      <!-- LEFT: Filters + Table -->
+      <div class="left-column">
+        <div class="card">
+          <div class="section-title">Filters</div>
+          <div class="filters">
+            <div>
+              <label for="slot-filter">Slot</label>
+              <select id="slot-filter">
+                <option value="">All</option>
+                <option>Hat</option>
+                <option>Top</option>
+                <option>Bottom</option>
+                <option>Gloves</option>
+                <option>Ring</option>
+                <option>Eye</option>
+                <option>Cape</option>
+                <option>Shoulder</option>
+                <option>Belt</option>
+                <option>Boots</option>
+                <option>Necklace</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="rarity-filter">Rarity</label>
+              <select id="rarity-filter">
+                <option value="">All</option>
+                <option>Epic</option>
+                <option>Unique</option>
+                <option>Legendary</option>
+              </select>
+            </div>
+
+            <div>
+              <label for="equipped-only">Equipped Only</label>
+              <div style="display:flex; align-items:center; height:30px;">
+                <input type="checkbox" id="equipped-only" />
+              </div>
+            </div>
+
+            <div>
+              <label for="locked-only">Locked Only</label>
+              <div style="display:flex; align-items:center; height:30px;">
+                <input type="checkbox" id="locked-only" />
+              </div>
+            </div>
+
+            <div>
+              <label for="new-only">New Only</label>
+              <div style="display:flex; align-items:center; height:30px;">
+                <input type="checkbox" id="new-only" />
+              </div>
+            </div>
+
+            <div class="filters-right">
+              <label>&nbsp;</label>
+              <button id="clear-filters">Clear filters</button>
+            </div>
+          </div>
+
+          <div class="section-title" style="margin-top:10px;">Filter by Stats</div>
+          <div class="small-note">Multi-select. Item must have <em>all</em> selected stats (can still have others).</div>
+          <div id="stat-filters" class="stat-filters">
+            <!-- checkboxes populated dynamically -->
+          </div>
+        </div>
+
+        <div class="card card-equipment">
+          <div class="section-title">Equipment</div>
+          <div class="scroll-table">
+            <table>
+              <thead id="table-head">
+                <!-- populated dynamically -->
+              </thead>
+              <tbody id="table-body">
+                <!-- populated dynamically -->
+              </tbody>
+            </table>
+            <!-- Add Row Button -->
+            <div id="add-row-container" style="padding: 12px; border-top: 1px solid #e0e0e0; display: none;">
+              <button type="button" id="add-row-btn" class="add-row-btn">
+                <span style="font-size: 1.2em; margin-right: 6px;">+</span> Add Row
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Add New Equipment (collapsible) + Column order (collapsible) -->
+      <div class="right-column">
+        <div class="card" id="equipment-manager-card">
+          <div class="equipment-manager-header" id="equipment-manager-toggle-area">
+            <div class="section-title" style="margin-bottom:0;">Add New Equipment</div>
+            <button id="equipment-manager-toggle" type="button" class="link">▼</button>
+          </div>
+          <div id="equipment-manager-body" style="display:none; margin-top:6px;">
+            <form id="add-form">
+              <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <div style="flex:1;">
+                  <label for="new-equipped">Used?</label>
+                  <select id="new-equipped" required>
+                    <option value="N">N</option>
+                    <option value="Y">Y</option>
+                  </select>
+                </div>
+
+                <div style="flex:1;">
+                  <label for="new-lock">Lock</label>
+                  <select id="new-lock" required>
+                    <option value="N">N</option>
+                    <option value="Y">Y</option>
+                  </select>
+                </div>
+
+                <div style="flex:1;">
+                  <label for="new-slot">Slot</label>
+                  <select id="new-slot" required>
+                    <option value="">Select...</option>
+                    <option>Hat</option>
+                    <option>Top</option>
+                    <option>Bottom</option>
+                    <option>Gloves</option>
+                    <option>Ring</option>
+                <option>Eye</option>
+                    <option>Cape</option>
+                    <option>Shoulder</option>
+                    <option>Belt</option>
+                    <option>Boots</option>
+                <option>Necklace</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="display:flex; gap:8px; margin-bottom:8px;">
+                <div style="flex:1;">
+                  <label for="new-level">Level</label>
+                  <input type="number" id="new-level" min="0" required />
+                </div>
+                <div style="flex:1;">
+                  <label for="new-rarity">Rarity</label>
+                  <select id="new-rarity" required>
+                    <option value="">Select...</option>
+                    <option>Epic</option>
+                    <option selected>Unique</option>
+                    <option>Legendary</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style="margin-bottom:8px;">
+                <label for="new-attack">Base Attack</label>
+                <input type="number" id="new-attack" min="0" required />
+              </div>
+
+              <div>
+                <div class="section-title">Stat Lines</div>
+                <div class="small-note">
+                  Choose which stat lines this item has, and their values (% or flat).
+                </div>
+                <div id="stat-lines-container">
+                  <!-- filled by JS when columns loaded -->
+                </div>
+                <button type="button" id="add-stat-line" class="link">+ Add stat line</button>
+              </div>
+
+              <div style="margin-top:10px; display:flex; gap:6px;">
+                <button type="submit" class="primary">Add Equipment</button>
+                <button type="reset">Reset</button>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <div class="card" id="starforce-card">
+  <div class="equipment-manager-header" id="starforce-toggle-area">
+    <div class="section-title" style="margin-bottom:0;">Star Force Leveling</div>
+    <button id="starforce-toggle" type="button" class="link">▼</button>
+  </div>
+  <div id="starforce-body" style="display:none; margin-top:6px;">
+    <div style="display:flex; gap:8px; margin-bottom:8px;">
+      <div style="flex:1;">
+        <label for="sf-slot">Slot</label>
+        <select id="sf-slot">
+          <option value="">Select...</option>
+          <option>Hat</option>
+          <option>Top</option>
+          <option>Bottom</option>
+          <option>Gloves</option>
+          <option>Ring</option>
+          <option>Eye</option>
+          <option>Cape</option>
+          <option>Shoulder</option>
+          <option>Belt</option>
+          <option>Boots</option>
+          <option>Necklace</option>
+        </select>
+      </div>
+      <div style="flex:1;">
+        <label for="sf-level">Target Level</label>
+        <select id="sf-level">
+          <option value="">Select...</option>
+        </select>
+      </div>
+    </div>
+    <button id="sf-apply" class="primary" type="button">Apply</button>
+</div>
+</div>
+
+        <div class="card" id="column-order-card" style="display:none;">
+          <div class="column-order-header" id="column-order-toggle-area">
+            <div class="section-title" style="margin-bottom:0;">Column Order</div>
+            <button id="column-order-toggle" type="button" class="link">▼</button>
+          </div>
+          <div id="column-order-note" class="small-note" style="display:none;"></div>
+          <div id="column-order-list" class="column-order-list" style="display:none;">
+            <!-- populated dynamically -->
+          </div>
+        </div>
+
+        <div class="card" id="bulk-manage-card" style="display:none;">
+          <div class="equipment-manager-header" id="bulk-manage-toggle-area">
+            <div class="section-title" style="margin-bottom:0;">Bulk Manage</div>
+            <button id="bulk-manage-toggle" type="button" class="link">▼</button>
+      </div>
+          <div id="bulk-manage-body" style="display:none; margin-top:6px;">
+            <div class="small-note" style="margin-bottom:8px;">
+              Select items using checkboxes in the table, then use actions below.
+            </div>
+            <div style="margin-bottom:8px;">
+              <span id="bulk-selected-count">0</span> item(s) selected
+              <button type="button" id="bulk-select-all" class="link" style="margin-left:8px;">Select all</button>
+              <button type="button" id="bulk-deselect-all" class="link" style="margin-left:4px;">Deselect all</button>
+            </div>
+            <div style="display:flex; gap:6px; flex-wrap:wrap;">
+              <button type="button" id="bulk-move-up" disabled>↑ Move Up</button>
+              <button type="button" id="bulk-move-down" disabled>↓ Move Down</button>
+              <button type="button" id="bulk-delete" class="danger" disabled>Delete Selected</button>
+            </div>
+            <div style="margin-top:10px;">
+              <button type="button" id="bulk-mode-exit">Exit Bulk Mode</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Embedded template as base64 (MS Template.xlsx)
+    const TEMPLATE_XLSX_BASE64 = "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";
+
+    // Core data model
+    let allItems = [];   // full list loaded from Excel + added
+    let columns = [];    // column order (data keys)
+    let statFields = []; // stat columns used for filters and add form
+    let slotFieldName = 'Slot';
+    let originalColumns = []; // columns from the original sheet, for export
+
+    const CORE_FIELDS = ['Equipped?', 'Locked?', 'New?', 'Slot', 'Level', 'Rarity', 'Base Atk'];
+    const NON_STAT_EXTRA = ['Inventory', 'Total Eqp'];
+    // These columns are hidden from table view but visible in edit mode
+    const HIDDEN_TABLE_COLS = ['Equipped?', 'Locked?', 'New?'];
+    
+    // Default stat fields - always available in dropdowns even without imported data
+    const DEFAULT_STAT_FIELDS = [
+      'Attack', 'Defense', 'Crit Rate', 'Crit Damage', 'Damage',
+      'Normal Monster', 'Boss Damage', 'Min Damage', 'Max Damage',
+      'Accuracy', 'Evasion', '1st Job Skill', '2nd Job Skill', '3rd Job Skill',
+      'Max HP', 'Max MP'
+    ];
+    
+    // Slot options for SF columns (must match slot-filter dropdown)
+    const SLOT_OPTIONS = ['Hat', 'Top', 'Bottom', 'Gloves', 'Ring', 'Eye', 'Cape', 'Shoulder', 'Belt', 'Boots', 'Necklace'];
+    
+    // SF column names (hidden from UI, only used in export/import)
+    const SF_COLUMNS = SLOT_OPTIONS.map(s => `SF ${s}`);
+    
+    // Initialize columns with defaults when no data is loaded
+    function initializeDefaultColumns() {
+      if (columns.length === 0) {
+        columns = [...CORE_FIELDS, ...DEFAULT_STAT_FIELDS];
+        originalColumns = [...columns];
+      }
+    }
+
+    const fileInput = document.getElementById('file-input');
+    const slotFilter = document.getElementById('slot-filter');
+    const rarityFilter = document.getElementById('rarity-filter');
+    const equippedOnlyCheckbox = document.getElementById('equipped-only');
+    const lockedOnlyCheckbox = document.getElementById('locked-only');
+    const newOnlyCheckbox = document.getElementById('new-only');
+    const clearFiltersBtn = document.getElementById('clear-filters');
+    const statFiltersDiv = document.getElementById('stat-filters');
+    const tableHead = document.getElementById('table-head');
+    const tableBody = document.getElementById('table-body');
+    const addRowContainer = document.getElementById('add-row-container');
+    const addRowBtn = document.getElementById('add-row-btn');
+
+    const downloadTemplateBtn = document.getElementById('download-template-btn');
+    const exportBtn = document.getElementById('export-btn');
+
+    const addForm = document.getElementById('add-form');
+    const newEquipped = document.getElementById('new-equipped');
+    const newLock = document.getElementById('new-lock');
+    const newSlot = document.getElementById('new-slot');
+    const newLevel = document.getElementById('new-level');
+    const newRarity = document.getElementById('new-rarity');
+    const newAttack = document.getElementById('new-attack');
+    const statLinesContainer = document.getElementById('stat-lines-container');
+    const addStatLineBtn = document.getElementById('add-stat-line');
+
+    const columnOrderCard = document.getElementById('column-order-card');
+    const columnOrderList = document.getElementById('column-order-list');
+    const columnOrderNote = document.getElementById('column-order-note');
+    const columnOrderToggleBtn = document.getElementById('column-order-toggle');
+    const columnOrderToggleArea = document.getElementById('column-order-toggle-area');
+
+    const equipmentManagerToggleBtn = document.getElementById('equipment-manager-toggle');
+    const equipmentManagerToggleArea = document.getElementById('equipment-manager-toggle-area');
+    const equipmentManagerBody = document.getElementById('equipment-manager-body');
+
+    const totalEqpSpan = document.getElementById('total-eqp-count');
+    const inventorySpan = document.getElementById('inventory-count');
+    const filteredEqpSpan = document.getElementById('filtered-eqp-count');
+
+    let columnOrderCollapsed = true;
+    let equipmentManagerCollapsed = true;
+
+    // Sorting state (by column header)
+    let sortColumn = null;
+    let sortAscending = true;
+
+    // Track which item is being edited
+    let editingItem = null; // currently edited item (object reference)
+    
+    // Track if we're adding a new row inline
+    let addingNewRow = false;
+    let newRowItem = null;
+
+    // Bulk mode state
+    let bulkModeEnabled = false;
+    let bulkSelectedItems = new Set(); // Set of selected item references
+
+    // Bulk manage DOM elements
+    const bulkManageCard = document.getElementById('bulk-manage-card');
+    const bulkManageToggleBtn = document.getElementById('bulk-manage-toggle');
+    const bulkManageToggleArea = document.getElementById('bulk-manage-toggle-area');
+    const bulkManageBody = document.getElementById('bulk-manage-body');
+    const bulkSelectedCountSpan = document.getElementById('bulk-selected-count');
+    const bulkSelectAllBtn = document.getElementById('bulk-select-all');
+    const bulkDeselectAllBtn = document.getElementById('bulk-deselect-all');
+    const bulkMoveUpBtn = document.getElementById('bulk-move-up');
+    const bulkMoveDownBtn = document.getElementById('bulk-move-down');
+    const bulkDeleteBtn = document.getElementById('bulk-delete');
+    const bulkModeExitBtn = document.getElementById('bulk-mode-exit');
+
+    let bulkManageCollapsed = true;
+
+    // ========== LocalStorage Persistence ==========
+    const STORAGE_KEY = 'equipmentViewerData';
+
+    function saveToLocalStorage() {
+      try {
+        const data = {
+          allItems: allItems,
+          columns: columns,
+          originalColumns: originalColumns,
+          starForceBySlot: starForceBySlot
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (e) {
+        console.warn('Failed to save to localStorage:', e);
+      }
+    }
+
+    /**
+     * Mark an item as equipped and unequip all other items in the same slot.
+     * This ensures only one item per slot can be equipped at a time.
+     * @param {Object} item - The item to equip
+     */
+    function setItemEquipped(item) {
+      const targetSlot = String(item['Slot'] || '').trim().toLowerCase();
+      
+      // Unequip all other items in the same slot
+      allItems.forEach(otherItem => {
+        const otherSlot = String(otherItem['Slot'] || '').trim().toLowerCase();
+        if (otherSlot === targetSlot && otherItem !== item) {
+          otherItem['Equipped?'] = '';
+        }
+      });
+      
+      // Equip the target item
+      item['Equipped?'] = 'Y';
+    }
+
+    function loadFromLocalStorage() {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) return false;
+        
+        const data = JSON.parse(stored);
+        if (data.allItems && Array.isArray(data.allItems)) {
+          allItems = data.allItems;
+        }
+        if (data.columns && Array.isArray(data.columns)) {
+          columns = data.columns;
+          // Ensure New? column exists (added in later version)
+          if (!columns.includes('New?')) {
+            // Insert after Locked? or at position 2
+            const lockedIdx = columns.indexOf('Locked?');
+            if (lockedIdx >= 0) {
+              columns.splice(lockedIdx + 1, 0, 'New?');
+            } else {
+              columns.splice(2, 0, 'New?');
+            }
+          }
+        }
+        if (data.originalColumns && Array.isArray(data.originalColumns)) {
+          originalColumns = data.originalColumns;
+          // Ensure New? column exists in originalColumns too
+          if (!originalColumns.includes('New?')) {
+            const lockedIdx = originalColumns.indexOf('Locked?');
+            if (lockedIdx >= 0) {
+              originalColumns.splice(lockedIdx + 1, 0, 'New?');
+            } else {
+              originalColumns.splice(2, 0, 'New?');
+            }
+          }
+        }
+        if (data.starForceBySlot && typeof data.starForceBySlot === 'object') {
+          Object.assign(starForceBySlot, data.starForceBySlot);
+        }
+        return allItems.length > 0;
+      } catch (e) {
+        console.warn('Failed to load from localStorage:', e);
+        return false;
+      }
+    }
+
+    function clearLocalStorage() {
+      try {
+        localStorage.removeItem(STORAGE_KEY);
+      } catch (e) {
+        console.warn('Failed to clear localStorage:', e);
+      }
+    }
+
+    function setColumnOrderCollapsed(collapsed) {
+      columnOrderCollapsed = collapsed;
+      if (collapsed) {
+        columnOrderToggleBtn.textContent = '▼';
+        columnOrderNote.style.display = 'none';
+        columnOrderList.style.display = 'none';
+      } else {
+        columnOrderToggleBtn.textContent = '▲';
+        columnOrderNote.style.display = 'block';
+        columnOrderList.style.display = 'block';
+      }
+    }
+
+    function setEquipmentManagerCollapsed(collapsed) {
+      equipmentManagerCollapsed = collapsed;
+      if (collapsed) {
+        equipmentManagerToggleBtn.textContent = '▼';
+        equipmentManagerBody.style.display = 'none';
+      } else {
+        equipmentManagerToggleBtn.textContent = '▲';
+        equipmentManagerBody.style.display = 'block';
+      }
+    }
+
+    columnOrderToggleBtn.addEventListener('click', () => {
+      setColumnOrderCollapsed(!columnOrderCollapsed);
+    });
+    columnOrderToggleArea.addEventListener('click', (e) => {
+      if (e.target === columnOrderToggleBtn) return;
+      setColumnOrderCollapsed(!columnOrderCollapsed);
+    });
+
+    equipmentManagerToggleBtn.addEventListener('click', () => {
+      setEquipmentManagerCollapsed(!equipmentManagerCollapsed);
+    });
+    equipmentManagerToggleArea.addEventListener('click', (e) => {
+      if (e.target === equipmentManagerToggleBtn) return;
+      setEquipmentManagerCollapsed(!equipmentManagerCollapsed);
+    });
+
+    // Start with Add New Equipment section collapsed
+    setEquipmentManagerCollapsed(true);
+
+    // Bulk manage toggle and functions
+    function setBulkManageCollapsed(collapsed) {
+      bulkManageCollapsed = collapsed;
+      if (collapsed) {
+        bulkManageToggleBtn.textContent = '▼';
+        bulkManageBody.style.display = 'none';
+      } else {
+        bulkManageToggleBtn.textContent = '▲';
+        bulkManageBody.style.display = 'block';
+      }
+    }
+
+    function enableBulkMode() {
+      bulkModeEnabled = true;
+      bulkSelectedItems.clear();
+      setBulkManageCollapsed(false);
+      updateBulkUI();
+      renderTable();
+    }
+
+    function disableBulkMode() {
+      bulkModeEnabled = false;
+      bulkSelectedItems.clear();
+      setBulkManageCollapsed(true);
+      updateBulkUI();
+      renderTable();
+    }
+
+    function updateBulkUI() {
+      const count = bulkSelectedItems.size;
+      bulkSelectedCountSpan.textContent = count;
+      
+      const hasSelection = count > 0;
+      const canReorder = !sortColumn;
+      
+      bulkMoveUpBtn.disabled = !hasSelection || !canReorder;
+      bulkMoveDownBtn.disabled = !hasSelection || !canReorder;
+      bulkDeleteBtn.disabled = !hasSelection;
+    }
+
+    bulkManageToggleBtn.addEventListener('click', () => {
+      if (bulkManageCollapsed) {
+        enableBulkMode();
+      } else {
+        disableBulkMode();
+      }
+    });
+    bulkManageToggleArea.addEventListener('click', (e) => {
+      if (e.target === bulkManageToggleBtn) return;
+      if (bulkManageCollapsed) {
+        enableBulkMode();
+      } else {
+        disableBulkMode();
+      }
+    });
+
+    bulkSelectAllBtn.addEventListener('click', () => {
+      const filtered = applyFilters(allItems);
+      const sortedPreLock = sortColumn ? applySort(filtered) : filtered;
+      const sorted = sortColumn ? sortedPreLock : moveLockedBottom(sortedPreLock);
+      sorted.forEach(item => bulkSelectedItems.add(item));
+      updateBulkUI();
+      renderTable();
+    });
+
+    bulkDeselectAllBtn.addEventListener('click', () => {
+      bulkSelectedItems.clear();
+      updateBulkUI();
+      renderTable();
+    });
+
+    bulkMoveUpBtn.addEventListener('click', () => {
+      if (sortColumn) return; // Can't reorder when sorted
+      
+      const filtered = applyFilters(allItems);
+      const sorted = moveLockedBottom(filtered);
+      
+      // Get selected items in current order
+      const selectedInOrder = sorted.filter(item => bulkSelectedItems.has(item));
+      if (!selectedInOrder.length) return;
+      
+      // Move each selected item up in allItems (in order, so they stay grouped)
+      selectedInOrder.forEach(item => {
+        const filteredIdx = sorted.indexOf(item);
+        if (filteredIdx <= 0) return; // Already at top
+        
+        const neighbor = sorted[filteredIdx - 1];
+        if (bulkSelectedItems.has(neighbor)) return; // Don't swap with another selected item
+        
+        const idx1 = allItems.indexOf(item);
+        const idx2 = allItems.indexOf(neighbor);
+        if (idx1 === -1 || idx2 === -1) return;
+        
+        // Swap in allItems
+        allItems[idx1] = neighbor;
+        allItems[idx2] = item;
+      });
+      
+      saveToLocalStorage();
+      renderTable();
+    });
+
+    bulkMoveDownBtn.addEventListener('click', () => {
+      if (sortColumn) return; // Can't reorder when sorted
+      
+      const filtered = applyFilters(allItems);
+      const sorted = moveLockedBottom(filtered);
+      
+      // Get selected items in reverse order (so bottom items move first)
+      const selectedInOrder = sorted.filter(item => bulkSelectedItems.has(item)).reverse();
+      if (!selectedInOrder.length) return;
+      
+      selectedInOrder.forEach(item => {
+        const filteredIdx = sorted.indexOf(item);
+        if (filteredIdx >= sorted.length - 1) return; // Already at bottom
+        
+        const neighbor = sorted[filteredIdx + 1];
+        if (bulkSelectedItems.has(neighbor)) return; // Don't swap with another selected item
+        
+        const idx1 = allItems.indexOf(item);
+        const idx2 = allItems.indexOf(neighbor);
+        if (idx1 === -1 || idx2 === -1) return;
+        
+        // Swap in allItems
+        allItems[idx1] = neighbor;
+        allItems[idx2] = item;
+      });
+      
+      saveToLocalStorage();
+      renderTable();
+    });
+
+    bulkDeleteBtn.addEventListener('click', () => {
+      const count = bulkSelectedItems.size;
+      if (count === 0) return;
+      
+      const confirmed = window.confirm(`Are you sure you want to delete ${count} item(s)?`);
+      if (!confirmed) return;
+      
+      // Remove selected items from allItems
+      bulkSelectedItems.forEach(item => {
+        const idx = allItems.indexOf(item);
+        if (idx >= 0) {
+          allItems.splice(idx, 1);
+        }
+      });
+      
+      bulkSelectedItems.clear();
+      updateBulkUI();
+      saveToLocalStorage();
+      renderTable();
+    });
+
+    bulkModeExitBtn.addEventListener('click', () => {
+      disableBulkMode();
+    });
+
+// ---- Star Force Leveling ----
+const starforceToggleBtn = document.getElementById('starforce-toggle');
+const starforceToggleArea = document.getElementById('starforce-toggle-area');
+const starforceBody = document.getElementById('starforce-body');
+const sfSlot = document.getElementById('sf-slot');
+const sfLevel = document.getElementById('sf-level');
+const sfApply = document.getElementById('sf-apply');
+
+let starforceCollapsed = true;
+const starForceBySlot = {}; // slot -> target level (1..25)
+
+const baseAmpByLevel = {
+  0: 0,
+  1: 0.1,
+  2: 0.2,
+  3: 0.3,
+  4: 0.4,
+  5: 0.6,
+  6: 0.75,
+  7: 0.9,
+  8: 1.05,
+  9: 1.2,
+  10: 1.5,
+  11: 1.75,
+  12: 2,
+  13: 2.25,
+  14: 2.5,
+  15: 3,
+  16: 3.5,
+  17: 4,
+  18: 4.5,
+  19: 5,
+  20: 6,
+  21: 7,
+  22: 9,
+  23: 12,
+  24: 15,
+  25: 20
+};
+
+const subAmpByLevel = {
+  0: 0,
+  1: 0,
+  2: 0,
+  3: 0,
+  4: 0,
+  5: 0.1,
+  6: 0.1,
+  7: 0.1,
+  8: 0.1,
+  9: 0.1,
+  10: 0.25,
+  11: 0.25,
+  12: 0.25,
+  13: 0.25,
+  14: 0.25,
+  15: 0.5,
+  16: 0.6,
+  17: 0.7,
+  18: 0.8,
+  19: 0.9,
+  20: 1,
+  21: 1.1,
+  22: 1.3,
+  23: 1.6,
+  24: 2,
+  25: 2.5
+};
+
+function getBaseAmp(level) {
+  const lvl = Number(level);
+  if (Number.isNaN(lvl) || lvl < 0) return 0;
+  return baseAmpByLevel.hasOwnProperty(lvl) ? baseAmpByLevel[lvl] : 0;
+}
+
+function getSubAmp(level) {
+  const lvl = Number(level);
+  if (Number.isNaN(lvl) || lvl < 0) return 0;
+  return subAmpByLevel.hasOwnProperty(lvl) ? subAmpByLevel[lvl] : 0;
+}
+
+
+function setStarforceCollapsed(collapsed) {
+  starforceCollapsed = collapsed;
+  if (collapsed) {
+    starforceToggleBtn.textContent = '▼';
+    starforceBody.style.display = 'none';
+  } else {
+    starforceToggleBtn.textContent = '▲';
+    starforceBody.style.display = 'block';
+    if (typeof syncStarForceSelection === 'function') syncStarForceSelection();
+  }
+}
+
+// Populate SF levels 1..25
+(function initSfLevels() {
+  const frag = document.createDocumentFragment();
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Select...';
+  frag.appendChild(placeholder);
+  for (let i = 1; i <= 25; i++) {
+    const opt = document.createElement('option');
+    opt.value = String(i);
+    opt.textContent = String(i);
+    frag.appendChild(opt);
+  }
+  sfLevel.innerHTML = '';
+  sfLevel.appendChild(frag);
+})();
+
+
+function syncStarForceSelection() {
+  const slot = sfSlot.value;
+  const remembered = starForceBySlot[slot];
+  sfLevel.value = remembered ? String(remembered) : '';
+}
+
+// When changing slot, recall the stored level for that slot (per-slot memory)
+sfSlot.addEventListener('change', () => {
+  syncStarForceSelection();
+});
+
+
+starforceToggleBtn.addEventListener('click', () => setStarforceCollapsed(!starforceCollapsed));
+starforceToggleArea.addEventListener('click', (e) => {
+  if (e.target === starforceToggleBtn) return;
+  setStarforceCollapsed(!starforceCollapsed);
+});
+
+// Start collapsed by default
+setStarforceCollapsed(true);
+
+sfApply.addEventListener('click', () => {
+  const slot = sfSlot.value;
+  const level = sfLevel.value;
+  if (!slot) { alert('Select a slot.'); return; }
+  if (!level) { alert('Select a target level.'); return; }
+  starForceBySlot[slot] = Number(level);
+  saveToLocalStorage();
+  renderTable();
+});
+
+    // Map internal column keys -> display names
+    function displayName(col) {
+      if (col === 'Base Atk') return 'Base Attack';
+      if (col === 'Equipped?') return 'Used?';
+      if (col === 'Locked?') return 'Lock';
+      if (col === 'New?') return 'New';
+      if (col === 'Attack_1') return 'Attack';
+      if (col.toLowerCase().includes('normal monster')) return 'Monster Damage';
+      return col;
+    }
+
+    // Identify percent stat columns by name
+    function isPercentColumn(col) {
+      const name = col.toLowerCase();
+      const percentHints = ['crit rate', 'crit damage', 'normal monster', 'boss damage', 'max mp', 'damage'];
+      return percentHints.some(h => name.includes(h));
+    }
+
+    function isNumericColumn(col) {
+      return col === 'Level' || col === 'Attack' || col === 'Base Atk' || statFields.includes(col);
+    }
+
+    // Format values for display
+    function formatValue(col, val) {
+      if (val === null || val === undefined || val === '') return '';
+      if (typeof val !== 'number') return String(val);
+
+      const colLower = col.toLowerCase();
+
+      // HP / MP can be flat or percent:
+      // >100 => flat value, <=100 => percent
+      if (colLower.includes('hp') || colLower.includes('mp')) {
+        if (val > 100) {
+          const floored = Math.floor(val);
+          return floored.toLocaleString(undefined, { maximumFractionDigits: 0 });
+        } else {
+          let pct = val;
+          if (Math.abs(val) < 1) {
+            pct = val * 100;
+          }
+          pct = Math.floor(pct * 10) / 10;
+          return pct.toLocaleString(undefined, {
+            minimumFractionDigits: 1,
+            maximumFractionDigits: 1
+          }) + '%';
+        }
+      }
+
+      if (isPercentColumn(col)) {
+        // treat values < 1 as fractional percentages (0.047 -> 4.7%)
+        let pct = val;
+        if (Math.abs(val) < 1) {
+          pct = val * 100;
+        }
+
+        // ROUND DOWN to nearest 0.1%
+        pct = Math.floor(pct * 10) / 10;
+
+        return pct.toLocaleString(undefined, {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1
+        }) + '%';
+      }
+
+      // ROUND DOWN to nearest whole number
+      const floored = Math.floor(val);
+
+      return floored.toLocaleString(undefined, {
+        maximumFractionDigits: 0
+      });
+    }
+
+    // ---------- Template download ----------
+    function downloadTemplate() {
+      try {
+        const headers = [
+          'Equipped?', 'Locked?', 'New?', 'Slot', 'Level', 'Rarity', 'Base Atk',
+          'Attack', 'Defense', 'Crit Rate', 'Crit Damage', 'Damage',
+          'Normal Monster', 'Boss Damage', 'Min Damage', 'Max Damage', 'Accuracy', 'Evasion',
+          '1st Job Skill', '2nd Job Skill', '3rd Job Skill', 'Max HP', 'Max MP'
+        ];
+        const sfHeaders = SLOT_OPTIONS.map(s => `SF ${s}`);
+        
+        // Example values for each column
+        const exampleValues = {
+          'Equipped?': 'Y or N',
+          'Locked?': 'Y or N',
+          'New?': 'Y or N',
+          'Slot': 'Hat/Top/Bottom/Gloves/Ring/Eye/Cape/Shoulder/Belt/Boots/Necklace',
+          'Level': 'e.g. 50',
+          'Rarity': 'Epic/Unique/Legendary',
+          'Base Atk': 'e.g. 1000',
+          'Attack': 'e.g. 500',
+          'Defense': 'e.g. 300',
+          'Crit Rate': '% e.g. 5.5',
+          'Crit Damage': '% e.g. 12.3',
+          'Damage': '% e.g. 8.0',
+          'Normal Monster': '% e.g. 10.0',
+          'Boss Damage': '% e.g. 15.0',
+          'Min Damage': '% e.g. 5.0',
+          'Max Damage': '% e.g. 5.0',
+          'Accuracy': 'e.g. 100',
+          'Evasion': 'e.g. 50',
+          '1st Job Skill': 'e.g. 2',
+          '2nd Job Skill': 'e.g. 3',
+          '3rd Job Skill': 'e.g. 1',
+          'Max HP': '% or flat e.g. 5.0 or 5000',
+          'Max MP': '% or flat e.g. 5.0 or 5000'
+        };
+
+        const exampleRow = headers.map(h => exampleValues[h] || '').concat(sfHeaders.map(() => '1-25'));
+        const sfSettingsRow = headers.map(() => '').concat(sfHeaders.map(() => ''));
+
+        const ws = XLSX.utils.aoa_to_sheet([
+          headers.concat(sfHeaders),
+          exampleRow,
+          sfSettingsRow
+        ]);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+
+        const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+        const blob = new Blob([wbout], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'MS Template.xlsx';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error('Template download failed', err);
+        alert('Unable to download template in this environment.');
+      }
+    }
+
+    downloadTemplateBtn.addEventListener('click', downloadTemplate);
+
+    // ---------- Clear Data ----------
+    const clearDataBtn = document.getElementById('clear-data-btn');
+clearDataBtn.addEventListener('click', () => {
+      if (!confirm('Are you sure you want to clear all data? This cannot be undone.')) return;
+  allItems = [];
+      columns = [];
+      originalColumns = [];
+      Object.keys(starForceBySlot).forEach(k => delete starForceBySlot[k]);
+      clearLocalStorage();
+      editingItem = null;
+      bulkSelectedItems.clear();
+      bulkModeEnabled = false;
+      initializeDefaultColumns();
+      deriveStatFields();
+  buildTableHeader();
+      buildStatFiltersUI();
+      buildColumnOrderUI();
+  renderTable();
+      prepareAddFormStatLinesInitial();
+});
+
+// ---------- Excel loading ----------
+    let pendingImportData = null; // Temporarily store file data while waiting for modal
+    
+    // Helper to check if a row is an example/placeholder row
+    function isExampleRow(row) {
+      const slot = String(row['Slot'] || '').trim();
+      return slot.includes('/') || slot.toLowerCase().includes('hat/top');
+    }
+    
+    // Helper to check if a row is a SF settings row (has SF values, no equipment data)
+    function isSfSettingsRow(row) {
+      const slot = String(row['Slot'] || '').trim();
+      if (slot && !slot.includes('/')) return false;
+      
+      for (const slotOpt of SLOT_OPTIONS) {
+        const sfColName = `SF ${slotOpt}`;
+        const val = row[sfColName];
+        if (val !== null && val !== undefined && val !== '') {
+          const lvl = Number(val);
+          if (!Number.isNaN(lvl) && lvl >= 1 && lvl <= 25) {
+            return true;
+          }
+        }
+      }
+      return false;
+    }
+    
+    function processImportedFile(applySfAmplification) {
+      if (!pendingImportData) return;
+      
+      try {
+        const json = pendingImportData;
+        pendingImportData = null;
+        
+        // Normalize column names
+const sampleRow = json[0] || {};
+const keys = Object.keys(sampleRow);
+const slotKey = keys.find(k => String(k).trim().toLowerCase() === 'slot')
+  || keys.find(k => String(k).trim().toLowerCase().includes('slot'));
+
+if (slotKey && slotKey !== 'Slot') {
+  json.forEach(r => {
+    r['Slot'] = r[slotKey];
+    delete r[slotKey];
+  });
+}
+
+        if (!json.length) {
+          alert('No rows found in file.');
+          return;
+        }
+
+        allItems = json;
+        
+        // Original column order from sheet
+        originalColumns = Object.keys(json[0] || {}).filter(c => !String(c).startsWith('_'));
+
+        // Normalize base attack / attack column names
+        const hasBaseAtk = originalColumns.includes('Base Atk');
+        const hasAttack = originalColumns.includes('Attack');
+        const hasAttack1 = originalColumns.includes('Attack_1');
+
+        if (hasAttack && hasAttack1 && !hasBaseAtk) {
+          originalColumns = originalColumns.map(c => {
+            if (c === 'Attack') return 'Base Atk';
+            if (c === 'Attack_1') return 'Attack';
+            return c;
+          });
+          allItems.forEach(item => {
+            item['Base Atk'] = item['Attack'];
+            item['Attack'] = item['Attack_1'];
+            delete item['Attack_1'];
+          });
+        } else if (!hasBaseAtk && hasAttack && !hasAttack1) {
+          originalColumns = originalColumns.map(c => (c === 'Attack' ? 'Base Atk' : c));
+          allItems.forEach(item => {
+            item['Base Atk'] = item['Attack'];
+            delete item['Attack'];
+          });
+        }
+
+        // Ensure Locked? column exists
+if (!originalColumns.includes('Locked?')) {
+  const idxEq = originalColumns.indexOf('Equipped?');
+  const insertAt = idxEq >= 0 ? idxEq + 1 : 0;
+  originalColumns.splice(insertAt, 0, 'Locked?');
+  allItems.forEach(item => { item['Locked?'] = item['Locked?'] ?? ''; });
+} else {
+  allItems.forEach(item => { item['Locked?'] = item['Locked?'] ?? ''; });
+}
+        
+        // Columns used in table (exclude helper columns and SF columns)
+        columns = originalColumns.filter(
+          c => !NON_STAT_EXTRA.includes(c) && !String(c).startsWith('_') && !SF_COLUMNS.includes(c)
+        );
+        
+        // Read SF settings from any row that has them
+        for (const row of json) {
+          if (isExampleRow(row)) continue;
+          
+          SLOT_OPTIONS.forEach(slot => {
+            const sfColName = `SF ${slot}`;
+            const val = row[sfColName];
+            if (val !== null && val !== undefined && val !== '') {
+              const lvl = Number(val);
+              if (!Number.isNaN(lvl) && lvl >= 1 && lvl <= 25) {
+                starForceBySlot[slot] = Math.floor(lvl);
+              }
+            }
+          });
+          
+          if (isSfSettingsRow(row)) break;
+        }
+        
+        // Filter out example and SF settings rows, keep only equipment data
+        allItems = json.filter(row => {
+          if (isExampleRow(row)) return false;
+          if (isSfSettingsRow(row)) return false;
+          const slot = String(row['Slot'] || '').trim();
+          return SLOT_OPTIONS.includes(slot);
+        });
+        
+        // Handle SF based on import option:
+        // applySfAmplification = true: File has BASE stats, store as-is (display will apply SF)
+        // applySfAmplification = false: File has AMPLIFIED stats, divide by SF to get base values
+        if (!applySfAmplification) {
+          // File values are already amplified - reverse SF to get base values
+          const sfAttackAmp = {0:0,1:0.1,2:0.2,3:0.3,4:0.4,5:0.6,6:0.75,7:0.9,8:1.05,9:1.2,10:1.5,11:1.75,12:2,13:2.25,14:2.5,15:3,16:3.5,17:4,18:4.5,19:5,20:6,21:7,22:9,23:12,24:15,25:20};
+          const sfSubAmp = {0:0,1:0,2:0,3:0,4:0,5:0.1,6:0.1,7:0.1,8:0.1,9:0.1,10:0.25,11:0.25,12:0.25,13:0.25,14:0.25,15:0.5,16:0.6,17:0.7,18:0.8,19:0.9,20:1,21:1.1,22:1.3,23:1.6,24:2,25:2.5};
+          const metaFields = new Set(['Slot','Level','Rarity','Equipped?','Locked?']);
+          
+          allItems.forEach(item => {
+            const slot = String(item['Slot'] || '').trim();
+            const sfLevel = starForceBySlot[slot] || 0;
+            if (sfLevel <= 0) return;
+            
+            const clamped = Math.max(0, Math.min(25, Math.floor(sfLevel)));
+            const baseAmp = sfAttackAmp[clamped] || 0;
+            const subAmp = sfSubAmp[clamped] || 0;
+            
+            // Reverse SF on Base Atk: base = amplified / (1 + amp)
+            if (typeof item['Base Atk'] === 'number' && baseAmp > 0) {
+              item['Base Atk'] = item['Base Atk'] / (1 + baseAmp);
+            }
+            
+            // Reverse SF on other numeric stat fields
+            for (const col of Object.keys(item)) {
+              if (metaFields.has(col) || col === 'Base Atk' || SF_COLUMNS.includes(col)) continue;
+              const val = item[col];
+              if (typeof val !== 'number' || subAmp <= 0) continue;
+              
+              item[col] = val / (1 + subAmp);
+            }
+          });
+        }
+        // If applySfAmplification = true, values are already base stats, store as-is
+
+        deriveStatFields();
+        buildTableHeader();
+        buildStatFiltersUI();
+        buildColumnOrderUI();
+        prepareAddFormStatLinesInitial();
+        editingItem = null;
+        sortColumn = null;
+        renderTable();
+
+        columnOrderCard.style.display = 'block';
+        setColumnOrderCollapsed(true);
+        
+        bulkManageCard.style.display = 'block';
+        setBulkManageCollapsed(true);
+        
+        saveToLocalStorage();
+        } catch (err) {
+          console.error(err);
+          alert('Error loading file: ' + (err && err.message ? err.message : err));
+      }
+    }
+    
+    // Import modal handling
+    function showImportModal() {
+      const modal = document.getElementById('import-modal');
+      if (modal) modal.style.display = 'flex';
+    }
+    
+    function hideImportModal() {
+      const modal = document.getElementById('import-modal');
+      if (modal) modal.style.display = 'none';
+    }
+    
+    // Wire up import modal buttons
+    document.addEventListener('DOMContentLoaded', () => {
+      // Try to restore data from localStorage
+      if (loadFromLocalStorage() && allItems.length > 0) {
+        deriveStatFields();
+        buildTableHeader();
+        buildStatFiltersUI();
+        buildColumnOrderUI();
+        prepareAddFormStatLinesInitial();
+        editingItem = null;
+        sortColumn = null;
+        renderTable();
+        columnOrderCard.style.display = 'block';
+        setColumnOrderCollapsed(true);
+        bulkManageCard.style.display = 'block';
+        setBulkManageCollapsed(true);
+      } else {
+        // No data loaded - initialize with defaults
+        initializeDefaultColumns();
+        deriveStatFields();
+        buildTableHeader();
+        buildStatFiltersUI();
+        buildColumnOrderUI();
+        prepareAddFormStatLinesInitial();
+        renderTable();
+        columnOrderCard.style.display = 'block';
+        setColumnOrderCollapsed(true);
+        bulkManageCard.style.display = 'block';
+        setBulkManageCollapsed(true);
+      }
+      
+      const importApply = document.getElementById('import-apply');
+      const importNo = document.getElementById('import-no');
+      const importCancel = document.getElementById('import-cancel');
+      const modal = document.getElementById('import-modal');
+      
+      if (importApply) importApply.addEventListener('click', () => {
+        hideImportModal();
+        processImportedFile(true);
+      });
+      
+      if (importNo) importNo.addEventListener('click', () => {
+        hideImportModal();
+        processImportedFile(false);
+      });
+      
+      if (importCancel) importCancel.addEventListener('click', () => {
+        hideImportModal();
+        pendingImportData = null;
+        fileInput.value = ''; // Clear file input
+      });
+      
+      if (modal) modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          hideImportModal();
+          pendingImportData = null;
+          fileInput.value = '';
+        }
+      });
+    });
+    
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        try {
+          const data = new Uint8Array(ev.target.result);
+          const workbook = XLSX.read(data, { type: 'array' });
+
+          let sheetName = 'Inventory';
+          if (!workbook.Sheets[sheetName]) {
+            sheetName = workbook.SheetNames[0];
+          }
+          const sheet = workbook.Sheets[sheetName];
+
+          const json = XLSX.utils.sheet_to_json(sheet, { defval: null });
+          
+          if (!json.length) {
+            alert('No rows found in sheet: ' + sheetName);
+            return;
+          }
+          
+          // Store data and show modal
+          pendingImportData = json;
+          showImportModal();
+        } catch (err) {
+          console.error(err);
+          alert('Error reading file: ' + (err && err.message ? err.message : err));
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+
+    function deriveStatFields() {
+      // Get stat fields from columns (imported data)
+      const fromColumns = columns.filter(c =>
+        !CORE_FIELDS.includes(c) && !NON_STAT_EXTRA.includes(c) && !SF_COLUMNS.includes(c)
+      );
+      // Merge with defaults, preserving order: defaults first, then any extra from columns
+      const merged = [...DEFAULT_STAT_FIELDS];
+      fromColumns.forEach(c => {
+        if (!merged.includes(c)) merged.push(c);
+      });
+      statFields = merged;
+    }
+
+    // ---------- UI builders ----------
+    function handleColumnSort(col) {
+      if (sortColumn === col) {
+        // toggle direction
+        sortAscending = !sortAscending;
+      } else {
+        sortColumn = col;
+        // default direction: numeric = desc, otherwise asc
+        sortAscending = isNumericColumn(col) ? false : true;
+      }
+      renderTable();
+    }
+
+    function buildTableHeader() {
+  const tr = document.createElement('tr');
+
+  const visibleCols = columns.filter(c => !HIDDEN_TABLE_COLS.includes(c));
+  const baseAtkIdx = visibleCols.indexOf('Base Atk');
+  const substatsStartCol = (baseAtkIdx >= 0 && baseAtkIdx < visibleCols.length - 1) ? visibleCols[baseAtkIdx + 1] : null;
+
+  visibleCols.forEach(col => {
+    const th = document.createElement('th');
+    th.textContent = displayName(col);
+
+    th.classList.add('sortable');
+    th.setAttribute('data-col', col);
+    if (substatsStartCol && col === substatsStartCol) th.classList.add('substats-start');
+
+    // sort label indicator
+    if (sortColumn === col) {
+      th.textContent = displayName(col) + (sortAscending ? ' ▲' : ' ▼');
+    }
+
+    th.addEventListener('click', () => {
+      if (sortColumn === col) {
+        // Toggle direction on repeated clicks
+        sortAscending = !sortAscending;
+      } else {
+        // First click on a new column sorts DESC (highest first)
+        sortColumn = col;
+        sortAscending = false;
+      }
+      renderTable();
+    });
+
+    tr.appendChild(th);
+  });
+
+  const thAction = document.createElement('th');
+  thAction.textContent = 'Actions';
+  tr.appendChild(thAction);
+
+  tableHead.innerHTML = '';
+  tableHead.appendChild(tr);
+}
+
+    function buildStatFiltersUI() {
+      statFiltersDiv.innerHTML = '';
+      statFields.forEach(field => {
+        const id = 'stat-filter-' + field.replace(/\s+/g, '_');
+        const label = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.id = id;
+        cb.name = 'statFilter';
+        cb.value = field;
+        cb.addEventListener('change', renderTable);
+
+        label.appendChild(cb);
+        label.appendChild(document.createTextNode(displayName(field)));
+        statFiltersDiv.appendChild(label);
+      });
+    }
+
+    function buildColumnOrderUI() {
+      columnOrderList.innerHTML = '';
+      columns.forEach((col, idx) => {
+        const row = document.createElement('div');
+        row.className = 'column-order-item';
+
+        const labelSpan = document.createElement('span');
+        labelSpan.className = 'column-order-label';
+        labelSpan.textContent = displayName(col);
+
+        const controlsSpan = document.createElement('span');
+        controlsSpan.className = 'column-order-controls';
+
+        const upBtn = document.createElement('button');
+        upBtn.type = 'button';
+        upBtn.textContent = '↑';
+        upBtn.disabled = idx === 0;
+        upBtn.addEventListener('click', () => {
+          if (idx === 0) return;
+          const tmp = columns[idx - 1];
+          columns[idx - 1] = columns[idx];
+          columns[idx] = tmp;
+          saveToLocalStorage();
+          buildTableHeader();
+          buildColumnOrderUI();
+          renderTable();
+        });
+
+        const downBtn = document.createElement('button');
+        downBtn.type = 'button';
+        downBtn.textContent = '↓';
+        downBtn.disabled = idx === columns.length - 1;
+        downBtn.addEventListener('click', () => {
+          if (idx === columns.length - 1) return;
+          const tmp = columns[idx + 1];
+          columns[idx + 1] = columns[idx];
+          columns[idx] = tmp;
+          saveToLocalStorage();
+          buildTableHeader();
+          buildColumnOrderUI();
+          renderTable();
+        });
+
+        controlsSpan.appendChild(upBtn);
+        controlsSpan.appendChild(downBtn);
+
+        row.appendChild(labelSpan);
+        row.appendChild(controlsSpan);
+
+        columnOrderList.appendChild(row);
+      });
+    }
+
+    function prepareAddFormStatLinesInitial() {
+      statLinesContainer.innerHTML = '';
+      // Start with a single stat row by default
+      addStatLineRow();
+    }
+
+    function addStatLineRow(selectedField = '', value = '') {
+      if (!statFields.length) {
+        return; // nothing to add yet
+      }
+      const row = document.createElement('div');
+      row.className = 'stat-line-row';
+
+      const sel = document.createElement('select');
+      sel.required = true;
+      const placeholder = document.createElement('option');
+      placeholder.value = '';
+      placeholder.textContent = 'Stat...';
+      sel.appendChild(placeholder);
+      statFields.forEach(field => {
+        const opt = document.createElement('option');
+        opt.value = field;
+        opt.textContent = displayName(field);
+        sel.appendChild(opt);
+      });
+      sel.value = selectedField || '';
+
+      const inputVal = document.createElement('input');
+      inputVal.type = 'number';
+      inputVal.step = '0.001';
+      inputVal.placeholder = 'Value';
+      inputVal.value = value;
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = '×';
+      removeBtn.className = 'danger';
+      removeBtn.addEventListener('click', () => {
+        statLinesContainer.removeChild(row);
+      });
+
+      row.appendChild(sel);
+      row.appendChild(inputVal);
+      row.appendChild(removeBtn);
+
+      statLinesContainer.appendChild(row);
+    }
+
+    addStatLineBtn.addEventListener('click', () => {
+      addStatLineRow();
+    });
+
+    // ---------- Summary counters ----------
+    function updateCounters(filteredCount) {
+      const total = allItems.length;
+      const inventory = allItems.filter(item =>
+        String(item['Equipped?'] || '').trim().toUpperCase() !== 'Y'
+      ).length;
+
+      totalEqpSpan.textContent = total;
+      inventorySpan.textContent = inventory;
+      filteredEqpSpan.textContent = filteredCount;
+    }
+
+    // ---------- Filtering + sorting ----------
+    slotFilter.addEventListener('change', () => {
+      newSlot.value = slotFilter.value || '';
+      sfSlot.value = slotFilter.value || '';
+      if (typeof syncStarForceSelection === 'function') syncStarForceSelection();
+      renderTable();
+    });
+    rarityFilter.addEventListener('change', renderTable);
+    equippedOnlyCheckbox.addEventListener('change', renderTable);
+    lockedOnlyCheckbox.addEventListener('change', renderTable);
+    newOnlyCheckbox.addEventListener('change', renderTable);
+
+    
+
+clearFiltersBtn.addEventListener('click', () => {
+  slotFilter.value = '';
+  rarityFilter.value = '';
+  equippedOnlyCheckbox.checked = false;
+  lockedOnlyCheckbox.checked = false;
+  newOnlyCheckbox.checked = false;
+
+  // Clear stat filter checkboxes
+  statFiltersDiv.querySelectorAll('input[name="statFilter"]').forEach(cb => {
+    cb.checked = false;
+  });
+
+  // Clear sorting
+  sortColumn = null;
+  sortAscending = true;
+
+  // Keep add-form slot and starforce slot in sync with slot filter
+  newSlot.value = '';
+  sfSlot.value = '';
+  if (typeof syncStarForceSelection === 'function') {
+    try { syncStarForceSelection(); } catch (e) { console.error(e); }
+  }
+
+  renderTable();
+});
+
+
+    function getSelectedStatFilters() {
+      return Array.from(
+        statFiltersDiv.querySelectorAll('input[name="statFilter"]:checked')
+      ).map(cb => cb.value);
+    }
+
+    function applyFilters(items) {
+      const slotVal = slotFilter.value;
+      const rarityVal = rarityFilter.value;
+      const requiredStats = getSelectedStatFilters();
+      const equippedOnly = equippedOnlyCheckbox.checked;
+      const lockedOnly = lockedOnlyCheckbox.checked;
+      const newOnly = newOnlyCheckbox.checked;
+
+      return items.filter(item => {
+if (slotVal) {
+  let itemSlot = item[slotFieldName];
+  if (itemSlot === undefined) {
+    const k = Object.keys(item).find(key => String(key).trim().toLowerCase() === 'slot')
+      || Object.keys(item).find(key => String(key).toLowerCase().includes('slot'));
+    if (k) itemSlot = item[k];
+  }
+  if (String(itemSlot || '').trim().toUpperCase() !== String(slotVal).trim().toUpperCase()) {
+    return false;
+  }
+}
+        if (rarityVal && String(item['Rarity'] || '').trim().toUpperCase() !== String(rarityVal).trim().toUpperCase()) {
+          return false;
+        }
+
+        if (equippedOnly) {
+          const isEquipped = String(item['Equipped?'] || '').trim().toUpperCase() === 'Y';
+          if (!isEquipped) return false;
+        }
+
+        if (lockedOnly) {
+          const isLocked = String(item['Locked?'] || '').trim().toUpperCase() === 'Y';
+          if (!isLocked) return false;
+        }
+
+        if (newOnly) {
+          const isNew = String(item['New?'] || '').trim().toUpperCase() === 'Y';
+          if (!isNew) return false;
+        }
+
+        if (requiredStats.length) {
+          const hasAll = requiredStats.every(stat => {
+            const val = item[stat];
+            if (val === null || val === undefined || val === '') return false;
+            if (typeof val === 'number') return !Number.isNaN(val);
+            // if string, treat non-empty as present
+            return String(val).trim() !== '';
+          });
+          if (!hasAll) return false;
+        }
+
+        return true;
+      });
+    }
+
+    function rarityRank(v) {
+      const val = String(v || '').trim().toLowerCase();
+      if (val === 'legendary') return 3;
+      if (val === 'unique') return 2;
+      if (val === 'epic') return 1;
+      return 0;
+    }
+
+function moveLockedBottom(items) {
+  // Sort order: equipped first (regardless of locked), then unlocked, then locked
+  const equipped = [];
+  const unlocked = [];
+  const locked = [];
+  items.forEach(it => {
+    const isEquipped = String(it['Equipped?'] || '').trim().toUpperCase() === 'Y';
+    const isLocked = String(it['Locked?'] || '').trim().toUpperCase() === 'Y';
+    
+    if (isEquipped) {
+      equipped.push(it);
+    } else if (isLocked) {
+      locked.push(it);
+    } else {
+      unlocked.push(it);
+    }
+  });
+  return equipped.concat(unlocked).concat(locked);
+}
+
+    function applySort(items) {
+      if (!sortColumn) return items;
+
+      const col = sortColumn;
+
+      const sorted = [...items].sort((a, b) => {
+        const avRaw = a[col];
+        const bvRaw = b[col];
+
+        // Rarity custom order
+        if (col === 'Rarity') {
+          const av = rarityRank(avRaw);
+          const bv = rarityRank(bvRaw);
+          if (av < bv) return sortAscending ? -1 : 1;
+          if (av > bv) return sortAscending ? 1 : -1;
+          return 0;
+        }
+
+        // Slot alpha
+        if (col === 'Slot') {
+          const av = String(avRaw || '').toLowerCase();
+          const bv = String(bvRaw || '').toLowerCase();
+          if (av < bv) return sortAscending ? -1 : 1;
+          if (av > bv) return sortAscending ? 1 : -1;
+          return 0;
+        }
+
+        // Equipped? (Y first)
+        if (col === 'Equipped?') {
+          const av = String(avRaw || '').trim().toUpperCase() === 'Y' ? 1 : 0;
+          const bv = String(bvRaw || '').trim().toUpperCase() === 'Y' ? 1 : 0;
+          if (av < bv) return sortAscending ? -1 : 1;
+          if (av > bv) return sortAscending ? 1 : -1;
+          return 0;
+        }
+
+        // Numeric columns
+        if (isNumericColumn(col)) {
+          const av = avRaw === null || avRaw === undefined || avRaw === '' ? NaN : Number(avRaw);
+          const bv = bvRaw === null || bvRaw === undefined || bvRaw === '' ? NaN : Number(bvRaw);
+
+          const aIsNaN = Number.isNaN(av);
+          const bIsNaN = Number.isNaN(bv);
+
+          if (aIsNaN && bIsNaN) return 0;
+          if (aIsNaN) return 1; // NaNs go last
+          if (bIsNaN) return -1;
+
+          if (av < bv) return sortAscending ? -1 : 1;
+          if (av > bv) return sortAscending ? 1 : -1;
+          return 0;
+        }
+
+        // Fallback string comparison
+        const av = String(avRaw || '').toLowerCase();
+        const bv = String(bvRaw || '').toLowerCase();
+        if (av < bv) return sortAscending ? -1 : 1;
+        if (av > bv) return sortAscending ? 1 : -1;
+        return 0;
+      });
+
+      return sorted;
+    }
+
+    // Move an item up or down within the filtered order (when no sort is active)
+    function moveItemInFiltered(item, direction) {
+      console.log('[MoveItem] Called with direction:', direction, 'sortColumn:', sortColumn);
+      if (sortColumn) {
+        // Reordering is only meaningful when no explicit sort is applied
+        console.log('[MoveItem] Skipping - sortColumn is active');
+        return;
+      }
+      
+      // Use the same sorted order as renderTable (with moveLockedBottom applied)
+      const filtered = applyFilters(allItems);
+      const displaySorted = moveLockedBottom(filtered);
+      
+      const idxF = displaySorted.indexOf(item);
+      console.log('[MoveItem] Item index in displaySorted:', idxF);
+      if (idxF === -1) return;
+
+      const neighbor = direction === 'up' ? displaySorted[idxF - 1] : displaySorted[idxF + 1];
+      console.log('[MoveItem] Neighbor:', neighbor);
+      if (!neighbor) return;
+
+      const idx1 = allItems.indexOf(item);
+      const idx2 = allItems.indexOf(neighbor);
+      console.log('[MoveItem] Swapping indices in allItems:', idx1, idx2);
+      if (idx1 === -1 || idx2 === -1) return;
+
+      const tmp = allItems[idx1];
+      allItems[idx1] = allItems[idx2];
+      allItems[idx2] = tmp;
+
+      saveToLocalStorage();
+      renderTable();
+      console.log('[MoveItem] Done');
+    }
+
+    // ---------- Save edited row ----------
+    function saveEditedRow(tr, item) {
+      columns.forEach(col => {
+        const td = tr.querySelector('td[data-col="' + col + '"]');
+        if (!td) return;
+        const input = td.querySelector('input, select');
+        if (!input) return;
+
+        const value = input.value;
+
+        if (col === 'Equipped?') {
+          item[col] = value === 'Y' ? 'Y' : '';
+        } else if (col === 'Locked?') {
+          item[col] = value === 'Y' ? 'Y' : '';
+        } else if (col === 'New?') {
+          item[col] = value === 'Y' ? 'Y' : '';
+        } else if (col === 'Rarity' || col === 'Slot') {
+          item[col] = value;
+        } else if (col === 'Level' || col === 'Attack' || statFields.includes(col)) {
+          if (value === '') {
+            item[col] = null;
+          } else {
+            const num = Number(value);
+            item[col] = Number.isNaN(num) ? value : num;
+          }
+        } else {
+          item[col] = value;
+        }
+      });
+
+      item._manualFinal = true;
+      editingItem = null;
+      saveToLocalStorage();
+      renderTable();
+    }
+
+    // ---------- Export ----------
+    function exportToExcel(applySfAmplification=true) {
+      if (!allItems.length) {
+        alert('No data to export.');
+        return;
+      }
+
+      const cols = (originalColumns && originalColumns.length)
+        ? originalColumns.slice()
+        : Object.keys(allItems[0]);
+
+      const data = allItems.map(item => {
+        const row = {};
+        cols.forEach(c => {
+          row[c] = item[c] != null ? item[c] : null;
+        });
+        return row;
+      });
+
+      const ws = XLSX.utils.json_to_sheet(data, { header: cols });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+
+      const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+      const blob = new Blob([wbout], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'equipment_export.xlsx';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+
+    
+exportBtn.addEventListener('click', () => { openExportModal(); });
+// ---------- Render ----------
+    function renderTable() {
+      // Rebuild header to update sort indicators
+      buildTableHeader();
+
+      // Show/hide add row button based on whether we have columns
+      if (addRowContainer) {
+        addRowContainer.style.display = columns.length ? 'block' : 'none';
+      }
+
+      if (!allItems.length || !columns.length) {
+        tableBody.innerHTML = '';
+        updateCounters(0);
+        return;
+      }
+
+      const filtered = applyFilters(allItems);
+      const sortedPreLock = sortColumn ? applySort(filtered) : filtered;
+      let sorted = sortColumn ? sortedPreLock : moveLockedBottom(sortedPreLock);
+      
+      // If adding a new row, move it to the end for visibility
+      if (addingNewRow && newRowItem) {
+        sorted = sorted.filter(item => item !== newRowItem);
+        sorted.push(newRowItem);
+      }
+
+      updateCounters(filtered.length);
+
+      tableBody.innerHTML = '';
+
+      const visibleCols = columns.filter(c => !HIDDEN_TABLE_COLS.includes(c));
+      const baseAtkIdx = visibleCols.indexOf('Base Atk');
+      const substatsStartCol = (baseAtkIdx >= 0 && baseAtkIdx < visibleCols.length - 1) ? visibleCols[baseAtkIdx + 1] : null;
+
+      sorted.forEach((item, idx) => {
+        const tr = document.createElement('tr');
+
+        const isEquipped = String(item['Equipped?'] || '').trim().toUpperCase() === 'Y';
+        const isLocked = String(item['Locked?'] || '').trim().toUpperCase() === 'Y';
+        const isNew = String(item['New?'] || '').trim().toUpperCase() === 'Y';
+        const isNewRow = item._isNewRow === true;
+        
+        if (isEquipped) {
+          tr.classList.add('equipped');
+        }
+        if (isLocked) {
+          tr.classList.add('locked');
+        }
+        if (isNew) {
+          tr.classList.add('new-item');
+        }
+        if (isNewRow) {
+          tr.classList.add('new-row-editing');
+        }
+
+        const isEditing = (editingItem === item);
+
+        visibleCols.forEach(col => {
+          const td = document.createElement('td');
+          td.setAttribute('data-col', col);
+          if (substatsStartCol && col === substatsStartCol) td.classList.add('substats-start');
+          const val = item[col];
+
+          if (isEditing) {
+            // Editable inputs
+            if (col === 'Equipped?') {
+              const sel = document.createElement('select');
+              const optN = document.createElement('option');
+              optN.value = 'N';
+              optN.textContent = 'N';
+              const optY = document.createElement('option');
+              optY.value = 'Y';
+              optY.textContent = 'Y';
+              sel.appendChild(optN);
+              sel.appendChild(optY);
+              sel.value = String(val || '').trim().toUpperCase() === 'Y' ? 'Y' : 'N';
+              td.appendChild(sel);
+            } else if (col === 'Locked?') {
+              const sel = document.createElement('select');
+              const optN = document.createElement('option');
+              optN.value = 'N';
+              optN.textContent = 'N';
+              const optY = document.createElement('option');
+              optY.value = 'Y';
+              optY.textContent = 'Y';
+              sel.appendChild(optN);
+              sel.appendChild(optY);
+              sel.value = String(val || '').trim().toUpperCase() === 'Y' ? 'Y' : 'N';
+              td.appendChild(sel);
+            } else if (col === 'New?') {
+              const sel = document.createElement('select');
+              const optN = document.createElement('option');
+              optN.value = 'N';
+              optN.textContent = 'N';
+              const optY = document.createElement('option');
+              optY.value = 'Y';
+              optY.textContent = 'Y';
+              sel.appendChild(optN);
+              sel.appendChild(optY);
+              sel.value = String(val || '').trim().toUpperCase() === 'Y' ? 'Y' : 'N';
+              td.appendChild(sel);
+            } else if (col === 'Rarity') {
+              const sel = document.createElement('select');
+              ['', 'Epic', 'Unique', 'Legendary'].forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = v || 'Select...';
+                sel.appendChild(opt);
+              });
+              sel.value = val || '';
+              td.appendChild(sel);
+            } else if (col === 'Slot') {
+              const sel = document.createElement('select');
+              ['', 'Hat', 'Top', 'Bottom', 'Gloves', 'Ring', 'Eye', 'Cape', 'Shoulder', 'Belt', 'Boots', 'Necklace'].forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = v || 'Select...';
+                sel.appendChild(opt);
+              });
+              sel.value = val || '';
+              td.appendChild(sel);
+            } else {
+              const input = document.createElement('input');
+              const isNumeric = typeof val === 'number' || isNumericColumn(col) || isPercentColumn(col);
+              input.type = isNumeric ? 'number' : 'text';
+              if (isNumeric) {
+                input.step = isPercentColumn(col) ? '0.001' : '1';
+              }
+              
+              // Apply SF amplification for edit display if _manualFinal is false
+              // This shows the user the same values they see in the table
+              let editVal = val;
+              if (typeof val === 'number' && !item._manualFinal) {
+                const sfLevelForEdit = starForceBySlot[String(item['Slot'] || '').trim()];
+                if (sfLevelForEdit) {
+                  const baseAtkIdx2 = visibleCols.indexOf('Base Atk');
+                  const colIdx = visibleCols.indexOf(col);
+                  const baseAmp = getBaseAmp(sfLevelForEdit);
+                  const subAmp = getSubAmp(sfLevelForEdit);
+                  
+                  if (col === 'Base Atk') {
+                    editVal = val * (1 + baseAmp);
+                  } else if (baseAtkIdx2 >= 0 && colIdx > baseAtkIdx2) {
+                    editVal = val * (1 + subAmp);
+                  }
+                  // Round to reasonable precision
+                  editVal = Math.round(editVal * 1000) / 1000;
+                }
+              }
+              
+              input.value = editVal !== null && editVal !== undefined ? editVal : '';
+              td.appendChild(input);
+            }
+          } else {
+            // Read-only formatted value
+            if (col === 'Equipped?') {
+              const chk = document.createElement('input');
+              chk.type = 'checkbox';
+              chk.checked = isEquipped;
+              chk.addEventListener('change', () => {
+                if (chk.checked) {
+                  setItemEquipped(item);
+                } else {
+                  item['Equipped?'] = '';
+                }
+                saveToLocalStorage();
+                renderTable();
+              });
+              td.appendChild(chk);
+            } else if (col === 'Locked?') {
+              const chk = document.createElement('input');
+              chk.type = 'checkbox';
+              chk.checked = isLocked;
+              chk.addEventListener('change', () => {
+                item['Locked?'] = chk.checked ? 'Y' : '';
+                saveToLocalStorage();
+                renderTable();
+              });
+              td.appendChild(chk);
+            } else if (col === 'New?') {
+              const chk = document.createElement('input');
+              chk.type = 'checkbox';
+              chk.checked = isNew;
+              chk.addEventListener('change', () => {
+                item['New?'] = chk.checked ? 'Y' : '';
+                saveToLocalStorage();
+                renderTable();
+              });
+              td.appendChild(chk);
+            } else {
+let displayVal = val;
+// Apply SF display amplification based on current starForceBySlot levels
+// Skip if _manualFinal = true (user-entered final values, e.g. via Add Equipment)
+const sfLevelApplied = starForceBySlot[String(item['Slot'] || '').trim()];
+if (sfLevelApplied && typeof val === 'number' && !item._manualFinal) {
+  const baseAtkIdx2 = visibleCols.indexOf('Base Atk');
+  const colIdx = visibleCols.indexOf(col);
+  const baseAmp = getBaseAmp(sfLevelApplied);
+  const subAmp = getSubAmp(sfLevelApplied);
+
+  if (col === 'Base Atk') {
+    displayVal = val + (val * baseAmp);
+  } else if (baseAtkIdx2 >= 0 && colIdx > baseAtkIdx2) {
+    // Sub stats are everything to the right of Base Atk
+    if (subAmp > 0) {
+      displayVal = val + (val * subAmp);
+    }
+  }
+}
+td.textContent = formatValue(col, displayVal);
+            }
+          }
+
+          tr.appendChild(td);
+        });
+
+        const tdAction = document.createElement('td');
+
+
+if (isEditing) {
+          // Used / Lock / New checkboxes + Save/Cancel inline
+          const row = document.createElement('div');
+          row.className = 'actions-inline';
+
+          const usedWrap = document.createElement('div');
+          usedWrap.className = 'pair';
+          const usedLabel = document.createElement('span');
+          usedLabel.className = 'mini-label';
+          usedLabel.textContent = 'Used';
+          const usedChk = document.createElement('input');
+          usedChk.type = 'checkbox';
+          usedChk.checked = String(item['Equipped?'] || '').trim().toUpperCase() === 'Y';
+          usedChk.addEventListener('change', () => {
+            if (usedChk.checked) {
+              setItemEquipped(item);
+            } else {
+              item['Equipped?'] = '';
+            }
+          });
+          usedWrap.appendChild(usedLabel);
+          usedWrap.appendChild(usedChk);
+
+          const lockWrap = document.createElement('div');
+          lockWrap.className = 'pair';
+          const lockLabel = document.createElement('span');
+          lockLabel.className = 'mini-label';
+          lockLabel.textContent = 'Lock';
+          const lockChk = document.createElement('input');
+          lockChk.type = 'checkbox';
+          lockChk.checked = String(item['Locked?'] || '').trim().toUpperCase() === 'Y';
+          lockChk.addEventListener('change', () => { item['Locked?'] = lockChk.checked ? 'Y' : ''; });
+          lockWrap.appendChild(lockLabel);
+          lockWrap.appendChild(lockChk);
+
+          const newWrap = document.createElement('div');
+          newWrap.className = 'pair';
+          const newLabel = document.createElement('span');
+          newLabel.className = 'mini-label';
+          newLabel.textContent = 'New';
+          const newChk = document.createElement('input');
+          newChk.type = 'checkbox';
+          newChk.checked = String(item['New?'] || '').trim().toUpperCase() === 'Y';
+          newChk.addEventListener('change', () => { item['New?'] = newChk.checked ? 'Y' : ''; });
+          newWrap.appendChild(newLabel);
+          newWrap.appendChild(newChk);
+
+          const saveBtn = document.createElement('button');
+          saveBtn.textContent = 'Save';
+          saveBtn.className = 'primary';
+          saveBtn.addEventListener('click', () => {
+            if (isNewRow) {
+              saveNewRow(tr, item);
+            } else {
+            saveEditedRow(tr, item);
+            }
+          });
+
+          const cancelBtn = document.createElement('button');
+          cancelBtn.textContent = 'Cancel';
+          cancelBtn.style.marginLeft = '4px';
+          cancelBtn.addEventListener('click', () => {
+            if (isNewRow) {
+              cancelNewRow(item);
+            } else {
+            editingItem = null;
+            renderTable();
+            }
+          });
+
+          row.appendChild(usedWrap);
+          row.appendChild(lockWrap);
+          row.appendChild(newWrap);
+          row.appendChild(saveBtn);
+          row.appendChild(cancelBtn);
+
+          tdAction.appendChild(row);
+        } else if (!editingItem && bulkModeEnabled) {
+          // Bulk mode: show checkbox for selection
+          const bulkChk = document.createElement('input');
+          bulkChk.type = 'checkbox';
+          bulkChk.checked = bulkSelectedItems.has(item);
+          bulkChk.style.width = '18px';
+          bulkChk.style.height = '18px';
+          bulkChk.style.cursor = 'pointer';
+          bulkChk.addEventListener('change', () => {
+            if (bulkChk.checked) {
+              bulkSelectedItems.add(item);
+            } else {
+              bulkSelectedItems.delete(item);
+            }
+            updateBulkUI();
+          });
+          tdAction.appendChild(bulkChk);
+        } else if (!editingItem) {
+          const canReorder = !sortColumn;
+
+          const upBtn = document.createElement('button');
+          upBtn.textContent = '↑';
+          upBtn.style.marginRight = '2px';
+          upBtn.disabled = !canReorder || idx === 0;
+          upBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[UpBtn] Clicked, item:', item['Slot'], item['Level']);
+            moveItemInFiltered(item, 'up');
+          });
+
+          const downBtn = document.createElement('button');
+          downBtn.textContent = '↓';
+          downBtn.style.marginRight = '6px';
+          downBtn.disabled = !canReorder || idx === (sorted.length - 1);
+          downBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('[DownBtn] Clicked, item:', item['Slot'], item['Level']);
+            moveItemInFiltered(item, 'down');
+          });
+
+          const editBtn = document.createElement('button');
+          editBtn.textContent = 'Edit';
+          editBtn.style.marginRight = '4px';
+          editBtn.addEventListener('click', () => {
+            editingItem = item;
+            renderTable();
+          });
+
+          const delBtn = document.createElement('button');
+          delBtn.textContent = 'Delete';
+          delBtn.className = 'danger';
+          delBtn.addEventListener('click', () => {
+            const confirmed = window.confirm('Are you sure you want to delete this item?');
+            if (!confirmed) return;
+
+            const idxGlobal = allItems.indexOf(item);
+            if (idxGlobal >= 0) {
+              allItems.splice(idxGlobal, 1);
+              if (editingItem === item) {
+                editingItem = null;
+              }
+              saveToLocalStorage();
+              renderTable();
+            }
+          });
+
+          tdAction.appendChild(upBtn);
+          tdAction.appendChild(downBtn);
+          tdAction.appendChild(editBtn);
+          tdAction.appendChild(delBtn);
+        }
+
+        tr.appendChild(tdAction);
+        tableBody.appendChild(tr);
+      });
+    }
+
+    // ---------- Add new equipment ----------
+    addForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!columns.length) {
+        alert('Load a spreadsheet first.');
+        return;
+      }
+
+      const newItem = {};
+      // Initialize all known columns (visible and helper) to null
+      const allKnownCols = originalColumns && originalColumns.length ? originalColumns : columns;
+      allKnownCols.forEach(c => newItem[c] = null);
+
+      newItem['Equipped?'] = newEquipped.value === 'Y' ? 'Y' : '';
+      newItem['Locked?'] = newLock.value === 'Y' ? 'Y' : '';
+      newItem['New?'] = 'Y'; // New items are marked as new by default
+      newItem['Slot'] = newSlot.value;
+      newItem['Level'] = Number(newLevel.value) || null;
+      newItem['Rarity'] = newRarity.value || 'Unique'; // Default to Unique if not set
+      const baseKey = 'Base Atk';
+      if ((columns && columns.includes(baseKey)) || (originalColumns && originalColumns.includes(baseKey))) {
+        newItem[baseKey] = Number(newAttack.value) || null;
+      }
+
+      // Stat lines
+      const rows = Array.from(statLinesContainer.querySelectorAll('.stat-line-row'));
+      rows.forEach(row => {
+        const sel = row.querySelector('select');
+        const inputVal = row.querySelector('input[type="number"]');
+        const statName = sel.value;
+        const valRaw = inputVal.value;
+
+        if (!statName || valRaw === '') return;
+        const numericVal = Number(valRaw);
+        newItem[statName] = Number.isNaN(numericVal) ? valRaw : numericVal;
+      });
+
+      newItem._manualFinal = true;
+      allItems.push(newItem);
+      
+      // If the new item is equipped, unequip others in the same slot
+      if (newEquipped.value === 'Y') {
+        setItemEquipped(newItem);
+      }
+      
+      editingItem = null;
+      saveToLocalStorage();
+      renderTable();
+      addForm.reset();
+      prepareAddFormStatLinesInitial();
+    });
+
+    // ---------- Add Row Button (inline add) ----------
+    addRowBtn.addEventListener('click', () => {
+      if (addingNewRow) return; // Already adding
+      
+      // Ensure we have columns
+      if (!columns.length) {
+        initializeDefaultColumns();
+      }
+
+      // Create a blank item object
+      newRowItem = {};
+      const allKnownCols = originalColumns && originalColumns.length ? originalColumns : columns;
+      allKnownCols.forEach(c => newRowItem[c] = null);
+      newRowItem['Equipped?'] = '';
+      newRowItem['Locked?'] = '';
+      newRowItem['New?'] = 'Y'; // New items are marked as new by default
+      newRowItem['Slot'] = slotFilter.value || ''; // Pre-fill with current filter if set
+      newRowItem['Level'] = null;
+      newRowItem['Rarity'] = 'Unique'; // Default to Unique
+      newRowItem['Base Atk'] = null;
+      newRowItem._isNewRow = true; // Flag to identify it in renderTable
+
+      addingNewRow = true;
+      editingItem = newRowItem; // Put it in edit mode
+      allItems.push(newRowItem); // Temporarily add to list
+      renderTable();
+      
+      // Scroll to the new row
+      const newRow = tableBody.querySelector('tr.new-row-editing');
+      if (newRow) {
+        newRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Focus the Level input if slot is pre-filled, otherwise focus the Slot select
+        if (slotFilter.value) {
+          const levelInput = newRow.querySelector('td[data-col="Level"] input');
+          if (levelInput) levelInput.focus();
+        } else {
+          const firstSelect = newRow.querySelector('select');
+          if (firstSelect) firstSelect.focus();
+        }
+      }
+    });
+
+    function saveNewRow(tr, item) {
+      // Validate required fields: Slot, Level, Rarity, Base Atk
+      const slotSel = tr.querySelector('td[data-col="Slot"] select');
+      const levelInput = tr.querySelector('td[data-col="Level"] input');
+      const raritySel = tr.querySelector('td[data-col="Rarity"] select');
+      const baseAtkInput = tr.querySelector('td[data-col="Base Atk"] input');
+
+      const slotVal = slotSel ? slotSel.value : '';
+      const levelVal = levelInput ? levelInput.value : '';
+      const rarityVal = raritySel ? raritySel.value : '';
+      const baseAtkVal = baseAtkInput ? baseAtkInput.value : '';
+
+      const missingFields = [];
+      if (!slotVal) missingFields.push('Slot');
+      if (!levelVal) missingFields.push('Level');
+      if (!rarityVal) missingFields.push('Rarity');
+      if (!baseAtkVal) missingFields.push('Base Atk');
+
+      if (missingFields.length > 0) {
+        alert('Please fill in required fields: ' + missingFields.join(', '));
+        return;
+      }
+
+      // Gather all values from the row
+      const visibleCols = columns.filter(c => !HIDDEN_TABLE_COLS.includes(c));
+      visibleCols.forEach(col => {
+        const td = tr.querySelector(`td[data-col="${col}"]`);
+        if (!td) return;
+        const input = td.querySelector('input');
+        const select = td.querySelector('select');
+        if (select) {
+          item[col] = select.value;
+        } else if (input) {
+          const val = input.value;
+          if (col === 'Level' || col === 'Base Atk' || isNumericColumn(col)) {
+            item[col] = val !== '' ? Number(val) : null;
+          } else {
+            item[col] = val !== '' ? val : null;
+          }
+        }
+      });
+
+      // Check action area for Used/Lock/New checkboxes
+      const actionCheckboxes = tr.querySelectorAll('.actions-inline input[type="checkbox"]');
+      const isEquipped = actionCheckboxes.length >= 1 && actionCheckboxes[0].checked;
+      if (actionCheckboxes.length >= 3) {
+        item['Locked?'] = actionCheckboxes[1].checked ? 'Y' : '';
+        item['New?'] = actionCheckboxes[2].checked ? 'Y' : '';
+      }
+      
+      // If equipped, unequip others in the same slot
+      if (isEquipped) {
+        setItemEquipped(item);
+      } else {
+        item['Equipped?'] = '';
+      }
+
+      // Mark as final (user-entered values)
+      item._manualFinal = true;
+      delete item._isNewRow;
+
+      addingNewRow = false;
+      newRowItem = null;
+      editingItem = null;
+      saveToLocalStorage();
+      renderTable();
+    }
+
+    function cancelNewRow(item) {
+      // Remove the temporary item from allItems
+      const idx = allItems.indexOf(item);
+      if (idx >= 0) {
+        allItems.splice(idx, 1);
+      }
+      addingNewRow = false;
+      newRowItem = null;
+      editingItem = null;
+      renderTable();
+    }
+
+  /* --- Template generator override (Locked? + SF columns + example row) --- */
+function downloadTemplate() {
+  try {
+    const headers = [
+      'Equipped?',
+      'Locked?',
+      'New?',
+      'Slot',
+      'Level',
+      'Rarity',
+      'Base Atk',
+      'Attack',
+      'Defense',
+      'Crit Rate',
+      'Crit Damage',
+      'Damage',
+      'Normal Monster',
+      'Boss Damage',
+      'Min Damage',
+      'Max Damage',
+      'Accuracy',
+      'Evasion',
+      '1st Job Skill',
+      '2nd Job Skill',
+      '3rd Job Skill',
+      'Max HP',
+      'Max MP'
+    ];
+
+    // Slot list for SF columns - use constant
+    const slotOpts = (typeof SLOT_OPTIONS !== 'undefined' && Array.isArray(SLOT_OPTIONS)) ? SLOT_OPTIONS : ['Hat', 'Top', 'Bottom', 'Gloves', 'Ring', 'Eye', 'Cape', 'Shoulder', 'Belt', 'Boots', 'Necklace'];
+    const sfHeaders = slotOpts.map(s => `SF ${s}`);
+
+    // Example values for each column
+    const exampleValues = {
+      'Equipped?': 'Y or N',
+      'Locked?': 'Y or N',
+      'Slot': 'Hat/Top/Bottom/Gloves/Ring/Eye/Cape/Shoulder/Belt/Boots/Necklace',
+      'Level': 'e.g. 50',
+      'Rarity': 'Epic/Unique/Legendary',
+      'Base Atk': 'e.g. 1000',
+      'Attack': 'e.g. 500',
+      'Defense': 'e.g. 300',
+      'Crit Rate': '% e.g. 5.5',
+      'Crit Damage': '% e.g. 12.3',
+      'Damage': '% e.g. 8.0',
+      'Normal Monster': '% e.g. 10.0',
+      'Boss Damage': '% e.g. 15.0',
+      'Min Damage': '% e.g. 5.0',
+      'Max Damage': '% e.g. 5.0',
+      'Accuracy': 'e.g. 100',
+      'Evasion': 'e.g. 50',
+      '1st Job Skill': 'e.g. 2',
+      '2nd Job Skill': 'e.g. 3',
+      '3rd Job Skill': 'e.g. 1',
+      'Max HP': '% or flat e.g. 5.0 or 5000',
+      'Max MP': '% or flat e.g. 5.0 or 5000'
+    };
+
+    const exampleRow = headers.map(h => exampleValues[h] || '').concat(sfHeaders.map(() => '1-25'));
+    const sfSettingsRow = headers.map(() => '').concat(sfHeaders.map(() => ''));
+
+    const ws = XLSX.utils.aoa_to_sheet([
+      headers.concat(sfHeaders),
+      exampleRow,
+      sfSettingsRow
+    ]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'MS Template.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('Template download failed: ' + (err && err.message ? err.message : err));
+    console.error(err);
+  }
+}
+
+/* --- Export modal wiring (define globals used by export button handler) --- */
+(function initExportModal() {
+  const exportModal = document.getElementById('export-modal');
+  const exportAmplifiedBtn = document.getElementById('export-amplified');
+  const exportBaseBtn = document.getElementById('export-base');
+  const exportCancelBtn = document.getElementById('export-cancel');
+
+  if (!exportModal || !exportAmplifiedBtn || !exportBaseBtn || !exportCancelBtn) return;
+
+  window.openExportModal = function openExportModal() {
+    exportModal.style.display = 'flex';
+  };
+
+  function closeExportModal() {
+    exportModal.style.display = 'none';
+  }
+
+  exportAmplifiedBtn.addEventListener('click', () => {
+    closeExportModal();
+    try { exportToExcel(true); } catch (e) { console.error(e); alert('Export failed: ' + e.message); }
+  });
+
+  exportBaseBtn.addEventListener('click', () => {
+    closeExportModal();
+    try { exportToExcel(false); } catch (e) { console.error(e); alert('Export failed: ' + e.message); }
+  });
+
+  exportCancelBtn.addEventListener('click', () => {
+    closeExportModal();
+  });
+
+  exportModal.addEventListener('click', (e) => {
+    if (e.target === exportModal) closeExportModal();
+  });
+})();
+
+/* --- Ensure openExportModal exists (fallback to confirm if modal not present) --- */
+window.openExportModal = function openExportModal() {
+  const exportModal = document.getElementById('export-modal');
+  const exportAmplifiedBtn = document.getElementById('export-amplified');
+  const exportBaseBtn = document.getElementById('export-base');
+  const exportCancelBtn = document.getElementById('export-cancel');
+
+  // If modal exists, show it (and wire once)
+  if (exportModal && exportAmplifiedBtn && exportBaseBtn && exportCancelBtn) {
+    // one-time wiring
+    if (!exportModal.__wired) {
+      const close = () => { exportModal.style.display = 'none'; };
+      exportAmplifiedBtn.addEventListener('click', () => { close(); exportToExcel(true); });
+      exportBaseBtn.addEventListener('click', () => { close(); exportToExcel(false); });
+      exportCancelBtn.addEventListener('click', () => close());
+      exportModal.addEventListener('click', (e) => { if (e.target === exportModal) close(); });
+      exportModal.__wired = true;
+    }
+    exportModal.style.display = 'flex';
+    return;
+  }
+
+  // Fallback: native confirm
+  const amplify = window.confirm('Export with Star Force amplified stats?\nOK = Yes, export SF amplified stats\nCancel = No, export base stats');
+  exportToExcel(!!amplify);
+};
+
+/* --- Export override: include SF levels + optional amplification --- */
+function exportToExcel(applySfAmplification) {
+  try {
+    if (!allItems || !allItems.length) {
+      alert('No equipment to export.');
+      return;
+    }
+
+    const headers = [
+      'Equipped?',
+      'Locked?',
+      'New?',
+      'Slot',
+      'Level',
+      'Rarity',
+      'Base Atk',
+      'Attack',
+      'Defense',
+      'Crit Rate',
+      'Crit Damage',
+      'Damage',
+      'Normal Monster',
+      'Boss Damage',
+      'Min Damage',
+      'Max Damage',
+      'Accuracy',
+      'Evasion',
+      '1st Job Skill',
+      '2nd Job Skill',
+      '3rd Job Skill',
+      'Max HP',
+      'Max MP'
+    ];
+
+    // Use SLOT_OPTIONS constant with fallback
+    const slotOpts = (typeof SLOT_OPTIONS !== 'undefined' && Array.isArray(SLOT_OPTIONS)) ? SLOT_OPTIONS : ['Hat', 'Top', 'Bottom', 'Gloves', 'Ring', 'Eye', 'Cape', 'Shoulder', 'Belt', 'Boots', 'Necklace'];
+    const sfHeaders = slotOpts.map(s => `SF ${s}`);
+
+    // Amplification tables (0-25)
+    const sfAttackAmp = {0:0,1:0.1,2:0.2,3:0.3,4:0.4,5:0.6,6:0.75,7:0.9,8:1.05,9:1.2,10:1.5,11:1.75,12:2,13:2.25,14:2.5,15:3,16:3.5,17:4,18:4.5,19:5,20:6,21:7,22:9,23:12,24:15,25:20};
+    const sfSubAmp    = {0:0,1:0,2:0,3:0,4:0,5:0.1,6:0.1,7:0.1,8:0.1,9:0.1,10:0.25,11:0.25,12:0.25,13:0.25,14:0.25,15:0.5,16:0.6,17:0.7,18:0.8,19:0.9,20:1,21:1.1,22:1.3,23:1.6,24:2,25:2.5};
+
+    const percentFields = new Set(['Crit Rate','Crit Damage','Damage','Normal Monster','Boss Damage','Min Damage','Max Damage']);
+    function isHpMpPercent(col, v) {
+      // HP/MP special: >100 treat as flat, <=100 treat as percent
+      if (col !== 'Max HP' && col !== 'Max MP') return false;
+      const n = Number(v);
+      return !Number.isNaN(n) && n <= 100;
+    }
+    function roundDownPercent01(n) { return Math.floor(n * 10) / 10; } // to 0.1
+    function roundDownInt(n) { return Math.floor(n); }
+
+    function asNumber(val) {
+      if (val === null || val === undefined || val === '') return null;
+      if (typeof val === 'number') return val;
+      const n = Number(String(val).replace(/,/g,'').trim());
+      return Number.isNaN(n) ? null : n;
+    }
+
+    function computeVal(item, col) {
+      const raw = item[col];
+      const n = asNumber(raw);
+      if (n === null) return raw;
+
+      const meta = new Set(['Slot','Level','Rarity','Equipped?','Locked?']);
+      if (meta.has(col)) return n;
+
+      const slot = String(item['Slot'] || '').trim();
+      const lvl = (starForceBySlot && starForceBySlot[slot]) ? Number(starForceBySlot[slot]) : 0;
+      const clamped = Math.max(0, Math.min(25, Math.floor(lvl)));
+
+        const isBase = (col === 'Base Atk');
+      const amp = clamped > 0 ? (isBase ? (sfAttackAmp[clamped] || 0) : (sfSubAmp[clamped] || 0)) : 0;
+
+      // Determine what the stored value represents:
+      // - Imported items (_manualFinal undefined/false): stored = BASE stats
+      // - Manually added items (_manualFinal = true): stored = FINAL stats (already amplified)
+      let exportValue;
+      
+      if (item._manualFinal) {
+        // Manually added - stored values are FINAL (already include SF)
+        if (applySfAmplification) {
+          // Export amplified: use as-is (already final)
+          exportValue = n;
+        } else {
+          // Export base: reverse SF to get base value
+          exportValue = amp > 0 ? n / (1 + amp) : n;
+        }
+      } else {
+        // Imported - stored values are BASE
+        if (applySfAmplification) {
+          // Export amplified: apply SF to base value
+          exportValue = amp > 0 ? n * (1 + amp) : n;
+        } else {
+          // Export base: use as-is (already base)
+          exportValue = n;
+        }
+      }
+
+      // Rounding: amplified rounds down (match display), base rounds to reasonable precision
+      const treatAsPct = percentFields.has(col) || isHpMpPercent(col, exportValue);
+      if (applySfAmplification) {
+        return treatAsPct ? roundDownPercent01(exportValue) : roundDownInt(exportValue);
+      } else {
+        return treatAsPct ? (Math.round(exportValue * 10) / 10) : Math.round(exportValue);
+      }
+    }
+
+    const rows = [];
+    
+    // Example values for each column (helps users understand expected format)
+    const exampleValues = {
+      'Equipped?': 'Y or N',
+      'Locked?': 'Y or N',
+      'Slot': 'Hat/Top/Bottom/Gloves/Ring/Eye/Cape/Shoulder/Belt/Boots/Necklace',
+      'Level': 'e.g. 50',
+      'Rarity': 'Epic/Unique/Legendary',
+      'Base Atk': 'e.g. 1000',
+      'Attack': 'e.g. 500',
+      'Defense': 'e.g. 300',
+      'Crit Rate': '% e.g. 5.5',
+      'Crit Damage': '% e.g. 12.3',
+      'Damage': '% e.g. 8.0',
+      'Normal Monster': '% e.g. 10.0',
+      'Boss Damage': '% e.g. 15.0',
+      'Min Damage': '% e.g. 5.0',
+      'Max Damage': '% e.g. 5.0',
+      'Accuracy': 'e.g. 100',
+      'Evasion': 'e.g. 50',
+      '1st Job Skill': 'e.g. 2',
+      '2nd Job Skill': 'e.g. 3',
+      '3rd Job Skill': 'e.g. 1',
+      'Max HP': '% or flat e.g. 5.0 or 5000',
+      'Max MP': '% or flat e.g. 5.0 or 5000'
+    };
+
+    // Row 1: Example/placeholder values
+    const exampleRow = {};
+    headers.forEach(h => { exampleRow[h] = exampleValues[h] || ''; });
+    sfHeaders.forEach(sfH => { exampleRow[sfH] = '1-25'; });
+    rows.push(exampleRow);
+
+    // Row 2: SF settings only (equipment columns blank)
+    const sfSettingsRow = {};
+    headers.forEach(h => { sfSettingsRow[h] = ''; }); // blank equipment columns
+    sfHeaders.forEach(sfH => {
+      const slotName = sfH.slice(3).trim(); // "SF Hat" -> "Hat"
+      const lvl = (starForceBySlot && starForceBySlot[slotName]) ? Number(starForceBySlot[slotName]) : 0;
+      sfSettingsRow[sfH] = lvl ? Math.max(0, Math.min(25, Math.floor(lvl))) : '';
+    });
+    rows.push(sfSettingsRow);
+
+    // Equipment data rows (SF columns blank)
+    for (let i = 0; i < allItems.length; i++) {
+      const item = allItems[i];
+      const row = {};
+
+      headers.forEach(h => {
+        const val = item[h];
+
+        if (h === 'Equipped?' || h === 'Locked?') {
+          row[h] = String(val || '').trim().toUpperCase() === 'Y' ? 'Y' : '';
+          return;
+        }
+
+        if (val === null || val === undefined || val === '') return;
+
+        const n = asNumber(val);
+        if (n !== null) row[h] = computeVal(item, h);
+        else row[h] = val;
+      });
+
+      // SF columns blank for equipment rows
+      sfHeaders.forEach(sfH => { row[sfH] = ''; });
+
+      rows.push(row);
+    }
+
+    const ws = XLSX.utils.json_to_sheet(rows, { header: headers.concat(sfHeaders), skipHeader: false });
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Inventory');
+
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'equipment_export.xlsx';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('Export failed: ' + (err && err.message ? err.message : err));
+    console.error(err);
+  }
+}
+
+</script>
+
+    <!-- Export Modal -->
+    <div id="export-modal" class="modal-backdrop" style="display:none;">
+      <div class="modal">
+        <div class="modal-title">Export</div>
+        <div class="modal-text">How would you like to export the equipment stats?</div>
+        <div class="modal-actions">
+          <button id="export-base">Export with base stats</button>
+          <button id="export-amplified" class="primary">Export SF amplified stats</button>
+          <button id="export-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="import-modal" class="modal-backdrop" style="display:none;">
+      <div class="modal">
+        <div class="modal-title">Import</div>
+        <div class="modal-text">What type of stats are in this file?</div>
+        <div class="modal-actions">
+          <button id="import-apply" class="primary">Base stats (no SF applied)</button>
+          <button id="import-no">SF amplified stats</button>
+          <button id="import-cancel">Cancel</button>
+        </div>
+      </div>
+    </div>
+</body>
+
+</html>

@@ -345,7 +345,7 @@ function renderPresetsPanel() {
             </label>
         </header>
     `;
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 20; i++) {
     const presetId = `preset${i}`;
     const presetData = loadoutStore.getPreset(presetId);
     const isEquipped = presetId === equippedPresetId;

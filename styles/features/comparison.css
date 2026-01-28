@@ -62,6 +62,14 @@
 .comparison-slot-selector-inner {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: var(--comp-space-md);
+    flex-wrap: wrap;
+}
+
+.comparison-slot-selector-left {
+    display: flex;
+    align-items: center;
     gap: var(--comp-space-md);
     flex-wrap: wrap;
 }
@@ -102,6 +110,72 @@
 
 .dark .comparison-slot-select:focus {
     box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.15);
+}
+
+/* Refresh from Equipment Viewer Button */
+.comparison-refresh-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--comp-duration) var(--comp-ease-out);
+    white-space: nowrap;
+}
+
+.comparison-refresh-btn:hover {
+    background: linear-gradient(135deg, #059669 0%, #047857 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+}
+
+.comparison-refresh-btn:active {
+    transform: translateY(0);
+}
+
+.comparison-refresh-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Refresh All Slots Button */
+.comparison-refresh-all-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-family: var(--font-display);
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--comp-duration) var(--comp-ease-out);
+    white-space: nowrap;
+}
+
+.comparison-refresh-all-btn:hover {
+    background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+}
+
+.comparison-refresh-all-btn:active {
+    transform: translateY(0);
+}
+
+.comparison-refresh-all-btn svg {
+    width: 16px;
+    height: 16px;
 }
 
 /* ========================================

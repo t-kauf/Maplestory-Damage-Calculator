@@ -36,6 +36,11 @@ import { displayResults } from './results-display';
 import { StatCalculationService } from '@ts/services/stat-calculation-service.js';
 import type { EquipmentSlotData } from '@ts/types/page/equipment/equipment.types';
 import { debounce } from '@ts/utils/event-emitter';
+import { 
+    hasEquipmentViewerData, 
+    getItemsForSlot,
+    type ConvertedItem 
+} from '@ts/services/equipment-viewer.service';
 
 // ============================================================================
 // STATE
@@ -79,13 +84,29 @@ function generateSlotSelectorOptionsHTML(): string {
  */
 export function generateComparisonHTML(): string {
     return `
-        <!-- Slot Selector with Improved Visual Hierarchy -->
+        <!-- Slot Selector with Refresh Buttons -->
         <div class="comparison-slot-selector-wrapper">
             <div class="comparison-slot-selector-inner">
-                <label for="comparison-slot-selector" class="comparison-slot-label">Equipment Slot</label>
-                <select id="comparison-slot-selector" class="comparison-slot-select" aria-label="Select equipment slot to compare">
-                    ${generateSlotSelectorOptionsHTML()}
-                </select>
+                <div class="comparison-slot-selector-left">
+                    <label for="comparison-slot-selector" class="comparison-slot-label">Equipment Slot</label>
+                    <select id="comparison-slot-selector" class="comparison-slot-select" aria-label="Select equipment slot to compare">
+                        ${generateSlotSelectorOptionsHTML()}
+                    </select>
+                    <button id="refresh-from-viewer-btn" class="comparison-refresh-btn" title="Refresh this slot from Equipment Viewer" aria-label="Refresh comparison items from Equipment Viewer">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                            <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                            <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                        </svg>
+                        <span>Refresh</span>
+                    </button>
+                </div>
+                <button id="refresh-all-from-viewer-btn" class="comparison-refresh-all-btn" title="Refresh all slots from Equipment Viewer" aria-label="Refresh all slots from Equipment Viewer">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                        <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                        <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                    </svg>
+                    <span>Refresh All Slots</span>
+                </button>
             </div>
         </div>
 
@@ -481,6 +502,21 @@ function attachEventListeners(): void {
         calculateButton.onclick = handleCalculate;
     }
 
+    // Refresh from Equipment Viewer button (single slot)
+    const refreshButton = document.getElementById('refresh-from-viewer-btn') as HTMLButtonElement;
+    if (refreshButton) {
+        refreshButton.onclick = handleRefreshFromViewer;
+    }
+
+    // Refresh All from Equipment Viewer button
+    const refreshAllButton = document.getElementById('refresh-all-from-viewer-btn') as HTMLButtonElement;
+    if (refreshAllButton) {
+        refreshAllButton.onclick = handleRefreshAllFromViewer;
+    }
+
+    // Update button visibility based on Equipment Viewer data
+    updateRefreshButtonVisibility();
+
     loadoutStore.on('equipment-updated', debounce((update: { slotId: EquipmentSlotId, data: EquipmentSlotData }) => {
         if (update.slotId === localStorage.getItem('lastSelectedComparisonSlot')) {
             switchSlot(update.slotId);
@@ -548,6 +584,140 @@ function handleAddItem(): void {
 
     // Auto-calculate
     triggerAutoCalculate();
+}
+
+/**
+ * Update refresh button visibility based on Equipment Viewer data availability
+ */
+function updateRefreshButtonVisibility(): void {
+    const hasData = hasEquipmentViewerData();
+    
+    const refreshButton = document.getElementById('refresh-from-viewer-btn') as HTMLButtonElement;
+    if (refreshButton) {
+        refreshButton.style.display = hasData ? '' : 'none';
+    }
+    
+    const refreshAllButton = document.getElementById('refresh-all-from-viewer-btn') as HTMLButtonElement;
+    if (refreshAllButton) {
+        refreshAllButton.style.display = hasData ? '' : 'none';
+    }
+}
+
+/**
+ * Handle refresh from Equipment Viewer button click
+ * Clears all comparison items and repopulates from Equipment Viewer
+ */
+function handleRefreshFromViewer(): void {
+    if (!hasEquipmentViewerData()) {
+        showToast('No Equipment Viewer data found. Open Equipment Viewer and add some items first.', false);
+        return;
+    }
+
+    // Get items for current slot from Equipment Viewer
+    const viewerItems = getItemsForSlot(currentSlot);
+    
+    if (viewerItems.length === 0) {
+        showToast(`No items found for ${currentSlot} in Equipment Viewer.`, false);
+        return;
+    }
+
+    // Clear all existing comparison items for this slot
+    const existingItems = getComparisonItems(currentSlot);
+    for (const item of existingItems) {
+        removeComparisonItem(currentSlot, item.guid);
+    }
+
+    // Add items from Equipment Viewer (skip equipped items - they go to Equipment tab)
+    let addedCount = 0;
+    for (const viewerItem of viewerItems) {
+        // Skip equipped items - they belong in the Equipment tab
+        if (viewerItem.isEquipped) continue;
+
+        // Convert Equipment Viewer item to comparison item format
+        const statLines: ComparisonStatLine[] = viewerItem.stats.map(stat => ({
+            type: stat.type,
+            value: stat.value
+        }));
+
+        addComparisonItem(currentSlot, {
+            name: viewerItem.name,
+            attack: viewerItem.attack,
+            mainStat: 0, // Equipment Viewer doesn't track main stat separately
+            statLines
+        });
+        addedCount++;
+    }
+
+    // Re-render
+    renderComparisonItems();
+    
+    // Show feedback
+    showToast(`Loaded ${addedCount} item(s) from Equipment Viewer`, true);
+
+    // Auto-calculate if we added items
+    if (addedCount > 0) {
+        triggerAutoCalculate();
+    }
+}
+
+/**
+ * Handle refresh all slots from Equipment Viewer button click
+ * Clears and repopulates comparison items for ALL slots from Equipment Viewer
+ */
+function handleRefreshAllFromViewer(): void {
+    if (!hasEquipmentViewerData()) {
+        showToast('No Equipment Viewer data found. Open Equipment Viewer and add some items first.', false);
+        return;
+    }
+
+    let totalAdded = 0;
+    let slotsUpdated = 0;
+
+    // Iterate through all equipment slots
+    for (const slotId of Object.keys(EQUIPMENT_SLOTS) as EquipmentSlotId[]) {
+        const viewerItems = getItemsForSlot(slotId);
+        
+        // Clear existing comparison items for this slot
+        const existingItems = getComparisonItems(slotId);
+        for (const item of existingItems) {
+            removeComparisonItem(slotId, item.guid);
+        }
+
+        // Add non-equipped items from Equipment Viewer
+        let slotAdded = 0;
+        for (const viewerItem of viewerItems) {
+            if (viewerItem.isEquipped) continue;
+
+            const statLines: ComparisonStatLine[] = viewerItem.stats.map(stat => ({
+                type: stat.type,
+                value: stat.value
+            }));
+
+            addComparisonItem(slotId, {
+                name: viewerItem.name,
+                attack: viewerItem.attack,
+                mainStat: 0,
+                statLines
+            });
+            slotAdded++;
+        }
+
+        if (slotAdded > 0) {
+            slotsUpdated++;
+            totalAdded += slotAdded;
+        }
+    }
+
+    // Re-render current slot
+    renderComparisonItems();
+    
+    // Show feedback
+    showToast(`Loaded ${totalAdded} item(s) across ${slotsUpdated} slot(s) from Equipment Viewer`, true);
+
+    // Auto-calculate if we added items
+    if (totalAdded > 0) {
+        triggerAutoCalculate();
+    }
 }
 
 /**

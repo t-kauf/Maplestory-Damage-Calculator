@@ -227,7 +227,7 @@ class GearLabStore {
         presets: { ...defaults.innerAbility.presets }
       };
     }
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 20; i++) {
       if (!this.data.innerAbility.presets[i]) {
         this.data.innerAbility.presets[i] = {
           id: i,
@@ -318,14 +318,14 @@ class GearLabStore {
   // ========================================================================
   /**
    * Get all inner ability presets
-   * @returns All 10 presets as a record
+   * @returns All 20 presets as a record
    */
   getInnerAbilityPresets() {
     return JSON.parse(JSON.stringify(this.data.innerAbility.presets));
   }
   /**
    * Get a single preset
-   * @param id - Preset ID (1-10)
+   * @param id - Preset ID (1-20)
    * @returns Preset data or null if not found
    */
   getPreset(id) {
@@ -334,7 +334,7 @@ class GearLabStore {
   }
   /**
    * Get the currently equipped preset ID
-   * @returns Equipped preset ID (1-10) or null if none equipped
+   * @returns Equipped preset ID (1-20) or null if none equipped
    */
   getEquippedPresetId() {
     const equipped = Object.values(this.data.innerAbility.presets).find((p) => p.isEquipped);
@@ -356,7 +356,7 @@ class GearLabStore {
    * @param data - Partial preset data to update
    */
   updatePreset(id, data) {
-    if (id < 1 || id > 10) {
+    if (id < 1 || id > 20) {
       console.error(`GearLabStore: Invalid preset ID ${id}`);
       return;
     }
@@ -374,9 +374,11 @@ class GearLabStore {
       // Ensure id cannot be changed
     };
     if (data.isEquipped === true) {
-      for (let i = 1; i <= 10; i++) {
+      for (let i = 1; i <= 20; i++) {
         if (i !== id) {
-          this.data.innerAbility.presets[i].isEquipped = false;
+          if (this.data.innerAbility.presets[i]) {
+            this.data.innerAbility.presets[i].isEquipped = false;
+          }
         }
       }
     }
@@ -384,12 +386,12 @@ class GearLabStore {
   }
   /**
    * Update a single line in a preset
-   * @param presetId - Preset ID (1-10)
+   * @param presetId - Preset ID (1-20)
    * @param lineIndex - Line index (0-5)
    * @param line - Line data
    */
   updatePresetLine(presetId, lineIndex, line) {
-    if (presetId < 1 || presetId > 10) {
+    if (presetId < 1 || presetId > 20) {
       console.error(`GearLabStore: Invalid preset ID ${presetId}`);
       return;
     }
@@ -414,15 +416,17 @@ class GearLabStore {
   }
   /**
    * Set which preset is equipped
-   * @param id - Preset ID to equip (1-10), or null to unequip all
+   * @param id - Preset ID to equip (1-20), or null to unequip all
    */
   setEquippedPreset(id) {
-    if (id !== null && (id < 1 || id > 10)) {
+    if (id !== null && (id < 1 || id > 20)) {
       console.error(`GearLabStore: Invalid preset ID ${id}`);
       return;
     }
-    for (let i = 1; i <= 10; i++) {
-      this.data.innerAbility.presets[i].isEquipped = false;
+    for (let i = 1; i <= 20; i++) {
+      if (this.data.innerAbility.presets[i]) {
+        this.data.innerAbility.presets[i].isEquipped = false;
+      }
     }
     if (id !== null) {
       this.data.innerAbility.presets[id].isEquipped = true;

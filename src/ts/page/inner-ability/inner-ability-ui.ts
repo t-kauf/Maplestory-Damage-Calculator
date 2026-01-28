@@ -118,14 +118,14 @@ function generatePresetContentHTML(presetId: number, isActive = false): string {
  */
 export function generateInnerAbilityHTML(): string {
     // Generate preset tabs
-    const tabsHTML = Array.from({ length: 10 }, (_, i) => {
+    const tabsHTML = Array.from({ length: 20 }, (_, i) => {
         const presetId = i + 1;
         const activeClass = presetId === 1 ? 'active' : '';
         return `<button class="ia-preset-tab ${activeClass}" id="preset-tab-${presetId}" onclick="switchPreset(${presetId})">${presetId}</button>`;
     }).join('');
 
     // Generate preset contents
-    const contentsHTML = Array.from({ length: 10 }, (_, i) => {
+    const contentsHTML = Array.from({ length: 20 }, (_, i) => {
         const presetId = i + 1;
         return generatePresetContentHTML(presetId, presetId === 1);
     }).join('');
@@ -449,11 +449,11 @@ export function switchInnerAbilityTab(tabName: InnerAbilityTabName): void {
 }
 
 /**
- * Switch between preset tabs (1-10)
+ * Switch between preset tabs (1-20)
  */
 export function switchPreset(presetId: number): void {
     // Hide all preset contents
-    for (let i = 1; i <= 10; i++) {
+    for (let i = 1; i <= 20; i++) {
         const content = document.getElementById(`preset-${i}-content`);
         const tab = document.getElementById(`preset-tab-${i}`);
 
@@ -481,7 +481,7 @@ export function handlePresetEquipped(presetId: number): void {
 
     if (checkbox.checked) {
         // Uncheck all other presets
-        for (let i = 1; i <= 10; i++) {
+        for (let i = 1; i <= 20; i++) {
             if (i !== presetId) {
                 const otherCheckbox = document.getElementById(`preset-${i}-equipped`) as HTMLInputElement;
                 const otherTab = document.getElementById(`preset-tab-${i}`);

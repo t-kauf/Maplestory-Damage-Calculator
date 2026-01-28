@@ -22,6 +22,12 @@ import {
     migrateStatlineFormats,
 } from './equipment';
 import { STAT, type StatId } from '@ts/types/constants';
+import { 
+    hasEquipmentViewerData, 
+    getAllEquippedItems,
+    type ConvertedItem 
+} from '@ts/services/equipment-viewer.service';
+import { showToast } from '@ts/utils/notifications';
 
 /**
  * Legacy kebab-case to STAT.X.id mapping for UI migration
@@ -134,11 +140,20 @@ function generateStatLineHTML(slotId: string, statIndex: number): string {
  */
 export function generateEquipmentHTML(): string {
     return `
-        <div id="equipment-summary-container" class="mb-8">
-            <div class="mb-4">Equipment Summary</div>
-            <div id="equipment-summary-content" class="equipment-summary-content">
-                <span class="equipment-summary-empty">No equipment configured</span>
+        <div id="equipment-header" class="equipment-header">
+            <div id="equipment-summary-container" class="mb-8">
+                <div class="mb-4">Equipment Summary</div>
+                <div id="equipment-summary-content" class="equipment-summary-content">
+                    <span class="equipment-summary-empty">No equipment configured</span>
+                </div>
             </div>
+            <button id="refresh-equipment-from-viewer-btn" class="equipment-refresh-btn" title="Refresh from Equipment Viewer" style="display: none;">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+                    <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2v1z"/>
+                    <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466z"/>
+                </svg>
+                <span>Refresh from Equipment Viewer</span>
+            </button>
         </div>
 
         <div id="equipment-slots-container" class="equipment-slots-grid">
@@ -509,6 +524,66 @@ export function attachEquipmentEventListeners(): void {
             }
         });
     });
+
+    // Refresh from Equipment Viewer button
+    const refreshBtn = document.getElementById('refresh-equipment-from-viewer-btn');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', refreshFromEquipmentViewer);
+        // Show button if Equipment Viewer data exists
+        updateRefreshButtonVisibility();
+    }
+}
+
+/**
+ * Update refresh button visibility based on Equipment Viewer data
+ */
+function updateRefreshButtonVisibility(): void {
+    const refreshBtn = document.getElementById('refresh-equipment-from-viewer-btn');
+    if (refreshBtn) {
+        refreshBtn.style.display = hasEquipmentViewerData() ? '' : 'none';
+    }
+}
+
+/**
+ * Refresh all equipment slots from Equipment Viewer (items marked Used=Y)
+ */
+function refreshFromEquipmentViewer(): void {
+    if (!hasEquipmentViewerData()) {
+        showToast('No Equipment Viewer data found. Open Equipment Viewer and add items.', false);
+        return;
+    }
+
+    const equippedItems = getAllEquippedItems();
+    let updatedCount = 0;
+
+    for (const [slotId, item] of Object.entries(equippedItems)) {
+        if (!item) continue;
+
+        // Convert Equipment Viewer item to slot data format
+        const statLines = item.stats.map(stat => ({
+            type: stat.type,
+            value: stat.value
+        }));
+
+        // Build slot data
+        const slotData: EquipmentSlotData = {
+            name: item.name,
+            attack: item.attack,
+            mainStat: 0,
+            statLines
+        };
+
+        // Save to store and update UI
+        setSlotData(slotId as EquipmentSlotId, slotData);
+        populateSlotWithData(slotId, slotData);
+        updatedCount++;
+    }
+
+    // Update summary
+    updateEquipmentSummary();
+    notifyStatContributors();
+
+    showToast(`Updated ${updatedCount} equipment slot(s) from Equipment Viewer`, true);
 }
 
 // ============================================================================

@@ -29,6 +29,9 @@ export type CompanionKey = `${CompanionClass}-${CompanionRarity}`;
 
 export type CompanionPresetId =
     | 'preset1' | 'preset2' | 'preset3' | 'preset4' | 'preset5'
+    | 'preset6' | 'preset7' | 'preset8' | 'preset9' | 'preset10'
+    | 'preset11' | 'preset12' | 'preset13' | 'preset14' | 'preset15'
+    | 'preset16' | 'preset17' | 'preset18' | 'preset19' | 'preset20'
     | 'optimal-boss'
     | 'optimal-normal';
 
@@ -206,6 +209,21 @@ export const DEFAULT_COMPANION_STATE: CompanionState = {
         'preset3': { ...EMPTY_PRESET },
         'preset4': { ...EMPTY_PRESET },
         'preset5': { ...EMPTY_PRESET },
+        'preset6': { ...EMPTY_PRESET },
+        'preset7': { ...EMPTY_PRESET },
+        'preset8': { ...EMPTY_PRESET },
+        'preset9': { ...EMPTY_PRESET },
+        'preset10': { ...EMPTY_PRESET },
+        'preset11': { ...EMPTY_PRESET },
+        'preset12': { ...EMPTY_PRESET },
+        'preset13': { ...EMPTY_PRESET },
+        'preset14': { ...EMPTY_PRESET },
+        'preset15': { ...EMPTY_PRESET },
+        'preset16': { ...EMPTY_PRESET },
+        'preset17': { ...EMPTY_PRESET },
+        'preset18': { ...EMPTY_PRESET },
+        'preset19': { ...EMPTY_PRESET },
+        'preset20': { ...EMPTY_PRESET },
         'optimal-boss': { ...EMPTY_PRESET },
         'optimal-normal': { ...EMPTY_PRESET }
     },
